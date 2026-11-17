@@ -1,4 +1,5 @@
 #include "unit_tests_common.h"
+#include <ui/ui_tree.h>
 
 #define VTREE_ROW_STRIDE 26.0f
 #define VTREE_INDENT 16.0f
@@ -278,7 +279,7 @@ UTEST(tree_virtual, only_rows_with_children_get_an_arrow) {
     }
     const bool expect_arrow[] = { true, false, false, false, true, true, true };
     for_count(row, sizeof_array(expect_arrow)) {
-        const FlLayoutId arrow_id = { .name = tree.name, .id = -(i32)(row + 1) };
+        const FlLayoutId arrow_id = { .name = tree.name, .id = TREE_ARROW_ID(row) };
         const Clay_ElementData arrow
             = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(arrow_id) });
         ASSERT_EQ_MSG(expect_arrow[row], arrow.found, "root rows have an arrow slot, child rows do not");

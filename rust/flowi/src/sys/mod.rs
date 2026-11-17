@@ -140,6 +140,7 @@ pub use toolkit::background::{
     fl_background_set_clear_color,
 };
 pub use toolkit::button::*;
+pub use toolkit::cell::*;
 pub use toolkit::checkbox::*;
 pub use toolkit::chip::*;
 pub use toolkit::dropdown::*;
@@ -260,7 +261,7 @@ pub use toolkit::focused::fl_focused_id;
 /// The frame domain: alpha, delta time, screen size and frame-arena string reservation.
 pub use toolkit::frame::*;
 pub use toolkit::list::{
-    DropRelationship, ListConfig, ListItem, ListOpts, ListRange, ListResult,
+    ColumnDef, DropRelationship, ListConfig, ListItem, ListOpts, ListRange, ListResult,
 };
 pub use toolkit::list_clipper::{fl_list_clipper_create, ListClipper};
 pub use toolkit::list_uniform::{

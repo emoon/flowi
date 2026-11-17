@@ -37,6 +37,38 @@ const _: () = {
     assert!(core::mem::offset_of!(ListItem, icon) == 24, "ListItem.icon offset drift");
 };
 
+/// A column of a list or tree with a header.
+///
+/// Pass the columns in `ListConfig.columns`, in the order they are drawn. You own the widths: when the user resizes
+/// a column, `ListResult.resized_column` reports it, and you pass the new width back as `width` on the next frame.
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct ColumnDef {
+    /// The id of the column (unique, never 0). Signals and results name a column by this id.
+    pub id: u32,
+    /// The text shown in the header.
+    pub title: crate::sys::RawStr,
+    /// The width of the column, in logical pixels (0 makes the column flexible).
+    pub width: f32,
+    /// The share of the leftover width a flexible column takes (0 uses 1).
+    pub flex: f32,
+    /// The narrowest the column can get, in logical pixels (0 for no minimum).
+    ///
+    /// If the columns do not fit, a flexible column stays at its minimum, a fixed one keeps its `width`, and the
+    /// right edge is clipped.
+    pub min_width: f32,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<ColumnDef>() == 40, "ColumnDef size drift");
+    assert!(core::mem::align_of::<ColumnDef>() == 8, "ColumnDef align drift");
+    assert!(core::mem::offset_of!(ColumnDef, id) == 0, "ColumnDef.id offset drift");
+    assert!(core::mem::offset_of!(ColumnDef, title) == 8, "ColumnDef.title offset drift");
+    assert!(core::mem::offset_of!(ColumnDef, width) == 24, "ColumnDef.width offset drift");
+    assert!(core::mem::offset_of!(ColumnDef, flex) == 28, "ColumnDef.flex offset drift");
+    assert!(core::mem::offset_of!(ColumnDef, min_width) == 32, "ColumnDef.min_width offset drift");
+};
+
 /// Options for `fl_list_begin`.
 ///
 /// A field left at zero uses its default.
@@ -53,16 +85,30 @@ pub struct ListConfig {
     pub suppress_drag_visuals: bool,
     /// When the scrollbar is shown (`ScrollbarDisplayMode::Never` by default). The mouse wheel always scrolls.
     pub scrollbar_mode: crate::sys::ScrollbarDisplayMode,
+    /// The columns (`column_count` entries, null for a list without columns).
+    ///
+    /// With columns, the list draws a header above the rows that stays in place while they scroll. Draw each cell
+    /// of a row with `fl_cell_begin`.
+    ///
+    /// If typing in the table starts an edit, leave `labels` null so type-ahead does not take the keys.
+    pub columns: *const crate::sys::ColumnDef,
+    /// The number of entries in `columns`.
+    pub column_count: u32,
+    /// The height of the header, in logical pixels (0 uses `row_height`).
+    pub header_height: f32,
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<ListConfig>() == 24, "ListConfig size drift");
+    assert!(core::mem::size_of::<ListConfig>() == 40, "ListConfig size drift");
     assert!(core::mem::align_of::<ListConfig>() == 8, "ListConfig align drift");
     assert!(core::mem::offset_of!(ListConfig, row_height) == 0, "ListConfig.row_height offset drift");
     assert!(core::mem::offset_of!(ListConfig, gap) == 4, "ListConfig.gap offset drift");
     assert!(core::mem::offset_of!(ListConfig, labels) == 8, "ListConfig.labels offset drift");
     assert!(core::mem::offset_of!(ListConfig, suppress_drag_visuals) == 16, "ListConfig.suppress_drag_visuals offset drift");
     assert!(core::mem::offset_of!(ListConfig, scrollbar_mode) == 20, "ListConfig.scrollbar_mode offset drift");
+    assert!(core::mem::offset_of!(ListConfig, columns) == 24, "ListConfig.columns offset drift");
+    assert!(core::mem::offset_of!(ListConfig, column_count) == 32, "ListConfig.column_count offset drift");
+    assert!(core::mem::offset_of!(ListConfig, header_height) == 36, "ListConfig.header_height offset drift");
 };
 
 /// Options for `fl_input_list`.
@@ -130,6 +176,8 @@ pub struct ListResult {
     pub focused_id: u64,
     /// The row the user right-clicked. The list opens no menu, so open yours for this row.
     pub context_menu_id: u64,
+    /// The column the user right-clicked in the row `context_menu_id` (0 for none).
+    pub context_menu_cell: u32,
     /// The selection changes of this frame (`request_count` entries, valid this frame only).
     ///
     /// These are already applied if you passed a set. Otherwise apply them yourself.
@@ -157,23 +205,45 @@ pub struct ListResult {
     pub drag_from_count: u32,
     /// The side of `drag_target_id` the rows land on.
     pub drag_rel: crate::sys::DropRelationship,
+    /// The column whose header the user clicked (0 for none). The list does not sort.
+    pub header_clicked_column: u32,
+    /// The column the user is resizing (0 for none).
+    ///
+    /// It is reported on each frame of the drag, once the mouse has moved.
+    pub resized_column: u32,
+    /// The width of `resized_column`, in logical pixels.
+    pub resized_width: f32,
+    /// The width every column got this frame, in logical pixels (`column_width_count` entries, valid this frame
+    /// only).
+    ///
+    /// Read it to save the layout. The entries follow the order of `ListConfig.columns`. It is empty on the first
+    /// frames of a list, until the list knows how wide it is.
+    pub column_widths: *const f32,
+    /// The number of entries in `column_widths`.
+    pub column_width_count: u32,
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<ListResult>() == 64, "ListResult size drift");
+    assert!(core::mem::size_of::<ListResult>() == 104, "ListResult size drift");
     assert!(core::mem::align_of::<ListResult>() == 8, "ListResult align drift");
     assert!(core::mem::offset_of!(ListResult, activated_id) == 0, "ListResult.activated_id offset drift");
     assert!(core::mem::offset_of!(ListResult, focused_id) == 8, "ListResult.focused_id offset drift");
     assert!(core::mem::offset_of!(ListResult, context_menu_id) == 16, "ListResult.context_menu_id offset drift");
-    assert!(core::mem::offset_of!(ListResult, requests) == 24, "ListResult.requests offset drift");
-    assert!(core::mem::offset_of!(ListResult, request_count) == 32, "ListResult.request_count offset drift");
-    assert!(core::mem::offset_of!(ListResult, nav_up_edge) == 36, "ListResult.nav_up_edge offset drift");
-    assert!(core::mem::offset_of!(ListResult, nav_down_edge) == 37, "ListResult.nav_down_edge offset drift");
-    assert!(core::mem::offset_of!(ListResult, drag_active) == 38, "ListResult.drag_active offset drift");
-    assert!(core::mem::offset_of!(ListResult, reorder_emitted) == 39, "ListResult.reorder_emitted offset drift");
-    assert!(core::mem::offset_of!(ListResult, drag_from_ids) == 40, "ListResult.drag_from_ids offset drift");
-    assert!(core::mem::offset_of!(ListResult, drag_target_id) == 48, "ListResult.drag_target_id offset drift");
-    assert!(core::mem::offset_of!(ListResult, drag_from_count) == 56, "ListResult.drag_from_count offset drift");
-    assert!(core::mem::offset_of!(ListResult, drag_rel) == 60, "ListResult.drag_rel offset drift");
+    assert!(core::mem::offset_of!(ListResult, context_menu_cell) == 24, "ListResult.context_menu_cell offset drift");
+    assert!(core::mem::offset_of!(ListResult, requests) == 32, "ListResult.requests offset drift");
+    assert!(core::mem::offset_of!(ListResult, request_count) == 40, "ListResult.request_count offset drift");
+    assert!(core::mem::offset_of!(ListResult, nav_up_edge) == 44, "ListResult.nav_up_edge offset drift");
+    assert!(core::mem::offset_of!(ListResult, nav_down_edge) == 45, "ListResult.nav_down_edge offset drift");
+    assert!(core::mem::offset_of!(ListResult, drag_active) == 46, "ListResult.drag_active offset drift");
+    assert!(core::mem::offset_of!(ListResult, reorder_emitted) == 47, "ListResult.reorder_emitted offset drift");
+    assert!(core::mem::offset_of!(ListResult, drag_from_ids) == 48, "ListResult.drag_from_ids offset drift");
+    assert!(core::mem::offset_of!(ListResult, drag_target_id) == 56, "ListResult.drag_target_id offset drift");
+    assert!(core::mem::offset_of!(ListResult, drag_from_count) == 64, "ListResult.drag_from_count offset drift");
+    assert!(core::mem::offset_of!(ListResult, drag_rel) == 68, "ListResult.drag_rel offset drift");
+    assert!(core::mem::offset_of!(ListResult, header_clicked_column) == 72, "ListResult.header_clicked_column offset drift");
+    assert!(core::mem::offset_of!(ListResult, resized_column) == 76, "ListResult.resized_column offset drift");
+    assert!(core::mem::offset_of!(ListResult, resized_width) == 80, "ListResult.resized_width offset drift");
+    assert!(core::mem::offset_of!(ListResult, column_widths) == 88, "ListResult.column_widths offset drift");
+    assert!(core::mem::offset_of!(ListResult, column_width_count) == 96, "ListResult.column_width_count offset drift");
 };
 

@@ -38,6 +38,10 @@ f32 list_uniform_gap_px(const FlUiCtx* ctx, f32 gap);
 // end.
 void list_uniform_nudge_scroll(FlListUniformContext* self, FlString id, f32 delta_px, f32 item_stride, u32 total_count);
 
+// The width, in physical pixels, that rows of list id got last frame: the container width minus the scrollbar
+// reserve. 0 until the list has been laid out once, or for an unknown id.
+f32 list_uniform_content_width(FlListUniformContext* self, FlString id);
+
 bool list_uniform_scrollbar_engaged(const FlListUniformContext* self);
 
 void list_uniform_begin_update(FlListUniformContext* self);

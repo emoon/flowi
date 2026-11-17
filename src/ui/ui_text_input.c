@@ -19,7 +19,7 @@
 // multipliers: type (glyph sizes, text widths) carries text_scale, chrome (padding, heights, hairlines)
 // carries ui_scale. The two are independent and are applied separately, never folded into one factor.
 // ui_text_edit_measure covers the type half; this is the chrome half, applied to the authored lengths below.
-static inline float ui_scale_of(FlUiCtx* ctx) {
+static inline float ui_scale_of(const FlUiCtx* ctx) {
     return ctx->ui_scale > 0.0f ? ctx->ui_scale : 1.0f;
 }
 
@@ -200,8 +200,26 @@ static void scroll_to_cursor(const TextField* f, float visible_width) {
     state->scroll_offset_x += (state->target_scroll_x - state->scroll_offset_x) * 0.3f;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The authored lengths of one field's chrome.
+typedef struct FieldBox {
+    FlLayoutSizingAxis outer_width;
+    FlLayoutSizingAxis outer_height;
+    FlLayoutSizingAxis inner_width;
+    FlLayoutSizingAxis inner_height;
+    float border;
+    float padding;
+    float radius;
+    float content_height; // height of the box the text is centered in
+    float visible_width;  // width the text scrolls in
+    FlLayoutAlignmentY text_align;
+} FieldBox;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // The text, or the placeholder while empty, followed by the optional character counter.
-static void render_content(const TextField* f) {
+static void render_content(const TextField* f, const FieldBox* box) {
     const FlTextInputState* state = f->state;
     const FlTextInputConfig* cfg = f->cfg;
     const struct FlThemeColors* theme = ui_get_theme_colors(f->ctx);
@@ -210,7 +228,7 @@ static void render_content(const TextField* f) {
         // TODO: Render selection highlight as a colored rectangle behind text
 
         // Wrap text in a growing container to prevent it from affecting parent layout
-        ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) {
+        ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }, .child_alignment = { .y = box->text_align }) {
             ui_text_styled(ui_text_input_get_text(state), .color = theme->text.primary, .valign = FlTextVAlign_Center);
         }
     } else if (cfg->placeholder.length > 0) {
@@ -228,9 +246,52 @@ static Clay_SizingAxis clay_fixed(float size) {
     return (Clay_SizingAxis) { .type = CLAY__SIZING_TYPE_FIXED, .size = { .minMax = { .min = size, .max = size } } };
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FieldBox bordered_box(const FlTextInputConfig* cfg) {
+    const float min_width = cfg->min_width > 0.0f ? cfg->min_width : 200.0f;
+    const float inner_width = min_width - (s_border_width * 2.0f);
+    return (FieldBox) {
+        .outer_width = sizing_fixed(min_width),
+        .outer_height = sizing_fixed(s_widget_height),
+        .inner_width = sizing_fixed(inner_width),
+        .inner_height = sizing_fixed(s_inner_height),
+        .border = s_border_width,
+        .padding = s_inner_padding,
+        .radius = (float)FlRadius_MD,
+        .content_height = s_inner_height,
+        .visible_width = inner_width - (s_inner_padding * 2.0f),
+    };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// No chrome: the field takes the size of the box it is in, as measured on the previous frame.
+static FieldBox borderless_box(const FlUiCtx* ctx, u32 clay_id) {
+    const FlElementState last = ui_get_element_state_by_id(clay_id);
+    const float scale = ui_scale_of(ctx);
+    return (FieldBox) {
+        .outer_width = sizing_grow(),
+        .outer_height = sizing_grow(),
+        .inner_width = sizing_grow(),
+        .inner_height = sizing_grow(),
+        .content_height = last.size.y / scale,
+        .visible_width = last.size.x / scale,
+        .text_align = LayoutAlignmentY_Center,
+    };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FieldBox field_box(const TextField* f, u32 clay_id) {
+    return f->cfg->borderless ? borderless_box(f->ctx, clay_id) : bordered_box(f->cfg);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Render the blinking text cursor as a floating element attached to the input container.
 // Caller is responsible for the focus/stb_state guard before invoking.
-static void render_cursor(const TextField* f, u32 clay_id) {
+static void render_cursor(const TextField* f, const FieldBox* box, u32 clay_id) {
     FlTextInputState* state = f->state;
     FlUiCtx* ctx = f->ctx;
 
@@ -244,7 +305,7 @@ static void render_cursor(const TextField* f, u32 clay_id) {
     // size; the chrome lengths and the hairline constants are authored lengths and are scaled here.
     const float scale = ui_scale_of(ctx);
     const float text_height = ui_text_edit_measure(ctx, S("M")).y;
-    const float text_top = (s_inner_height * scale - text_height) / 2.0f;
+    const float text_top = (box->content_height * scale - text_height) / 2.0f;
     const FlColor color = ui_get_theme_colors(ctx)->text.primary;
 
     // Unique per-frame id for the cursor element.
@@ -257,7 +318,7 @@ static void render_cursor(const TextField* f, u32 clay_id) {
         .floating = { .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
                       .parentId = clay_id,
                       .attachPoints = { .element = CLAY_ATTACH_POINT_LEFT_TOP, .parent = CLAY_ATTACH_POINT_LEFT_TOP },
-                      .offset = { .x = s_inner_padding * scale + cursor_offset(f) - state->scroll_offset_x,
+                      .offset = { .x = box->padding * scale + cursor_offset(f) - state->scroll_offset_x,
                                   .y = text_top - 1.0f * scale },
                       .zIndex = 10 },
     };
@@ -304,48 +365,72 @@ static void update_focused(const TextField* f, FlString label, FlSignal* signal)
         f->ctx->text_input_focused_this_frame = true;
         handle_keyboard(f, signal);
     }
+    if (signal->focused && f->cfg->borderless) {
+        fl_consume_nav_up();
+        fl_consume_nav_down();
+    }
 }
 
 // clang-format off
-// The bordered field: focus ring, clipped scrolling content and the cursor.
+// The field: focus ring, clipped scrolling content and the cursor.
 static void render_field(const TextField* f, FlLayoutId input_id, bool focused) {
     FlTextInputState* state = f->state;
     const u32 clay_id = ui_layout_id_to_clay_id(input_id);
     ItemState* item = hashmap_get(&f->ctx->shared->item_state, clay_id);
     const struct FlThemeColors* theme = ui_get_theme_colors(f->ctx);
 
-    const FlColor bg_color = ui_apply_state_color(theme->surface.elevated, item);
-    const FlColor border_color = ui_apply_focus_border(theme->border.default_color, item, theme);
-
-    const float min_width = f->cfg->min_width > 0.0f ? f->cfg->min_width : 200.0f;
-    const float inner_width = min_width - (s_border_width * 2.0f);
-    const float visible_width = inner_width - (s_inner_padding * 2.0f);
+    const FlColor none = { 0 };
+    const bool chrome = !f->cfg->borderless;
+    const FlColor bg_color = chrome ? ui_apply_state_color(theme->surface.elevated, item) : none;
+    const FlColor border_color = chrome ? ui_apply_focus_border(theme->border.default_color, item, theme) : none;
+    const FieldBox box = field_box(f, clay_id);
 
     // Outer border container (focus ring)
-    ui_layout_area(.sizing = { sizing_fixed(min_width), sizing_fixed(s_widget_height) },
-                   .padding = padding_all(s_border_width), .radius = corner_radius(FlRadius_MD),
+    ui_layout_area(.sizing = { box.outer_width, box.outer_height },
+                   .padding = padding_all(box.border), .radius = corner_radius(box.radius),
                    .color = border_color) {
         // Inner content area with clipping for horizontal scroll
         ui_layout_area_id(
-            input_id, .sizing = { sizing_fixed(inner_width), sizing_fixed(s_inner_height) },
-            .padding = padding_all(s_inner_padding), .color = bg_color,
-            .radius = corner_radius(FlRadius_MD - s_border_width),
+            input_id, .sizing = { box.inner_width, box.inner_height },
+            .padding = padding_all(box.padding), .color = bg_color,
+            .radius = corner_radius(box.radius - box.border),
             .child_alignment = ui_align(Left, Center),
             .clip = { .horizontal = true,
                       .vertical = false,
                       .manual_scroll = true,
                       .scroll_pos = { .x = -state->scroll_offset_x, .y = 0.0f } }) {
             if (focused) {
-                scroll_to_cursor(f, visible_width);
+                scroll_to_cursor(f, box.visible_width);
             }
-            render_content(f);
+            render_content(f, &box);
         }
 
         // Render blinking cursor when focused (outside the clipped container so it can attach to it)
         if (focused && state->stb_state) {
-            render_cursor(f, clay_id);
+            render_cursor(f, &box, clay_id);
         }
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ui_text_input_request_focus(FlTextInputState* state, bool select_all) {
+    state->focus_requested = true;
+    state->select_all_requested = select_all;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void apply_focus_request(FlTextInputState* state, FlLayoutId input_id) {
+    if (!state->focus_requested) {
+        return;
+    }
+    fl_set_focus(input_id);
+    if (state->select_all_requested) {
+        ui_text_edit_select_all(state);
+    }
+    state->focus_requested = false;
+    state->select_all_requested = false;
 }
 
 FlSignal ui_text_input(FlString label, FlTextInputState* state, FlTextInputConfig cfg) {
@@ -361,6 +446,7 @@ FlSignal ui_text_input(FlString label, FlTextInputState* state, FlTextInputConfi
     const TextField field = { .state = state, .ctx = ctx, .cfg = &cfg };
     const FlLayoutId input_id = field_id(label, &cfg);
 
+    apply_focus_request(state, input_id);
     FlItemFlags flags = FlItemFlags_clickable | FlItemFlags_focusable | FlItemFlags_hot_animation | FlItemFlags_focus_animation;
     FlSignal signal = ui_item_behavior(input_id, flags, cfg.widget);
 

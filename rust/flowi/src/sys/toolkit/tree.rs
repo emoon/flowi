@@ -84,10 +84,10 @@ pub struct TreeConfig {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<TreeConfig>() == 32, "TreeConfig size drift");
+    assert!(core::mem::size_of::<TreeConfig>() == 48, "TreeConfig size drift");
     assert!(core::mem::align_of::<TreeConfig>() == 8, "TreeConfig align drift");
     assert!(core::mem::offset_of!(TreeConfig, list) == 0, "TreeConfig.list offset drift");
-    assert!(core::mem::offset_of!(TreeConfig, indent) == 24, "TreeConfig.indent offset drift");
+    assert!(core::mem::offset_of!(TreeConfig, indent) == 40, "TreeConfig.indent offset drift");
 };
 
 /// The outcome of a tree for one frame, returned by `fl_tree_end`.
@@ -109,12 +109,12 @@ pub struct TreeResult {
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<TreeResult>() == 80, "TreeResult size drift");
+    assert!(core::mem::size_of::<TreeResult>() == 120, "TreeResult size drift");
     assert!(core::mem::align_of::<TreeResult>() == 8, "TreeResult align drift");
     assert!(core::mem::offset_of!(TreeResult, list) == 0, "TreeResult.list offset drift");
-    assert!(core::mem::offset_of!(TreeResult, toggled_id) == 64, "TreeResult.toggled_id offset drift");
-    assert!(core::mem::offset_of!(TreeResult, toggle_expanded) == 72, "TreeResult.toggle_expanded offset drift");
-    assert!(core::mem::offset_of!(TreeResult, toggled_row) == 76, "TreeResult.toggled_row offset drift");
+    assert!(core::mem::offset_of!(TreeResult, toggled_id) == 104, "TreeResult.toggled_id offset drift");
+    assert!(core::mem::offset_of!(TreeResult, toggle_expanded) == 112, "TreeResult.toggle_expanded offset drift");
+    assert!(core::mem::offset_of!(TreeResult, toggled_row) == 116, "TreeResult.toggled_row offset drift");
 };
 
 // A tree view over rows you own.

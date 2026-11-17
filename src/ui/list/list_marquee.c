@@ -119,7 +119,7 @@ static void disarm(ListState* st) {
 
 static bool is_empty_space_press(const FlListContext* self, const ListViewport* vp) {
     const MouseState* mouse = &self->ui_ctx->input_state.mouse;
-    return self->ui_ctx->mouse_pressed_this_frame && !self->frame_row_pressed
+    return self->ui_ctx->mouse_pressed_this_frame && !self->frame_row_pressed && !list_press_on_focused_widget(self)
            && !list_uniform_scrollbar_engaged(self->ui_ctx->list_uniform_ctx)
            && list_viewport_contains(vp, mouse->x, mouse->y);
 }

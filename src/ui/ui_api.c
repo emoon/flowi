@@ -93,6 +93,12 @@ void fl_text_input_clear(FlTextInputState* state) {
     ui_text_input_clear(state);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void fl_text_input_request_focus(FlTextInputState* state, bool select_all) {
+    ui_text_input_request_focus(state, select_all);
+}
+
 // The parenthesised name suppresses the function-like macro fl_text_input_show in text_input.h.
 FlSignal(fl_text_input_show)(FlString label, FlTextInputState* state) {
     return ui_text_input(label, state, (FlTextInputConfig) { 0 });

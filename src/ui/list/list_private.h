@@ -52,6 +52,12 @@ typedef struct ListState {
     bool drag_pressed; // a left press landed on a row; tracking toward the threshold
     bool drag_active;  // threshold crossed; the reorder drag is live (ghost + insertion line drawn)
     u64 drag_press_id; // stable id of the row the press landed on (selected => drag the whole selection)
+
+    // Header column resize. Armed by a press on a header edge: the column id and its resolved width (logical px)
+    // at that moment, so the reported width is that plus the drag distance.
+    u32 resize_column; // id of the column being resized (0 = none)
+    f32 resize_start_width;
+    bool resize_moved; // the mouse has moved since the press, so the drag reports a width
 } ListState;
 
 // The arguments of the begin core: the scoped face's begin call plus the declarative face's policy toggles.
@@ -94,6 +100,20 @@ struct FlListContext {
     u32 req_capacity;
 
     bool frame_row_pressed; // Did a row of the current list take a press this frame? (focus tracking)
+
+    // Columns for this begin->end scope (config.columns; column_count 0 = a plain list). column_widths holds the
+    // resolved width of each column in logical pixels, in the frame arena.
+    const FlColumnDef* columns;
+    u32 column_count;
+    f32* column_widths;
+    u32 result_width_count;    // Entries of column_widths the result reports (0 until the row width is measured)
+    f32 cell_cursor;           // How far into the current row the lead and cells drawn so far reach (logical px)
+    u32 cell_next_index;       // Index of the first column the current row has not drawn a cell for
+    bool frame_header_pressed; // Did the header of the current list take a press this frame? (focus tracking)
+    u32 header_clicked_column; // Column whose header was clicked this frame (0 = none)
+    u32 resized_column;        // Column being dragged to a new width this frame (0 = none)
+    f32 resized_width;         // That column's new width in logical pixels
+    u32 context_menu_cell;     // Column of the right-click behind context_menu_id (0 = none)
 
     // Keyboard focus, resolved at begin and read by item_begin to draw the cursor ring. has_kb_focus is the
     // list-holds-focus verdict for this frame; frame_focus_cursor_id is the cursor row's stable id (0 = none).
@@ -160,6 +180,10 @@ bool list_get_viewport(const FlListContext* self, ListViewport* out);
 
 bool list_viewport_contains(const ListViewport* vp, f32 x, f32 y);
 
+// The mouse button went down this frame, inside the list, on the widget that has keyboard focus, such as a text
+// input in a row. That press is the widget's: the list neither takes focus for it nor starts a marquee.
+bool list_press_on_focused_widget(const FlListContext* self);
+
 // Content-space Y of the cursor, clamped to the viewport edges so a past-edge cursor pins at the edge and moves
 // only as fast as auto-scroll advances the scroll offset.
 f64 list_clamped_content_y(const FlListContext* self, const ListViewport* vp, f64 scroll);
@@ -187,6 +211,15 @@ void list_marquee_update(FlListContext* self, ListState* st);
 
 // Drag-reorder gesture; runs after the rows are emitted.
 void list_drag_update(FlListContext* self, ListState* st);
+
+// Columns (list_header.c). list_header_begin opens the outer wrapper and draws the header when the config has
+// columns, and does nothing otherwise. list_header_end closes the wrapper. list_column_at names the column under an
+// x offset from the row's left edge (logical px), 0 for none. list_row_cell_under_mouse names the column of the row
+// the mouse is inside, 0 for none.
+void list_header_begin(FlListContext* self, ListState* st, const FlListConfig* config, f32 row_height);
+void list_header_end(FlListContext* self);
+u32 list_column_at(const FlListContext* self, f32 x);
+u32 list_row_cell_under_mouse(const FlListContext* self, FlLayoutId row_id);
 
 FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args);
 

@@ -27,6 +27,14 @@ extern "C" {
     pub fn fl_text_input_get_text(state: *mut crate::sys::TextInputState) -> crate::sys::RawStr;
     /// Removes all text and moves the cursor to the start.
     pub fn fl_text_input_clear(state: *mut crate::sys::TextInputState);
+    /// Gives the text field keyboard focus the next time it is shown.
+    ///
+    /// If `select_all` is true, the whole text is selected, so typing replaces it.
+    ///
+    /// Call this once, on the frame an edit starts, or on the frame a field in a list row is shown again after the
+    /// row was scrolled out of view. Each call scrolls the field into view, so a call on every frame pulls the
+    /// list back whenever the user scrolls away.
+    pub fn fl_text_input_request_focus(state: *mut crate::sys::TextInputState, select_all: bool);
     /// Shows the text field with default options and returns its `Signal`.
     ///
     /// `Signal.text_changed`, `Signal.submitted` (Enter) and `Signal.cancelled` (Escape or gamepad B) are true only

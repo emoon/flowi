@@ -39,6 +39,11 @@ typedef struct FlSignal {
     bool selected;
     // The mouse position relative to the widget, in physical pixels.
     FlVec2 mouse_pos;
+    // The id of the column under the mouse (0 for none).
+    //
+    // `fl_list_item_begin` and `fl_tree_item_begin` set it for a row of a list with columns, whenever the mouse is
+    // inside the row. That includes when a widget in the row has the mouse, so `hovered` can be false.
+    uint32_t cell;
     // How far the mouse has moved since the drag started, in physical pixels.
     FlVec2 drag_delta;
     // The mouse wheel movement over the widget. It needs `FlItemFlags_scroll_target`, and `FlItemFlags_clickable` or

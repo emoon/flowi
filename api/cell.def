@@ -1,0 +1,17 @@
+/// A cell of a row in a list or tree with columns.
+///
+/// Inside a row, between `List::item_begin` and `List::item_end`, call `Cell::begin` for each column you draw, draw
+/// the content and call `Cell::end`. Go through the columns from left to right. A column you skip stays empty,
+/// and a row that draws no cell spans every column.
+#[frame_context]
+api Cell {
+    /// Starts the cell of the current row in the column with the id `column_id`.
+    ///
+    /// The cell sits under the header of its column, as wide as the column and as high as a row, and it cuts off
+    /// what it holds at its edge. In a tree, the first cell starts after the indent and the arrow.
+    ///
+    /// `column_id` must be the id of a column in `ListConfig.columns`.
+    begin(column_id: u32)
+    /// Ends the cell started with `Cell::begin`.
+    end()
+}

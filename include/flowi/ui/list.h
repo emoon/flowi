@@ -33,6 +33,26 @@ typedef struct FlListItem {
     FlImageHandle icon;
 } FlListItem;
 
+// A column of a list or tree with a header.
+//
+// Pass the columns in `FlListConfig.columns`, in the order they are drawn. You own the widths: when the user resizes
+// a column, `FlListResult.resized_column` reports it, and you pass the new width back as `width` on the next frame.
+typedef struct FlColumnDef {
+    // The id of the column (unique, never 0). Signals and results name a column by this id.
+    uint32_t id;
+    // The text shown in the header.
+    FlString title;
+    // The width of the column, in logical pixels (0 makes the column flexible).
+    float width;
+    // The share of the leftover width a flexible column takes (0 uses 1).
+    float flex;
+    // The narrowest the column can get, in logical pixels (0 for no minimum).
+    //
+    // If the columns do not fit, a flexible column stays at its minimum, a fixed one keeps its `width`, and the
+    // right edge is clipped.
+    float min_width;
+} FlColumnDef;
+
 // Options for `fl_list_begin`.
 //
 // A field left at zero uses its default.
@@ -47,6 +67,17 @@ typedef struct FlListConfig {
     bool suppress_drag_visuals;
     // When the scrollbar is shown (`FlScrollbarDisplayMode_Never` by default). The mouse wheel always scrolls.
     FlScrollbarDisplayMode scrollbar_mode;
+    // The columns (`column_count` entries, null for a list without columns).
+    //
+    // With columns, the list draws a header above the rows that stays in place while they scroll. Draw each cell
+    // of a row with `fl_cell_begin`.
+    //
+    // If typing in the table starts an edit, leave `labels` null so type-ahead does not take the keys.
+    const FlColumnDef* columns;
+    // The number of entries in `columns`.
+    uint32_t column_count;
+    // The height of the header, in logical pixels (0 uses `row_height`).
+    float header_height;
 } FlListConfig;
 
 // Options for `fl_input_list`.
@@ -89,6 +120,8 @@ typedef struct FlListResult {
     uint64_t focused_id;
     // The row the user right-clicked. The list opens no menu, so open yours for this row.
     uint64_t context_menu_id;
+    // The column the user right-clicked in the row `context_menu_id` (0 for none).
+    uint32_t context_menu_cell;
     // The selection changes of this frame (`request_count` entries, valid this frame only).
     //
     // These are already applied if you passed a set. Otherwise apply them yourself.
@@ -116,6 +149,22 @@ typedef struct FlListResult {
     uint32_t drag_from_count;
     // The side of `drag_target_id` the rows land on.
     FlDropRelationship drag_rel;
+    // The column whose header the user clicked (0 for none). The list does not sort.
+    uint32_t header_clicked_column;
+    // The column the user is resizing (0 for none).
+    //
+    // It is reported on each frame of the drag, once the mouse has moved.
+    uint32_t resized_column;
+    // The width of `resized_column`, in logical pixels.
+    float resized_width;
+    // The width every column got this frame, in logical pixels (`column_width_count` entries, valid this frame
+    // only).
+    //
+    // Read it to save the layout. The entries follow the order of `FlListConfig.columns`. It is empty on the first
+    // frames of a list, until the list knows how wide it is.
+    const float* column_widths;
+    // The number of entries in `column_widths`.
+    uint32_t column_width_count;
 } FlListResult;
 
 

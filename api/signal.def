@@ -28,6 +28,11 @@ struct Signal {
     selected: bool,
     /// The mouse position relative to the widget, in physical pixels.
     mouse_pos: Vec2,
+    /// The id of the column under the mouse (0 for none).
+    ///
+    /// `List::item_begin` and `Tree::item_begin` set it for a row of a list with columns, whenever the mouse is
+    /// inside the row. That includes when a widget in the row has the mouse, so `hovered` can be false.
+    cell: u32,
     /// How far the mouse has moved since the drag started, in physical pixels.
     drag_delta: Vec2,
     /// The mouse wheel movement over the widget. It needs `ItemFlags::scroll_target`, and `ItemFlags::clickable` or

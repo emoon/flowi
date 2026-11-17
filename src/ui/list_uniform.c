@@ -23,6 +23,7 @@ typedef struct ListUniformState {
     f64 scroll_offset;    // Current scroll position (pixels)
     f64 scroll_target;    // Target for smooth scrolling
     f32 container_height; // Actual container height from previous frame
+    f32 content_width;    // Width rows get (container width minus the scrollbar reserve) from previous frame
 } ListUniformState;
 
 struct FlListUniformContext {
@@ -43,6 +44,7 @@ struct FlListUniformContext {
     f32 viewport_height;
     f64 content_height;
     bool scrollbar_engaged;
+    f32 bar_reserve; // Right padding the container took this frame for the scrollbar
 
     // Current item state (during item_begin/item_end)
     bool in_item;
@@ -198,6 +200,7 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
 
     bool has_bar = opts.scrollbar_mode != FlScrollbarDisplayMode_Never && max_scroll > 0.0;
     f32 bar_reserve = has_bar ? ui_scroll_overlay_bar_reserve() : 0.0f;
+    self->bar_reserve = bar_reserve;
 
     fl_layout_start(layout_id);
     // Track the container so list_uniform_end can read its measured height from item_state.
@@ -246,6 +249,15 @@ void list_uniform_end(FlListUniformContext* self) {
     if (state.found && state.size.y > 0.0f) {
         self->current_state->container_height = state.size.y;
     }
+    if (state.found && state.size.x > 0.0f) {
+        self->current_state->content_width
+            = state.size.x - ui_scale_and_snap(self->bar_reserve, self->ui_ctx->ui_scale);
+    }
+}
+
+f32 list_uniform_content_width(FlListUniformContext* self, FlString id) {
+    ListUniformState* state = hashmap_string_get(&self->states, id);
+    return state != nullptr ? state->content_width : 0.0f;
 }
 
 bool list_uniform_scrollbar_engaged(const FlListUniformContext* self) {

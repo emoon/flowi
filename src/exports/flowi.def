@@ -46,6 +46,8 @@ EXPORTS
     fl_background_set_clear_color
     fl_button_image_impl
     fl_button_impl
+    fl_cell_begin
+    fl_cell_end
     fl_checkbox_impl
     fl_chip_impl
     fl_consume_nav_down
@@ -393,6 +395,7 @@ EXPORTS
     fl_text_input_create
     fl_text_input_destroy
     fl_text_input_get_text
+    fl_text_input_request_focus
     fl_text_input_set_text
     fl_text_input_show
     fl_text_input_show_impl

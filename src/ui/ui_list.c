@@ -22,6 +22,7 @@
 #include <ui/ui_theme.h>
 #include <flowi/ui/item_behavior.h>
 #include "layout.h"
+#include "pixel_snap.h"
 #include "ui.h"
 
 #define LIST_ROW_DEFAULT_HEIGHT 32.0f // Fallback row height when the config leaves it unset
@@ -116,6 +117,10 @@ static void list_reset_frame(FlListContext* self, const ListBeginArgs* args) {
     self->disable_reorder = args->disable_reorder;
     self->key_target_row = args->key_target_row;
     self->context_menu_id = 0;
+    self->context_menu_cell = 0;
+    self->header_clicked_column = 0;
+    self->resized_column = 0;
+    self->resized_width = 0.0f;
     self->current_id = args->id;
     self->current_clay_id = ui_layout_id_to_clay_id(args->id);
     self->rows = args->rows;
@@ -123,6 +128,7 @@ static void list_reset_frame(FlListContext* self, const ListBeginArgs* args) {
     self->activated_id = 0;
     self->focused_id = 0;
     self->frame_row_pressed = false;
+    self->frame_header_pressed = false;
     self->nav_up_edge = false;
     self->nav_down_edge = false;
     self->suppress_drag_visuals = args->config.suppress_drag_visuals;
@@ -177,6 +183,8 @@ FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     self->current_row_height = row_height;
     self->current_row_px = list_uniform_row_px(self->ui_ctx, row_height);
     self->current_gap_px = list_uniform_gap_px(self->ui_ctx, gap);
+
+    list_header_begin(self, st, &args.config, row_height);
 
     // list_uniform provides the scroll engine and uniform-height layout container; the ordered-id count is the
     // virtualization total.
@@ -256,6 +264,7 @@ static void list_record_signal(FlListContext* self, u64 stable_id, FlSignal sign
     // context menu at the cursor (the declarative face's menu hook; also available to the scoped face).
     if (signal.right_clicked) {
         self->context_menu_id = stable_id;
+        self->context_menu_cell = signal.cell;
     }
     if (signal.pressed) {
         list_claim_press(self);
@@ -326,11 +335,14 @@ FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
     bool selected = (self->set != nullptr) && selection_set_contains(self->set, stable_id);
 
     list_open_row_wrapper(self, item_id, stable_id, selected);
+    self->cell_cursor = 0.0f;
+    self->cell_next_index = 0;
 
     // Read this row's interaction off the wrapper's previous-frame rect (hover/click/double-click/right-click),
     // then stamp selected from membership so it flows out on the row's FlSignal.
     FlSignal signal = fl_item_behavior(item_id, LIST_ITEM_FLAGS);
     signal.selected = selected;
+    signal.cell = list_row_cell_under_mouse(self, item_id);
     list_record_signal(self, stable_id, signal);
 
     // A click that concluded a drag-reorder is suppressed (frame_drag_active) so the drop does not also re-select.
@@ -367,14 +379,18 @@ static bool list_empty_space_press_focuses(FlListContext* self) {
 // (frame_row_pressed) and a press on empty list space inside the viewport (the press that arms the marquee), so
 // starting a rubber-band gesture does not blur the very list being swept.
 static void list_update_focus_from_press(FlListContext* self, ListState* st) {
-    if (!self->ui_ctx->mouse_pressed_this_frame) {
+    if (!self->ui_ctx->mouse_pressed_this_frame || list_press_on_focused_widget(self)) {
         return;
     }
-    st->has_focus = self->frame_row_pressed || list_empty_space_press_focuses(self);
+    if (self->frame_header_pressed) {
+        self->ui_ctx->focused_id = self->current_clay_id;
+    }
+    st->has_focus = self->frame_row_pressed || self->frame_header_pressed || list_empty_space_press_focuses(self);
 }
 
 FlListResult list_end_impl(FlListContext* self) {
     list_uniform_end(self->ui_ctx->list_uniform_ctx);
+    list_header_end(self);
 
     ListState* st = list_state_get(self, self->current_clay_id);
 
@@ -404,6 +420,7 @@ FlListResult list_end_impl(FlListContext* self) {
         .activated_id = self->activated_id,
         .focused_id = self->focused_id,
         .context_menu_id = self->context_menu_id,
+        .context_menu_cell = self->context_menu_cell,
         .requests = self->requests,
         .request_count = self->req_count,
         .nav_up_edge = self->nav_up_edge,
@@ -414,6 +431,11 @@ FlListResult list_end_impl(FlListContext* self) {
         .drag_target_id = self->drag_target_id,
         .drag_from_count = self->drag_from_count,
         .drag_rel = self->drag_rel,
+        .header_clicked_column = self->header_clicked_column,
+        .resized_column = self->resized_column,
+        .resized_width = self->resized_width,
+        .column_widths = self->column_widths,
+        .column_width_count = self->result_width_count,
     };
 }
 
@@ -488,11 +510,11 @@ FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelect
 
 FlListRange fl_list_begin(FlLayoutId id, const u64* ordered_ids, u32 count, FlSelectionSet* set, FlListConfig config) {
     return list_begin_impl(g_ui_ctx->ui_list_ctx, (ListBeginArgs) {
-                                                          .id = id,
-                                                          .rows = list_rows_from_ids(ordered_ids, config.labels, count),
-                                                          .set = set,
-                                                          .config = config,
-                                                      });
+                                                      .id = id,
+                                                      .rows = list_rows_from_ids(ordered_ids, config.labels, count),
+                                                      .set = set,
+                                                      .config = config,
+                                                  });
 }
 
 FlSignal fl_list_item_begin(u64 stable_id) {

@@ -255,6 +255,12 @@ typedef struct FlTextInputConfig {
     float min_width;
     // Whether the input shows a character count, such as "15/100". It needs `max_length`.
     bool show_character_count;
+    // Whether the input has no border, background or padding and fills the box it is in.
+    //
+    // Use it to edit a value in place, such as in a `Cell`. `min_width` is not used.
+    //
+    // While a borderless input has focus, Up and Down do not move focus to another widget.
+    bool borderless;
     // The settings shared by every widget.
     FlWidgetConfig widget;
 } FlTextInputConfig;
