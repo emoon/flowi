@@ -132,6 +132,30 @@ static u64 length_without_trailing_slashes(FlString s) {
     return length;
 }
 
+// Offset where the child name starts, or 0 when path is not under the root.
+static u64 child_name_start(FlString watch_root, u64 root_length, FlString path) {
+    // A root of "/" already ends with the separator.
+    if (watch_root.data[root_length - 1] == '/') {
+        return root_length;
+    }
+
+    // Sibling with the root as a name prefix, e.g. "/a/bc" under "/a/b"
+    if (path.data[root_length] != '/') {
+        return 0;
+    }
+
+    return root_length + 1;
+}
+
+static bool has_no_separator(FlString path, u64 from, u64 to) {
+    for (u64 i = from; i < to; ++i) {
+        if (path.data[i] == '/') {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool file_watcher_path_is_direct_child(FlString watch_root, FlString path) {
     u64 root_length = length_without_trailing_slashes(watch_root);
     u64 path_length = length_without_trailing_slashes(path);
@@ -149,90 +173,24 @@ bool file_watcher_path_is_direct_child(FlString watch_root, FlString path) {
         return true;
     }
 
-    // Skip the separator between root and child; a root of "/" already ends with one.
-    u64 name_start = root_length;
-    if (watch_root.data[root_length - 1] != '/') {
-        if (path.data[root_length] != '/') {
-            return false; // Sibling with the root as a name prefix, e.g. "/a/bc" under "/a/b"
-        }
-        name_start = root_length + 1;
-    }
-
-    if (name_start >= path_length) {
+    u64 name_start = child_name_start(watch_root, root_length, path);
+    if (name_start == 0 || name_start >= path_length) {
         return false;
     }
 
-    // Direct child: no further separator inside the name component
-    for (u64 i = name_start; i < path_length; ++i) {
-        if (path.data[i] == '/') {
-            return false;
-        }
-    }
-
-    return true;
+    return has_no_separator(path, name_start, path_length);
 }
 
-void add_file_change(FileWatcherState* watcher, FlString path, FlString old_path, u32 change_types, bool is_directory) {
-    if (!watcher || !watcher->is_active) {
-        return;
-    }
-
-    // A moved file also counts as modified: editor safe-save replaces files via rename
+// A moved file also counts as modified: editor safe-save replaces files via rename
+static u32 effective_change_types(u32 change_types, bool is_directory) {
     if ((change_types & FlFileChangeType_Moved) && !is_directory) {
-        change_types |= FlFileChangeType_Modified;
+        return change_types | FlFileChangeType_Modified;
     }
+    return change_types;
+}
 
-    u64 timestamp = get_current_time_us_os();
-
-    // Called from platform threads, e.g. the dispatch queue on macOS.
-    mutex_lock(&watcher->changes_lock);
-
-    // Try to coalesce with recent changes to the same path
-    for_count(i, watcher->change_count) {
-        u32 idx = (watcher->change_tail + i) % watcher->change_capacity;
-        FileChange* existing = &watcher->changes[idx];
-
-        if (fl_string_equals(existing->path, path)
-            && (timestamp - existing->timestamp) < FILE_WATCHER_COALESCE_WINDOW_US) {
-            existing->change_types |= change_types;
-            existing->timestamp = timestamp;
-
-            FileChange callback_change = *existing;
-            CallbackRegistration matched[FILE_WATCHER_MAX_CALLBACKS];
-            u32 matched_count = snapshot_matching_callbacks(watcher, path, matched);
-            mutex_unlock(&watcher->changes_lock);
-
-            // Invoke callbacks outside lock to avoid deadlock
-            for_count(j, matched_count) {
-                matched[j].callback(&callback_change, matched[j].user_data);
-            }
-            return;
-        }
-    }
-
-    if (watcher->change_count >= watcher->change_capacity) {
-        if (!watcher->has_overflow) {
-            watcher->has_overflow = true;
-            logc_error(FW_ID, "FileWatcher[%u]: Change buffer overflow - some events lost", watcher->handle);
-        }
-        mutex_unlock(&watcher->changes_lock);
-        return;
-    }
-
-    FileChange* change = &watcher->changes[watcher->change_head];
-
-    // Event strings live in the per-watcher arena so they can be reclaimed when the ring
-    // drains; changes_lock (already held) guards both the ring and the arena.
-    change->path = fl_string_copy(watcher->changes_arena, path);
-    change->old_path = fl_string_copy(watcher->changes_arena, old_path);
-
-    change->change_types = change_types;
-    change->timestamp = timestamp;
-    change->is_directory = is_directory;
-
-    watcher->change_head = (watcher->change_head + 1) % watcher->change_capacity;
-    watcher->change_count++;
-
+// Must be called with watcher->changes_lock held; releases it before invoking callbacks.
+static void unlock_and_notify(FileWatcherState* watcher, FlString path, const FileChange* change) {
     FileChange callback_change = *change;
     CallbackRegistration matched[FILE_WATCHER_MAX_CALLBACKS];
     u32 matched_count = snapshot_matching_callbacks(watcher, path, matched);
@@ -244,46 +202,99 @@ void add_file_change(FileWatcherState* watcher, FlString path, FlString old_path
     }
 }
 
-FlFileWatcherHandle file_watcher_start(FlString path, FlFileWatcherConfig config) {
-    FileWatcherRegistry* registry = get_file_watcher_registry();
+// Must be called with watcher->changes_lock held.
+static FileChange* find_coalescible_change(FileWatcherState* watcher, FlString path, u64 timestamp) {
+    for_count(i, watcher->change_count) {
+        u32 idx = (watcher->change_tail + i) % watcher->change_capacity;
+        FileChange* existing = &watcher->changes[idx];
 
-    // The registry comes up with the foundation, so a watch started before fl_init has no arena
-    // to allocate from and no lock to take.
-    FL_VALIDATE_RET(registry->arena != nullptr, FL_FILE_WATCHER_INVALID);
+        if (fl_string_equals(existing->path, path)
+            && (timestamp - existing->timestamp) < FILE_WATCHER_COALESCE_WINDOW_US) {
+            return existing;
+        }
+    }
+    return nullptr;
+}
 
-    if (!file_exists_os(path) && !file_directory_exists_os(path)) {
-        logc_error(FW_ID, "Path does not exist: %.*s", (int)path.length, path.data);
-        return FL_FILE_WATCHER_INVALID;
+// Must be called with watcher->changes_lock held and room in the ring.
+static FileChange* append_change(FileWatcherState* watcher, const FileChange* source) {
+    FileChange* change = &watcher->changes[watcher->change_head];
+
+    // Event strings live in the per-watcher arena so they can be reclaimed when the ring
+    // drains; changes_lock (already held) guards both the ring and the arena.
+    *change = *source;
+    change->path = fl_string_copy(watcher->changes_arena, source->path);
+    change->old_path = fl_string_copy(watcher->changes_arena, source->old_path);
+
+    watcher->change_head = (watcher->change_head + 1) % watcher->change_capacity;
+    watcher->change_count++;
+    return change;
+}
+
+void add_file_change(FileWatcherState* watcher, FlString path, FlString old_path, u32 change_types, bool is_directory) {
+    if (!watcher || !watcher->is_active) {
+        return;
     }
 
-    // The lock protects handle allocation, arena allocations, and watcher array modification
-    mutex_lock(&registry->lock);
+    change_types = effective_change_types(change_types, is_directory);
+    u64 timestamp = get_current_time_us_os();
 
-    // Reuse a tombstoned slot (handle == FL_FILE_WATCHER_INVALID) before growing the array.
-    FileWatcherState* watcher = nullptr;
+    // Called from platform threads, e.g. the dispatch queue on macOS.
+    mutex_lock(&watcher->changes_lock);
+
+    FileChange* existing = find_coalescible_change(watcher, path, timestamp);
+    if (existing) {
+        existing->change_types |= change_types;
+        existing->timestamp = timestamp;
+        unlock_and_notify(watcher, path, existing);
+        return;
+    }
+
+    if (watcher->change_count >= watcher->change_capacity) {
+        if (!watcher->has_overflow) {
+            watcher->has_overflow = true;
+            logc_error(FW_ID, "FileWatcher[%u]: Change buffer overflow - some events lost", watcher->handle);
+        }
+        mutex_unlock(&watcher->changes_lock);
+        return;
+    }
+
+    FileChange incoming = {
+        .path = path,
+        .old_path = old_path,
+        .change_types = change_types,
+        .timestamp = timestamp,
+        .is_directory = is_directory,
+    };
+    FileChange* change = append_change(watcher, &incoming);
+    unlock_and_notify(watcher, path, change);
+}
+
+// Must be called with the registry lock held. Reuses a tombstoned slot (handle ==
+// FL_FILE_WATCHER_INVALID) before growing the array; returns nullptr when the array is full.
+static FileWatcherState* acquire_watcher_slot(FileWatcherRegistry* registry) {
     for_count(i, fixed_array_length(&registry->watchers)) {
         FileWatcherState* slot = fixed_array_get_ptr(&registry->watchers, i);
         ANALYZER_ASSUME_NONNULL(slot);
         if (slot->handle == FL_FILE_WATCHER_INVALID) {
-            watcher = slot;
-            break;
+            return slot;
         }
     }
 
-    if (!watcher) {
-        if (fixed_array_is_full(&registry->watchers)) {
-            u32 capacity = fixed_array_capacity(&registry->watchers);
-            mutex_unlock(&registry->lock);
-            logc_error(FW_ID, "Cannot start watcher: registry full (%u active), path: %.*s", capacity, (int)path.length,
-                       path.data);
-            return FL_FILE_WATCHER_INVALID;
-        }
-        FileWatcherState empty = { 0 };
-        fixed_array_add(&registry->watchers, empty);
-        watcher = fixed_array_get_ptr(&registry->watchers, fixed_array_length(&registry->watchers) - 1);
-        ANALYZER_ASSUME_NONNULL(watcher);
+    if (fixed_array_is_full(&registry->watchers)) {
+        return nullptr;
     }
 
+    FileWatcherState empty = { 0 };
+    fixed_array_add(&registry->watchers, empty);
+    FileWatcherState* watcher = fixed_array_get_ptr(&registry->watchers, fixed_array_length(&registry->watchers) - 1);
+    ANALYZER_ASSUME_NONNULL(watcher);
+    return watcher;
+}
+
+// Must be called with the registry lock held.
+static void init_watcher_state(FileWatcherRegistry* registry, FileWatcherState* watcher, FlString path,
+                               FlFileWatcherConfig config) {
     *watcher = (FileWatcherState) { 0 };
     watcher->handle = registry->next_handle++;
 
@@ -306,7 +317,33 @@ FlFileWatcherHandle file_watcher_start(FlString path, FlFileWatcherConfig config
     watcher->changes_arena = arena_new();
 
     watcher->next_callback_handle = 1; // Start from 1, 0 is invalid
+}
 
+FlFileWatcherHandle file_watcher_start(FlString path, FlFileWatcherConfig config) {
+    FileWatcherRegistry* registry = get_file_watcher_registry();
+
+    // The registry comes up with the foundation, so a watch started before fl_init has no arena
+    // to allocate from and no lock to take.
+    FL_VALIDATE_RET(registry->arena != nullptr, FL_FILE_WATCHER_INVALID);
+
+    if (!file_exists_os(path) && !file_directory_exists_os(path)) {
+        logc_error(FW_ID, "Path does not exist: %.*s", (int)path.length, path.data);
+        return FL_FILE_WATCHER_INVALID;
+    }
+
+    // The lock protects handle allocation, arena allocations, and watcher array modification
+    mutex_lock(&registry->lock);
+
+    FileWatcherState* watcher = acquire_watcher_slot(registry);
+    if (!watcher) {
+        u32 capacity = fixed_array_capacity(&registry->watchers);
+        mutex_unlock(&registry->lock);
+        logc_error(FW_ID, "Cannot start watcher: registry full (%u active), path: %.*s", capacity, (int)path.length,
+                   path.data);
+        return FL_FILE_WATCHER_INVALID;
+    }
+
+    init_watcher_state(registry, watcher, path, config);
     FlFileWatcherHandle handle = watcher->handle;
 
     mutex_unlock(&registry->lock);

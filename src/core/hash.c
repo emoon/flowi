@@ -63,25 +63,104 @@ u64 hash_sha1_chunk_count(u64 size, u32* out_tail_bytes) {
     return chunk_count;
 }
 
+static void sha1_fill_tail(uint8_t* datatail, uint32_t tailbytes, uint64_t databits) {
+    // Add bit '1' to end of message (big-endian)
+    // Add 64-bit message length in bits at very end (big-endian)
+    datatail[0] = 0x80;
+    for (uint32_t i = 0; i < 8; i++) {
+        datatail[tailbytes - 1 - i] = (uint8_t)(databits >> (i * 8) & 0xFF);
+    }
+}
+
+typedef struct Sha1Message {
+    const uint8_t* data;
+    size_t databytes;
+    const uint8_t* datatail;
+} Sha1Message;
+
+// Break one 512-bit chunk into sixteen 32-bit, big endian words, drawing from the message and then the padded tail
+static void sha1_load_words(uint32_t* W, const Sha1Message* msg, uint64_t* didx) {
+    memset(W, 0, 80 * sizeof(uint32_t));
+
+    for (uint32_t widx = 0; widx <= 15; widx++) {
+        int32_t wcount = 24;
+
+        // Copy byte-per byte from specified buffer
+        while (*didx < msg->databytes && wcount >= 0) {
+            W[widx] += (((uint32_t)msg->data[*didx]) << wcount);
+            (*didx)++;
+            wcount -= 8;
+        }
+        // Fill out W with padding as needed
+        while (wcount >= 0) {
+            W[widx] += (((uint32_t)msg->datatail[*didx - msg->databytes]) << wcount);
+            (*didx)++;
+            wcount -= 8;
+        }
+    }
+}
+
+// Extend the sixteen 32-bit words into eighty 32-bit words
+static void sha1_extend_words(uint32_t* W) {
+    for (uint32_t widx = 16; widx <= 31; widx++) {
+        W[widx] = SHA1ROTATELEFT((W[widx - 3] ^ W[widx - 8] ^ W[widx - 14] ^ W[widx - 16]), 1);
+    }
+    for (uint32_t widx = 32; widx <= 79; widx++) {
+        W[widx] = SHA1ROTATELEFT((W[widx - 6] ^ W[widx - 16] ^ W[widx - 28] ^ W[widx - 32]), 2);
+    }
+}
+
+static uint32_t sha1_round_function(uint32_t idx, uint32_t b, uint32_t c, uint32_t d) {
+    if (idx <= 19) {
+        return (b & c) | ((~b) & d);
+    }
+    if (idx <= 59 && idx >= 40) {
+        return (b & c) | (b & d) | (c & d);
+    }
+    return b ^ c ^ d;
+}
+
+static uint32_t sha1_round_constant(uint32_t idx) {
+    static const uint32_t constants[] = { 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xCA62C1D6 };
+    return constants[idx / 20];
+}
+
+static void sha1_compress_chunk(uint32_t* H, const uint32_t* W) {
+    uint32_t a = H[0];
+    uint32_t b = H[1];
+    uint32_t c = H[2];
+    uint32_t d = H[3];
+    uint32_t e = H[4];
+
+    for (uint32_t idx = 0; idx <= 79; idx++) {
+        uint32_t temp = SHA1ROTATELEFT(a, 5) + sha1_round_function(idx, b, c, d) + e + sha1_round_constant(idx) + W[idx];
+        e = d;
+        d = c;
+        c = SHA1ROTATELEFT(b, 30);
+        b = a;
+        a = temp;
+    }
+
+    H[0] += a;
+    H[1] += b;
+    H[2] += c;
+    H[3] += d;
+    H[4] += e;
+}
+
+static void sha1_store_digest(uint8_t* digest, const uint32_t* H) {
+    for (uint32_t idx = 0; idx < 5; idx++) {
+        digest[idx * 4 + 0] = (uint8_t)(H[idx] >> 24);
+        digest[idx * 4 + 1] = (uint8_t)(H[idx] >> 16);
+        digest[idx * 4 + 2] = (uint8_t)(H[idx] >> 8);
+        digest[idx * 4 + 3] = (uint8_t)(H[idx]);
+    }
+}
+
 static int sha1digest(uint8_t* digest, char* hexdigest, const uint8_t* data, size_t databytes) {
     uint32_t W[80];
     uint32_t H[] = { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0 };
-    uint32_t a;
-    uint32_t b;
-    uint32_t c;
-    uint32_t d;
-    uint32_t e;
-    uint32_t f = 0;
-    uint32_t k = 0;
-
-    uint32_t idx;
-    uint64_t lidx;
-    uint32_t widx;
     uint64_t didx = 0;
-
-    int32_t wcount;
-    uint32_t temp;
-    uint64_t databits = ((uint64_t)databytes) * 8;
     uint32_t tailbytes = 0;
     uint64_t loopcount = hash_sha1_chunk_count((uint64_t)databytes, &tailbytes);
     uint8_t datatail[128] = { 0 };
@@ -93,94 +172,19 @@ static int sha1digest(uint8_t* digest, char* hexdigest, const uint8_t* data, siz
     // nullptr data with zero length is the empty message.
     FL_VALIDATE_RET(data != nullptr || databytes == 0, -1);
 
-    // Pre-processing of data tail (includes padding to fill out 512-bit chunk):
-    // Add bit '1' to end of message (big-endian)
-    // Add 64-bit message length in bits at very end (big-endian)
-    datatail[0] = 0x80;
-    datatail[tailbytes - 8] = (uint8_t)(databits >> 56 & 0xFF);
-    datatail[tailbytes - 7] = (uint8_t)(databits >> 48 & 0xFF);
-    datatail[tailbytes - 6] = (uint8_t)(databits >> 40 & 0xFF);
-    datatail[tailbytes - 5] = (uint8_t)(databits >> 32 & 0xFF);
-    datatail[tailbytes - 4] = (uint8_t)(databits >> 24 & 0xFF);
-    datatail[tailbytes - 3] = (uint8_t)(databits >> 16 & 0xFF);
-    datatail[tailbytes - 2] = (uint8_t)(databits >> 8 & 0xFF);
-    datatail[tailbytes - 1] = (uint8_t)(databits >> 0 & 0xFF);
+    // Pre-processing of data tail (includes padding to fill out 512-bit chunk)
+    sha1_fill_tail(datatail, tailbytes, ((uint64_t)databytes) * 8);
 
-    // Process each 512-bit chunk
-    for (lidx = 0; lidx < loopcount; lidx++) {
-        // Compute all elements in W
-        memset(W, 0, 80 * sizeof(uint32_t));
+    Sha1Message msg = { data, databytes, datatail };
 
-        // Break 512-bit chunk into sixteen 32-bit, big endian words
-        for (widx = 0; widx <= 15; widx++) {
-            wcount = 24;
-
-            // Copy byte-per byte from specified buffer
-            while (didx < databytes && wcount >= 0) {
-                W[widx] += (((uint32_t)data[didx]) << wcount);
-                didx++;
-                wcount -= 8;
-            }
-            // Fill out W with padding as needed
-            while (wcount >= 0) {
-                W[widx] += (((uint32_t)datatail[didx - databytes]) << wcount);
-                didx++;
-                wcount -= 8;
-            }
-        }
-
-        // Extend the sixteen 32-bit words into eighty 32-bit words
-        for (widx = 16; widx <= 31; widx++) {
-            W[widx] = SHA1ROTATELEFT((W[widx - 3] ^ W[widx - 8] ^ W[widx - 14] ^ W[widx - 16]), 1);
-        }
-        for (widx = 32; widx <= 79; widx++) {
-            W[widx] = SHA1ROTATELEFT((W[widx - 6] ^ W[widx - 16] ^ W[widx - 28] ^ W[widx - 32]), 2);
-        }
-
-        // Main loop
-        a = H[0];
-        b = H[1];
-        c = H[2];
-        d = H[3];
-        e = H[4];
-
-        for (idx = 0; idx <= 79; idx++) {
-            if (idx <= 19) {
-                f = (b & c) | ((~b) & d);
-                k = 0x5A827999;
-            } else if (idx >= 20 && idx <= 39) {
-                f = b ^ c ^ d;
-                k = 0x6ED9EBA1;
-            } else if (idx >= 40 && idx <= 59) {
-                f = (b & c) | (b & d) | (c & d);
-                k = 0x8F1BBCDC;
-            } else if (idx >= 60 && idx <= 79) {
-                f = b ^ c ^ d;
-                k = 0xCA62C1D6;
-            }
-            temp = SHA1ROTATELEFT(a, 5) + f + e + k + W[idx];
-            e = d;
-            d = c;
-            c = SHA1ROTATELEFT(b, 30);
-            b = a;
-            a = temp;
-        }
-
-        H[0] += a;
-        H[1] += b;
-        H[2] += c;
-        H[3] += d;
-        H[4] += e;
+    for (uint64_t lidx = 0; lidx < loopcount; lidx++) {
+        sha1_load_words(W, &msg, &didx);
+        sha1_extend_words(W);
+        sha1_compress_chunk(H, W);
     }
 
-    // Store binary digest in supplied buffer
     if (digest) {
-        for (idx = 0; idx < 5; idx++) {
-            digest[idx * 4 + 0] = (uint8_t)(H[idx] >> 24);
-            digest[idx * 4 + 1] = (uint8_t)(H[idx] >> 16);
-            digest[idx * 4 + 2] = (uint8_t)(H[idx] >> 8);
-            digest[idx * 4 + 3] = (uint8_t)(H[idx]);
-        }
+        sha1_store_digest(digest, H);
     }
 
     // Store hex version of digest in supplied buffer
@@ -207,16 +211,47 @@ void hash_sha1_hex(const u8* data, u64 size, char out[41]) {
 // The algorithm is due to Ron Rivest. This code was written by Colin Plumb
 // in 1993, no copyright is claimed. This code is in the public domain.
 
-static void md5_transform(u32 buf[4], const u32 in[16]);
-
 // The four core functions
 #define MD5_F1(x, y, z) (z ^ (x & (y ^ z)))
 #define MD5_F2(x, y, z) MD5_F1(z, x, y)
 #define MD5_F3(x, y, z) (x ^ y ^ z)
 #define MD5_F4(x, y, z) (y ^ (x | ~z))
 
-// Central step in the MD5 algorithm
-#define MD5_STEP(f, w, x, y, z, data, s) (w += f(x, y, z) + data, w = w << s | w >> (32 - s), w += x)
+static const u32 md5_k[64] = {
+    0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
+    0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
+    0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
+    0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
+    0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa,
+    0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
+    0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed,
+    0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a,
+    0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c,
+    0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
+    0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05,
+    0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
+    0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039,
+    0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
+    0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
+    0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
+};
+
+static const u8 md5_shift[4][4] = { { 7, 12, 17, 22 }, { 5, 9, 14, 20 }, { 4, 11, 16, 23 }, { 6, 10, 15, 21 } };
+
+static u32 md5_mix(u32 round, u32 x, u32 y, u32 z) {
+    switch (round) {
+        case 0: return MD5_F1(x, y, z);
+        case 1: return MD5_F2(x, y, z);
+        case 2: return MD5_F3(x, y, z);
+        default: return MD5_F4(x, y, z);
+    }
+}
+
+static u32 md5_word_index(u32 round, u32 step) {
+    static const u32 mul[4] = { 1, 5, 3, 7 };
+    static const u32 add[4] = { 0, 1, 5, 0 };
+    return (mul[round] * step + add[round]) % 16;
+}
 
 static void md5_transform(u32 buf[4], const u32 in[16]) {
     u32 a = buf[0];
@@ -224,73 +259,16 @@ static void md5_transform(u32 buf[4], const u32 in[16]) {
     u32 c = buf[2];
     u32 d = buf[3];
 
-    MD5_STEP(MD5_F1, a, b, c, d, in[0] + 0xd76aa478, 7);
-    MD5_STEP(MD5_F1, d, a, b, c, in[1] + 0xe8c7b756, 12);
-    MD5_STEP(MD5_F1, c, d, a, b, in[2] + 0x242070db, 17);
-    MD5_STEP(MD5_F1, b, c, d, a, in[3] + 0xc1bdceee, 22);
-    MD5_STEP(MD5_F1, a, b, c, d, in[4] + 0xf57c0faf, 7);
-    MD5_STEP(MD5_F1, d, a, b, c, in[5] + 0x4787c62a, 12);
-    MD5_STEP(MD5_F1, c, d, a, b, in[6] + 0xa8304613, 17);
-    MD5_STEP(MD5_F1, b, c, d, a, in[7] + 0xfd469501, 22);
-    MD5_STEP(MD5_F1, a, b, c, d, in[8] + 0x698098d8, 7);
-    MD5_STEP(MD5_F1, d, a, b, c, in[9] + 0x8b44f7af, 12);
-    MD5_STEP(MD5_F1, c, d, a, b, in[10] + 0xffff5bb1, 17);
-    MD5_STEP(MD5_F1, b, c, d, a, in[11] + 0x895cd7be, 22);
-    MD5_STEP(MD5_F1, a, b, c, d, in[12] + 0x6b901122, 7);
-    MD5_STEP(MD5_F1, d, a, b, c, in[13] + 0xfd987193, 12);
-    MD5_STEP(MD5_F1, c, d, a, b, in[14] + 0xa679438e, 17);
-    MD5_STEP(MD5_F1, b, c, d, a, in[15] + 0x49b40821, 22);
-
-    MD5_STEP(MD5_F2, a, b, c, d, in[1] + 0xf61e2562, 5);
-    MD5_STEP(MD5_F2, d, a, b, c, in[6] + 0xc040b340, 9);
-    MD5_STEP(MD5_F2, c, d, a, b, in[11] + 0x265e5a51, 14);
-    MD5_STEP(MD5_F2, b, c, d, a, in[0] + 0xe9b6c7aa, 20);
-    MD5_STEP(MD5_F2, a, b, c, d, in[5] + 0xd62f105d, 5);
-    MD5_STEP(MD5_F2, d, a, b, c, in[10] + 0x02441453, 9);
-    MD5_STEP(MD5_F2, c, d, a, b, in[15] + 0xd8a1e681, 14);
-    MD5_STEP(MD5_F2, b, c, d, a, in[4] + 0xe7d3fbc8, 20);
-    MD5_STEP(MD5_F2, a, b, c, d, in[9] + 0x21e1cde6, 5);
-    MD5_STEP(MD5_F2, d, a, b, c, in[14] + 0xc33707d6, 9);
-    MD5_STEP(MD5_F2, c, d, a, b, in[3] + 0xf4d50d87, 14);
-    MD5_STEP(MD5_F2, b, c, d, a, in[8] + 0x455a14ed, 20);
-    MD5_STEP(MD5_F2, a, b, c, d, in[13] + 0xa9e3e905, 5);
-    MD5_STEP(MD5_F2, d, a, b, c, in[2] + 0xfcefa3f8, 9);
-    MD5_STEP(MD5_F2, c, d, a, b, in[7] + 0x676f02d9, 14);
-    MD5_STEP(MD5_F2, b, c, d, a, in[12] + 0x8d2a4c8a, 20);
-
-    MD5_STEP(MD5_F3, a, b, c, d, in[5] + 0xfffa3942, 4);
-    MD5_STEP(MD5_F3, d, a, b, c, in[8] + 0x8771f681, 11);
-    MD5_STEP(MD5_F3, c, d, a, b, in[11] + 0x6d9d6122, 16);
-    MD5_STEP(MD5_F3, b, c, d, a, in[14] + 0xfde5380c, 23);
-    MD5_STEP(MD5_F3, a, b, c, d, in[1] + 0xa4beea44, 4);
-    MD5_STEP(MD5_F3, d, a, b, c, in[4] + 0x4bdecfa9, 11);
-    MD5_STEP(MD5_F3, c, d, a, b, in[7] + 0xf6bb4b60, 16);
-    MD5_STEP(MD5_F3, b, c, d, a, in[10] + 0xbebfbc70, 23);
-    MD5_STEP(MD5_F3, a, b, c, d, in[13] + 0x289b7ec6, 4);
-    MD5_STEP(MD5_F3, d, a, b, c, in[0] + 0xeaa127fa, 11);
-    MD5_STEP(MD5_F3, c, d, a, b, in[3] + 0xd4ef3085, 16);
-    MD5_STEP(MD5_F3, b, c, d, a, in[6] + 0x04881d05, 23);
-    MD5_STEP(MD5_F3, a, b, c, d, in[9] + 0xd9d4d039, 4);
-    MD5_STEP(MD5_F3, d, a, b, c, in[12] + 0xe6db99e5, 11);
-    MD5_STEP(MD5_F3, c, d, a, b, in[15] + 0x1fa27cf8, 16);
-    MD5_STEP(MD5_F3, b, c, d, a, in[2] + 0xc4ac5665, 23);
-
-    MD5_STEP(MD5_F4, a, b, c, d, in[0] + 0xf4292244, 6);
-    MD5_STEP(MD5_F4, d, a, b, c, in[7] + 0x432aff97, 10);
-    MD5_STEP(MD5_F4, c, d, a, b, in[14] + 0xab9423a7, 15);
-    MD5_STEP(MD5_F4, b, c, d, a, in[5] + 0xfc93a039, 21);
-    MD5_STEP(MD5_F4, a, b, c, d, in[12] + 0x655b59c3, 6);
-    MD5_STEP(MD5_F4, d, a, b, c, in[3] + 0x8f0ccc92, 10);
-    MD5_STEP(MD5_F4, c, d, a, b, in[10] + 0xffeff47d, 15);
-    MD5_STEP(MD5_F4, b, c, d, a, in[1] + 0x85845dd1, 21);
-    MD5_STEP(MD5_F4, a, b, c, d, in[8] + 0x6fa87e4f, 6);
-    MD5_STEP(MD5_F4, d, a, b, c, in[15] + 0xfe2ce6e0, 10);
-    MD5_STEP(MD5_F4, c, d, a, b, in[6] + 0xa3014314, 15);
-    MD5_STEP(MD5_F4, b, c, d, a, in[13] + 0x4e0811a1, 21);
-    MD5_STEP(MD5_F4, a, b, c, d, in[4] + 0xf7537e82, 6);
-    MD5_STEP(MD5_F4, d, a, b, c, in[11] + 0xbd3af235, 10);
-    MD5_STEP(MD5_F4, c, d, a, b, in[2] + 0x2ad7d2bb, 15);
-    MD5_STEP(MD5_F4, b, c, d, a, in[9] + 0xeb86d391, 21);
+    for_count(step, 64) {
+        u32 round = step / 16;
+        u32 sum = a + md5_mix(round, b, c, d) + md5_k[step] + in[md5_word_index(round, step % 16)];
+        u32 shift = md5_shift[round][step % 4];
+        u32 next_b = b + (sum << shift | sum >> (32 - shift));
+        a = d;
+        d = c;
+        c = b;
+        b = next_b;
+    }
 
     buf[0] += a;
     buf[1] += b;
@@ -302,7 +280,6 @@ static void md5_transform(u32 buf[4], const u32 in[16]) {
 #undef MD5_F2
 #undef MD5_F3
 #undef MD5_F4
-#undef MD5_STEP
 
 void hash_md5_init(Md5Context* ctx) {
     ctx->buf[0] = 0x67452301;
@@ -493,34 +470,27 @@ void fl_hash_sha256_update(Sha256Context* ctx, const u8* data, u64 size) {
     }
 }
 
-void fl_hash_sha256_final(Sha256Context* ctx, u8 out[32]) {
+static void sha256_pad_block(Sha256Context* ctx) {
     u32 i = ctx->datalen;
+    u32 pad_end = ctx->datalen < 56 ? 56 : 64;
 
-    // Pad whatever data is left in the buffer
-    if (ctx->datalen < 56) {
-        ctx->data[i++] = 0x80;
-        while (i < 56) {
-            ctx->data[i++] = 0x00;
-        }
-    } else {
-        ctx->data[i++] = 0x80;
-        while (i < 64) {
-            ctx->data[i++] = 0x00;
-        }
+    ctx->data[i++] = 0x80;
+    memset(ctx->data + i, 0x00, pad_end - i);
+
+    if (pad_end == 64) {
         sha256_transform(ctx, ctx->data);
         memset(ctx->data, 0, 56);
     }
+}
+
+void fl_hash_sha256_final(Sha256Context* ctx, u8 out[32]) {
+    sha256_pad_block(ctx);
 
     // Append total message length in bits (big-endian)
     ctx->bitcount += (u64)ctx->datalen * 8;
-    ctx->data[63] = (u8)(ctx->bitcount);
-    ctx->data[62] = (u8)(ctx->bitcount >> 8);
-    ctx->data[61] = (u8)(ctx->bitcount >> 16);
-    ctx->data[60] = (u8)(ctx->bitcount >> 24);
-    ctx->data[59] = (u8)(ctx->bitcount >> 32);
-    ctx->data[58] = (u8)(ctx->bitcount >> 40);
-    ctx->data[57] = (u8)(ctx->bitcount >> 48);
-    ctx->data[56] = (u8)(ctx->bitcount >> 56);
+    for (int k = 0; k < 8; ++k) {
+        ctx->data[63 - k] = (u8)(ctx->bitcount >> (k * 8));
+    }
     sha256_transform(ctx, ctx->data);
 
     // Output digest (big-endian)

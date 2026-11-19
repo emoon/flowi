@@ -71,10 +71,13 @@ FlString string_allocator_alloc(StringAllocator* self, u64 size) {
     return (FlString) { .data = ptr, .length = size };
 }
 
-void string_allocator_free(StringAllocator* self, FlString str) {
+// Static strings were not allocated here
+static bool is_owned_allocation(FlString str) {
+    return str.data && str.length != 0 && !str.is_static;
+}
 
-    // Static strings were not allocated here
-    if (!str.data || str.length == 0 || str.is_static) {
+void string_allocator_free(StringAllocator* self, FlString str) {
+    if (!is_owned_allocation(str)) {
         return;
     }
 

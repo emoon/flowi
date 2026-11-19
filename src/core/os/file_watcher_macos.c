@@ -19,6 +19,51 @@ typedef struct MacOSWatcherData {
     dispatch_queue_t queue;
 } MacOSWatcherData;
 
+static u32 change_types_from_flags(FSEventStreamEventFlags flags) {
+    u32 change_types = 0;
+
+    if (flags & kFSEventStreamEventFlagItemCreated) {
+        change_types |= FlFileChangeType_Created;
+    }
+    if (flags & kFSEventStreamEventFlagItemModified) {
+        change_types |= FlFileChangeType_Modified;
+    }
+    if (flags & kFSEventStreamEventFlagItemRemoved) {
+        change_types |= FlFileChangeType_Deleted;
+    }
+    if (flags & kFSEventStreamEventFlagItemRenamed) {
+        change_types |= FlFileChangeType_Moved;
+    }
+
+    return change_types;
+}
+
+static bool is_watched_kind(const FlFileWatcherConfig* config, bool is_directory) {
+    return is_directory ? config->watch_directories : config->watch_files;
+}
+
+static void handle_fsevent(FileWatcherState* state, FlString path, FSEventStreamEventFlags flags) {
+    // FSEvents delivers events for the whole subtree; drop anything below the
+    // immediate directory when the watch is non-recursive.
+    if (!state->config.recursive && !file_watcher_path_is_direct_child(state->watch_path, path)) {
+        return;
+    }
+
+    bool is_directory = (flags & kFSEventStreamEventFlagItemIsDir) != 0;
+    if (!is_watched_kind(&state->config, is_directory)) {
+        return;
+    }
+
+    u32 change_types = change_types_from_flags(flags);
+    if (change_types == 0) {
+        return;
+    }
+
+    logc_debug(FW_ID, "FileWatcher[%u]: Detected change: %.*s (types: 0x%x, dir: %s)", state->handle, (int)path.length,
+               path.data, change_types, is_directory ? "yes" : "no");
+    add_file_change(state, path, FL_S(""), change_types, is_directory);
+}
+
 static void fsevent_callback(ConstFSEventStreamRef stream_ref, void* callback_info, size_t num_events,
                              void* event_paths, const FSEventStreamEventFlags event_flags[],
                              const FSEventStreamEventId event_ids[]) {
@@ -33,78 +78,37 @@ static void fsevent_callback(ConstFSEventStreamRef stream_ref, void* callback_in
     char** paths = (char**)event_paths;
 
     for_count(i, num_events) {
-        FlString path = string_from_cstr(paths[i]);
-        u32 change_types = 0;
-        bool is_directory = false;
-
-        // FSEvents delivers events for the whole subtree; drop anything below the
-        // immediate directory when the watch is non-recursive.
-        if (!state->config.recursive && !file_watcher_path_is_direct_child(state->watch_path, path)) {
-            continue;
-        }
-
-        FSEventStreamEventFlags flags = event_flags[i];
-
-        if (flags & kFSEventStreamEventFlagItemCreated) {
-            change_types |= FlFileChangeType_Created;
-        }
-        if (flags & kFSEventStreamEventFlagItemModified) {
-            change_types |= FlFileChangeType_Modified;
-        }
-        if (flags & kFSEventStreamEventFlagItemRemoved) {
-            change_types |= FlFileChangeType_Deleted;
-        }
-        if (flags & kFSEventStreamEventFlagItemRenamed) {
-            change_types |= FlFileChangeType_Moved;
-        }
-
-        if (flags & kFSEventStreamEventFlagItemIsDir) {
-            is_directory = true;
-        }
-
-        if (is_directory && !state->config.watch_directories) {
-            continue;
-        }
-        if (!is_directory && !state->config.watch_files) {
-            continue;
-        }
-
-        if (change_types != 0) {
-            logc_debug(FW_ID, "FileWatcher[%u]: Detected change: %.*s (types: 0x%x, dir: %s)", state->handle,
-                       (int)path.length, path.data, change_types, is_directory ? "yes" : "no");
-            add_file_change(state, path, FL_S(""), change_types, is_directory);
-        }
+        handle_fsevent(state, string_from_cstr(paths[i]), event_flags[i]);
     }
 }
 
-FileWatcherError platform_start_watching(FileWatcherState* state) {
-    if (FW_ID == LOG_CHANNEL_INVALID) {
-        FW_ID = fl_log_register_channel(FL_S("FILE_WATCHER"));
-    }
+// FSEvents reports every path with its symlinks resolved, and $TMPDIR on macOS is reached through one
+// (/var -> /private/var). Canonicalize the root so the direct-child filter and the paths this
+// watcher reports use the same spelling as the events.
+static const char* canonicalize_watch_path(FileWatcherState* state, FlArena* temp_arena) {
+    const char* cstr_path = fl_string_to_cstr(temp_arena, state->watch_path);
 
-    arena_scratch_auto(temp);
-    const char* cstr_path = fl_string_to_cstr(temp.arena, state->watch_path);
-
-    // FSEvents reports every path with its symlinks resolved, and $TMPDIR on macOS is reached through one
-    // (/var -> /private/var). Canonicalize the root so the direct-child filter below and the paths this
-    // watcher reports use the same spelling as the events.
     char resolved[PATH_MAX];
-    if (realpath(cstr_path, resolved) != nullptr) {
-        state->watch_path = fl_string_copy(get_file_watcher_registry()->arena, string_from_cstr(resolved));
-        cstr_path = fl_string_to_cstr(temp.arena, state->watch_path);
+    if (realpath(cstr_path, resolved) == nullptr) {
+        return cstr_path;
     }
 
-    CFStringRef cf_path = CFStringCreateWithCString(nullptr, cstr_path, kCFStringEncodingUTF8);
+    state->watch_path = fl_string_copy(get_file_watcher_registry()->arena, string_from_cstr(resolved));
+    return fl_string_to_cstr(temp_arena, state->watch_path);
+}
 
+// Returns nullptr on failure.
+static FSEventStreamRef create_event_stream(FileWatcherState* state, const char* cstr_path) {
+    CFStringRef cf_path = CFStringCreateWithCString(nullptr, cstr_path, kCFStringEncodingUTF8);
     if (!cf_path) {
-        return FileWatcherError_SystemError;
+        return nullptr;
     }
 
     CFArrayRef paths_to_watch = CFArrayCreate(nullptr, (const void**)&cf_path, 1, &kCFTypeArrayCallBacks);
     CFRelease(cf_path);
 
     if (!paths_to_watch) {
-        return FileWatcherError_SystemError;
+        return nullptr;
     }
 
     FSEventStreamContext context = { 0 };
@@ -120,7 +124,18 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
                                                   kFSEventStreamEventIdSinceNow, 0.05, flags);
 
     CFRelease(paths_to_watch);
+    return stream;
+}
 
+FileWatcherError platform_start_watching(FileWatcherState* state) {
+    if (FW_ID == LOG_CHANNEL_INVALID) {
+        FW_ID = fl_log_register_channel(FL_S("FILE_WATCHER"));
+    }
+
+    arena_scratch_auto(temp);
+    const char* cstr_path = canonicalize_watch_path(state, temp.arena);
+
+    FSEventStreamRef stream = create_event_stream(state, cstr_path);
     if (!stream) {
         return FileWatcherError_SystemError;
     }
@@ -184,8 +199,15 @@ void platform_stop_watching(FileWatcherState* state) {
     logc_debug(FW_ID, "FileWatcher[%u]: macOS FSEvents watcher stopped", state->handle);
 }
 
+static bool is_pollable(const FileWatcherState* state) {
+    if (!state || !state->is_active) {
+        return false;
+    }
+    return state->platform_data != nullptr;
+}
+
 FileWatcherError platform_poll_changes(FileWatcherState* state) {
-    if (!state || !state->platform_data || !state->is_active) {
+    if (!is_pollable(state)) {
         return FileWatcherError_Success;
     }
 

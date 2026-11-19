@@ -78,6 +78,91 @@ static int read_cpu_max_freq(int cpu_id) {
     return freq_khz;
 }
 
+static void count_core(CpuTopology* topo, CpuInfo* cpu, CoreType type) {
+    cpu->type = type;
+
+    if (type == CoreType_Performance) {
+        topo->performance_count++;
+    } else {
+        topo->efficiency_count++;
+    }
+}
+
+static int max_frequency(const int* frequencies, int count) {
+    int max_freq = frequencies[0];
+
+    for_count(i, count) {
+        if (frequencies[i] > max_freq) {
+            max_freq = frequencies[i];
+        }
+    }
+
+    return max_freq;
+}
+
+// Cores within 10% of the max frequency are Performance, below that Efficiency. Cores without
+// frequency info stay Unknown.
+static void classify_by_threshold(CpuTopology* topo, int threshold) {
+    for_count(i, topo->count) {
+        CpuInfo* cpu = &topo->cpus[i];
+
+        if (cpu->max_freq_khz <= 0) {
+            continue;
+        }
+
+        count_core(topo, cpu, cpu->max_freq_khz < threshold ? CoreType_Efficiency : CoreType_Performance);
+
+        logc_debug(CPU_TOPOLOGY_ID, "CPU %d: %d KHz, type=%s", cpu->cpu_id, cpu->max_freq_khz,
+                   cpu->type == CoreType_Performance ? "Performance" : "Efficiency");
+    }
+}
+
+static void classify_single_frequency(CpuTopology* topo) {
+    for_count(i, topo->count) {
+        if (topo->cpus[i].max_freq_khz > 0) {
+            count_core(topo, &topo->cpus[i], CoreType_Performance);
+        }
+    }
+}
+
+// valid_freq_count == 0: no cpufreq at all, all cores stay CoreType_Unknown
+static void classify_cores(CpuTopology* topo, const int* frequencies, int valid_freq_count) {
+    if (valid_freq_count == 1) {
+        classify_single_frequency(topo);
+        return;
+    }
+
+    if (valid_freq_count > 1) {
+        int max_freq = max_frequency(frequencies, valid_freq_count);
+        int threshold = max_freq - (max_freq / 10);
+        logc_debug(CPU_TOPOLOGY_ID, "Max CPU frequency: %d KHz, threshold: %d KHz", max_freq, threshold);
+        classify_by_threshold(topo, threshold);
+    }
+}
+
+static int collect_online_cpus(CpuInfo* cpus, int* frequencies, int max_cpu_id, int* valid_freq_count) {
+    int online_count = 0;
+
+    for_count(i, max_cpu_id) {
+        if (!is_cpu_online(i)) {
+            continue;
+        }
+
+        int freq = read_cpu_max_freq(i);
+
+        cpus[online_count].cpu_id = i;
+        cpus[online_count].max_freq_khz = freq;
+        cpus[online_count].type = CoreType_Unknown;
+        online_count++;
+
+        if (freq > 0) {
+            frequencies[(*valid_freq_count)++] = freq;
+        }
+    }
+
+    return online_count;
+}
+
 CpuTopology cpu_query_topology(FlArena* arena) {
     ensure_log_channel();
 
@@ -94,25 +179,8 @@ CpuTopology cpu_query_topology(FlArena* arena) {
     arena_scratch_auto(temp);
     CpuInfo* temp_cpus = arena_alloc_array(temp.arena, CpuInfo, max_cpu_id);
     int* frequencies = arena_alloc_array(temp.arena, int, max_cpu_id);
-    int online_count = 0;
     int valid_freq_count = 0;
-
-    for_count(i, max_cpu_id) {
-        if (!is_cpu_online(i)) {
-            continue;
-        }
-
-        int freq = read_cpu_max_freq(i);
-
-        temp_cpus[online_count].cpu_id = i;
-        temp_cpus[online_count].max_freq_khz = freq;
-        temp_cpus[online_count].type = CoreType_Unknown;
-        online_count++;
-
-        if (freq > 0) {
-            frequencies[valid_freq_count++] = freq;
-        }
-    }
+    int online_count = collect_online_cpus(temp_cpus, frequencies, max_cpu_id, &valid_freq_count);
 
     if (online_count == 0) {
         logc_warning(CPU_TOPOLOGY_ID, "No online CPUs found");
@@ -123,44 +191,7 @@ CpuTopology cpu_query_topology(FlArena* arena) {
     result.count = online_count;
     memcpy(result.cpus, temp_cpus, (size_t)online_count * sizeof(CpuInfo));
 
-    if (valid_freq_count > 1) {
-        // Cores within 10% of the max frequency are Performance, below that Efficiency.
-        int max_freq = frequencies[0];
-        for_count(i, valid_freq_count) {
-            if (frequencies[i] > max_freq) {
-                max_freq = frequencies[i];
-            }
-        }
-
-        int threshold = max_freq - (max_freq / 10);
-        logc_debug(CPU_TOPOLOGY_ID, "Max CPU frequency: %d KHz, threshold: %d KHz", max_freq, threshold);
-
-        for_count(i, online_count) {
-            if (result.cpus[i].max_freq_khz <= 0) {
-                // No frequency info: the core stays Unknown.
-                continue;
-            }
-
-            if (result.cpus[i].max_freq_khz < threshold) {
-                result.cpus[i].type = CoreType_Efficiency;
-                result.efficiency_count++;
-            } else {
-                result.cpus[i].type = CoreType_Performance;
-                result.performance_count++;
-            }
-
-            logc_debug(CPU_TOPOLOGY_ID, "CPU %d: %d KHz, type=%s", result.cpus[i].cpu_id, result.cpus[i].max_freq_khz,
-                       result.cpus[i].type == CoreType_Performance ? "Performance" : "Efficiency");
-        }
-    } else if (valid_freq_count == 1) {
-        for_count(i, online_count) {
-            if (result.cpus[i].max_freq_khz > 0) {
-                result.cpus[i].type = CoreType_Performance;
-                result.performance_count++;
-            }
-        }
-    }
-    // valid_freq_count == 0: no cpufreq at all, all cores stay CoreType_Unknown
+    classify_cores(&result, frequencies, valid_freq_count);
 
     logc_info(CPU_TOPOLOGY_ID, "CPU topology: %d total (%d performance, %d efficiency, %d unknown)", result.count,
               result.performance_count, result.efficiency_count,

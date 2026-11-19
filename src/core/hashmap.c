@@ -26,16 +26,15 @@ static u64 next_power_of_2(u64 n) {
     return power;
 }
 
-void hashmap_init_raw(HashMapBase* self, FlArena* arena, u64 capacity, u64 key_size, u64 value_size, u64 key_offset,
-                      u64 value_offset, u64 node_size) {
+void hashmap_init_raw(HashMapBase* self, FlArena* arena, u64 capacity, const HashMapLayout* layout) {
     self->arena = arena;
     self->capacity = next_power_of_2(capacity); // Ensure power-of-2 for bitwise indexing
     self->count = 0;
-    self->key_size = key_size;
-    self->value_size = value_size;
-    self->key_offset = key_offset;
-    self->value_offset = value_offset;
-    self->node_size = node_size;
+    self->key_size = layout->key_size;
+    self->value_size = layout->value_size;
+    self->key_offset = layout->key_offset;
+    self->value_offset = layout->value_offset;
+    self->node_size = layout->node_size;
     self->buckets = arena_alloc_array_zero(arena, HashMapBucket, self->capacity);
     self->free_nodes.first = nullptr;
     self->free_nodes.last = nullptr;
@@ -83,25 +82,32 @@ static void hashmap_free_node(HashMapBase* self, HashMapNodeBase* node) {
     self->count--;
 }
 
-static HashMapNodeBase* hashmap_find_node_internal(HashMapBase* self, u64 hash, const void* key, u64 key_size,
-                                                   KeyEqualsFunc key_equals) {
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
+typedef struct KeyProbe {
+    u64 hash;
+    const void* key;
+    u64 key_size;
+    KeyEqualsFunc key_equals;
+    KeyCopyFunc key_copy;
+} KeyProbe;
+
+static HashMapBucket* hashmap_bucket_for(HashMapBase* self, u64 hash) {
+    return &self->buckets[hash & (self->capacity - 1)];
+}
+
+static HashMapNodeBase* hashmap_find_node_internal(HashMapBase* self, const KeyProbe* probe) {
+    HashMapBucket* bucket = hashmap_bucket_for(self, probe->hash);
 
     for (HashMapNodeBase* node = bucket->first; node != nullptr; node = node->next) {
-        if (node->hash == hash) {
-            void* node_key = (u8*)node + self->key_offset;
-            if (key_equals(node_key, key, key_size)) {
-                return node;
-            }
+        void* node_key = (u8*)node + self->key_offset;
+        if (node->hash == probe->hash && probe->key_equals(node_key, probe->key, probe->key_size)) {
+            return node;
         }
     }
     return nullptr;
 }
 
-static HashMapNodeBase* hashmap_insert_internal(HashMapBase* self, u64 hash, const void* key, const void* value,
-                                                u64 key_size, KeyEqualsFunc key_equals, KeyCopyFunc key_copy) {
-    HashMapNodeBase* existing = hashmap_find_node_internal(self, hash, key, key_size, key_equals);
+static HashMapNodeBase* hashmap_insert_internal(HashMapBase* self, const KeyProbe* probe, const void* value) {
+    HashMapNodeBase* existing = hashmap_find_node_internal(self, probe);
     if (existing) {
         void* node_value = (u8*)existing + self->value_offset;
         memory_copy(node_value, self->value_size, value, self->value_size);
@@ -110,50 +116,85 @@ static HashMapNodeBase* hashmap_insert_internal(HashMapBase* self, u64 hash, con
 
     HashMapNodeBase* node = hashmap_allocate_node(self);
 
-    node->hash = hash;
+    node->hash = probe->hash;
     node->next = nullptr;
 
     void* node_key = (u8*)node + self->key_offset;
     void* node_value = (u8*)node + self->value_offset;
-    key_copy(self, node_key, key, key_size);
+    probe->key_copy(self, node_key, probe->key, probe->key_size);
     memory_copy(node_value, self->value_size, value, self->value_size);
 
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
+    HashMapBucket* bucket = hashmap_bucket_for(self, probe->hash);
     sll_queue_push(bucket->first, bucket->last, node);
     self->count++;
 
     return node;
 }
 
-static bool hashmap_remove_internal(HashMapBase* self, u64 hash, const void* key, u64 key_size,
-                                    KeyEqualsFunc key_equals) {
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
+static bool hashmap_remove_internal(HashMapBase* self, const KeyProbe* probe) {
+    HashMapBucket* bucket = hashmap_bucket_for(self, probe->hash);
+    HashMapNodeBase* node = hashmap_find_node_internal(self, probe);
 
-    for (HashMapNodeBase* node = bucket->first; node != nullptr; node = node->next) {
-        if (node->hash == hash) {
-            void* node_key = (u8*)node + self->key_offset;
-            if (key_equals(node_key, key, key_size)) {
-                sll_queue_remove(bucket->first, bucket->last, node);
-                hashmap_free_node(self, node);
-                return true;
-            }
-        }
+    if (node == nullptr) {
+        return false;
     }
-    return false;
+
+    sll_queue_remove(bucket->first, bucket->last, node);
+    hashmap_free_node(self, node);
+    return true;
+}
+
+static KeyProbe hashmap_probe_generic(HashMapBase* self, u64 hash, const void* key) {
+    return (KeyProbe){ hash, key, self->key_size, generic_key_equals, generic_key_copy };
+}
+
+static KeyProbe hashmap_probe_string(const FlString* key) {
+    return (KeyProbe){ hashmap_hash_string(*key), key, sizeof(FlString), string_key_equals, string_key_copy };
+}
+
+static bool u32_key_equals(const void* node_key, const void* search_key, u64 key_size) {
+    (void)key_size;
+    return *(const u32*)node_key == *(const u32*)search_key;
+}
+
+static void u32_key_copy(HashMapBase* self, void* dest_key, const void* src_key, u64 key_size) {
+    (void)self;
+    (void)key_size;
+    *(u32*)dest_key = *(const u32*)src_key;
+}
+
+static bool u64_key_equals(const void* node_key, const void* search_key, u64 key_size) {
+    (void)key_size;
+    return *(const u64*)node_key == *(const u64*)search_key;
+}
+
+static void u64_key_copy(HashMapBase* self, void* dest_key, const void* src_key, u64 key_size) {
+    (void)self;
+    (void)key_size;
+    *(u64*)dest_key = *(const u64*)src_key;
+}
+
+static KeyProbe hashmap_probe_u32(u64 hash, const u32* key) {
+    return (KeyProbe){ hash, key, sizeof(u32), u32_key_equals, u32_key_copy };
+}
+
+static KeyProbe hashmap_probe_u64(u64 hash, const u64* key) {
+    return (KeyProbe){ hash, key, sizeof(u64), u64_key_equals, u64_key_copy };
 }
 
 HashMapNodeBase* hashmap_insert_raw(HashMapBase* self, u64 hash, const void* key, const void* value) {
-    return hashmap_insert_internal(self, hash, key, value, self->key_size, generic_key_equals, generic_key_copy);
+    KeyProbe probe = hashmap_probe_generic(self, hash, key);
+    return hashmap_insert_internal(self, &probe, value);
 }
 
 HashMapNodeBase* hashmap_get_raw(HashMapBase* self, u64 hash, const void* key) {
-    return hashmap_find_node_internal(self, hash, key, self->key_size, generic_key_equals);
+    KeyProbe probe = hashmap_probe_generic(self, hash, key);
+    return hashmap_find_node_internal(self, &probe);
 }
 
 bool hashmap_remove_raw(HashMapBase* self, u64 hash, const void* key) {
-    return hashmap_remove_internal(self, hash, key, self->key_size, generic_key_equals);
+    KeyProbe probe = hashmap_probe_generic(self, hash, key);
+    return hashmap_remove_internal(self, &probe);
 }
 
 void hashmap_clear_raw(HashMapBase* self) {
@@ -193,152 +234,50 @@ u64 hashmap_hash_string(const FlString str) {
 }
 
 HashMapNodeBase* hashmap_insert_string_raw(HashMapBase* self, const FlString* key, const void* value) {
-    u64 hash = hashmap_hash_string(*key);
-    return hashmap_insert_internal(self, hash, key, value, sizeof(FlString), string_key_equals, string_key_copy);
+    KeyProbe probe = hashmap_probe_string(key);
+    return hashmap_insert_internal(self, &probe, value);
 }
 
 HashMapNodeBase* hashmap_get_string_raw(HashMapBase* self, const FlString* key) {
-    u64 hash = hashmap_hash_string(*key);
-    return hashmap_find_node_internal(self, hash, key, sizeof(FlString), string_key_equals);
+    KeyProbe probe = hashmap_probe_string(key);
+    return hashmap_find_node_internal(self, &probe);
 }
 
 bool hashmap_remove_string_raw(HashMapBase* self, const FlString* key) {
-    u64 hash = hashmap_hash_string(*key);
-    return hashmap_remove_internal(self, hash, key, sizeof(FlString), string_key_equals);
+    KeyProbe probe = hashmap_probe_string(key);
+    return hashmap_remove_internal(self, &probe);
 }
 
 // Optimized functions for u32 keys
 
-static HashMapNodeBase* hashmap_find_node_u32(HashMapBase* self, u64 hash, u32 key) {
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
-
-    for (HashMapNodeBase* node = bucket->first; node != nullptr; node = node->next) {
-        if (node->hash == hash) {
-            u32* node_key = (u32*)((u8*)node + self->key_offset);
-            if (*node_key == key) {
-                return node;
-            }
-        }
-    }
-    return nullptr;
-}
-
-static HashMapNodeBase* hashmap_insert_u32_internal(HashMapBase* self, u64 hash, u32 key, const void* value) {
-    HashMapNodeBase* existing = hashmap_find_node_u32(self, hash, key);
-    if (existing) {
-        void* node_value = (u8*)existing + self->value_offset;
-        memory_copy(node_value, self->value_size, value, self->value_size);
-        return existing;
-    }
-
-    HashMapNodeBase* node = hashmap_allocate_node(self);
-
-    node->hash = hash;
-    node->next = nullptr;
-
-    u32* node_key = (u32*)((u8*)node + self->key_offset);
-    void* node_value = (u8*)node + self->value_offset;
-    *node_key = key;
-    memory_copy(node_value, self->value_size, value, self->value_size);
-
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
-    sll_queue_push(bucket->first, bucket->last, node);
-    self->count++;
-
-    return node;
-}
-
 HashMapNodeBase* hashmap_insert_u32_raw(HashMapBase* self, u64 hash, u32 key, const void* value) {
-    return hashmap_insert_u32_internal(self, hash, key, value);
+    KeyProbe probe = hashmap_probe_u32(hash, &key);
+    return hashmap_insert_internal(self, &probe, value);
 }
 
 HashMapNodeBase* hashmap_get_u32_raw(HashMapBase* self, u64 hash, u32 key) {
-    return hashmap_find_node_u32(self, hash, key);
+    KeyProbe probe = hashmap_probe_u32(hash, &key);
+    return hashmap_find_node_internal(self, &probe);
 }
 
 bool hashmap_remove_u32_raw(HashMapBase* self, u64 hash, u32 key) {
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
-
-    for (HashMapNodeBase* node = bucket->first; node != nullptr; node = node->next) {
-        if (node->hash == hash) {
-            u32* node_key = (u32*)((u8*)node + self->key_offset);
-            if (*node_key == key) {
-                sll_queue_remove(bucket->first, bucket->last, node);
-                hashmap_free_node(self, node);
-                return true;
-            }
-        }
-    }
-    return false;
+    KeyProbe probe = hashmap_probe_u32(hash, &key);
+    return hashmap_remove_internal(self, &probe);
 }
 
-// Optimized functions for u64 keys (no function pointer overhead)
-
-static HashMapNodeBase* hashmap_find_node_u64(HashMapBase* self, u64 hash, u64 key) {
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
-
-    for (HashMapNodeBase* node = bucket->first; node != nullptr; node = node->next) {
-        if (node->hash == hash) {
-            u64* node_key = (u64*)((u8*)node + self->key_offset);
-            if (*node_key == key) {
-                return node;
-            }
-        }
-    }
-    return nullptr;
-}
-
-static HashMapNodeBase* hashmap_insert_u64_internal(HashMapBase* self, u64 hash, u64 key, const void* value) {
-    HashMapNodeBase* existing = hashmap_find_node_u64(self, hash, key);
-    if (existing) {
-        void* node_value = (u8*)existing + self->value_offset;
-        memory_copy(node_value, self->value_size, value, self->value_size);
-        return existing;
-    }
-
-    HashMapNodeBase* node = hashmap_allocate_node(self);
-
-    node->hash = hash;
-    node->next = nullptr;
-
-    u64* node_key = (u64*)((u8*)node + self->key_offset);
-    void* node_value = (u8*)node + self->value_offset;
-    *node_key = key;
-    memory_copy(node_value, self->value_size, value, self->value_size);
-
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
-    sll_queue_push(bucket->first, bucket->last, node);
-    self->count++;
-
-    return node;
-}
+// Optimized functions for u64 keys
 
 HashMapNodeBase* hashmap_insert_u64_raw(HashMapBase* self, u64 hash, u64 key, const void* value) {
-    return hashmap_insert_u64_internal(self, hash, key, value);
+    KeyProbe probe = hashmap_probe_u64(hash, &key);
+    return hashmap_insert_internal(self, &probe, value);
 }
 
 HashMapNodeBase* hashmap_get_u64_raw(HashMapBase* self, u64 hash, u64 key) {
-    return hashmap_find_node_u64(self, hash, key);
+    KeyProbe probe = hashmap_probe_u64(hash, &key);
+    return hashmap_find_node_internal(self, &probe);
 }
 
 bool hashmap_remove_u64_raw(HashMapBase* self, u64 hash, u64 key) {
-    const u64 bucket_idx = hash & (self->capacity - 1);
-    HashMapBucket* bucket = &self->buckets[bucket_idx];
-
-    for (HashMapNodeBase* node = bucket->first; node != nullptr; node = node->next) {
-        if (node->hash == hash) {
-            u64* node_key = (u64*)((u8*)node + self->key_offset);
-            if (*node_key == key) {
-                sll_queue_remove(bucket->first, bucket->last, node);
-                hashmap_free_node(self, node);
-                return true;
-            }
-        }
-    }
-    return false;
+    KeyProbe probe = hashmap_probe_u64(hash, &key);
+    return hashmap_remove_internal(self, &probe);
 }
