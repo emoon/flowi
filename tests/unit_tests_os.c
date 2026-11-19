@@ -284,16 +284,15 @@ UTEST(log_file, path_converts_to_valid_cstr) {
 // only the fields it sets, and fl_log_file_init takes the log file name from the app identity.
 
 UTEST(app_identity, defaults_override_and_log_routing) {
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi")));
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_log_file_name(), FL_S("flowi.log")));
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_file_watcher_queue(), FL_S("org.flowi.filewatcher")));
+    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi")));
+    ASSERT_TRUE(fl_string_equals(app_identity_log_file_name(), FL_S("flowi.log")));
+    ASSERT_TRUE(fl_string_equals(app_identity_file_watcher_queue(), FL_S("org.flowi.filewatcher")));
 
     // A partial override changes only the non-empty fields.
-    FlAppIdentity partial = { .log_file_name = FL_S("myapp.log") };
-    fl_app_identity_set(&partial);
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_log_file_name(), FL_S("myapp.log")));
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi")));
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_file_watcher_queue(), FL_S("org.flowi.filewatcher")));
+    app_identity_set(string_empty(), FL_S("myapp.log"), string_empty());
+    ASSERT_TRUE(fl_string_equals(app_identity_log_file_name(), FL_S("myapp.log")));
+    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi")));
+    ASSERT_TRUE(fl_string_equals(app_identity_file_watcher_queue(), FL_S("org.flowi.filewatcher")));
 
     // fl_log_file_init builds the log file from the overridden name, so the override shows up on disk.
     FlString dir = FL_S("/tmp/flowi_app_identity_test");
@@ -305,20 +304,17 @@ UTEST(app_identity, defaults_override_and_log_routing) {
     fl_arena_destroy(path_arena);
     file_remove_directory_recursive_os(dir);
 
-    FlAppIdentity replacement = { .log_file_name = FL_S("other.log") };
-    fl_app_identity_set(&replacement);
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_log_file_name(), FL_S("other.log")));
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi")));
+    app_identity_set(string_empty(), FL_S("other.log"), string_empty());
+    ASSERT_TRUE(fl_string_equals(app_identity_log_file_name(), FL_S("other.log")));
+    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi")));
 }
 
 UTEST(app_identity, data_dir_name_routes_through_seam) {
-    FlAppIdentity ident = { .data_dir_name = FL_S(".flowi_datadirtest") };
-    fl_app_identity_set(&ident);
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi_datadirtest")));
+    app_identity_set(FL_S(".flowi_datadirtest"), string_empty(), string_empty());
+    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi_datadirtest")));
 
-    FlAppIdentity replacement = { .data_dir_name = FL_S(".flowi_other") };
-    fl_app_identity_set(&replacement);
-    ASSERT_TRUE(fl_string_equals(fl_app_identity_data_dir_name(), FL_S(".flowi_other")));
+    app_identity_set(FL_S(".flowi_other"), string_empty(), string_empty());
+    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi_other")));
 }
 
 // Stopping a watcher leaves every other watcher's state where it is. Platform layers (FSEvents on macOS) keep the

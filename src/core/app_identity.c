@@ -2,8 +2,7 @@
 #include "arena.h"
 #include "string.h"
 
-// Overrides are copied into s_arena and live until app_identity_reset. Replacing an override leaves the
-// old copy in the arena; set is a startup call, so that waste is bounded.
+// Overrides are copied into s_arena and live until app_identity_reset.
 
 #define DEFAULT_DATA_DIR_NAME FL_S_(".flowi")
 #define DEFAULT_LOG_FILE_NAME FL_S_("flowi.log")
@@ -24,13 +23,10 @@ static void set_field(FlString* field, FlString value) {
     *field = fl_string_copy(s_arena, value);
 }
 
-void fl_app_identity_set(const FlAppIdentity* identity) {
-    if (identity == nullptr) {
-        return;
-    }
-    set_field(&s_data_dir_name, identity->data_dir_name);
-    set_field(&s_log_file_name, identity->log_file_name);
-    set_field(&s_file_watcher_queue, identity->file_watcher_queue);
+void app_identity_set(FlString data_dir_name, FlString log_file_name, FlString file_watcher_queue) {
+    set_field(&s_data_dir_name, data_dir_name);
+    set_field(&s_log_file_name, log_file_name);
+    set_field(&s_file_watcher_queue, file_watcher_queue);
 }
 
 void app_identity_reset(void) {
@@ -42,14 +38,14 @@ void app_identity_reset(void) {
     s_file_watcher_queue = (FlString) DEFAULT_FILE_WATCHER_QUEUE;
 }
 
-FlString fl_app_identity_data_dir_name(void) {
+FlString app_identity_data_dir_name(void) {
     return s_data_dir_name;
 }
 
-FlString fl_app_identity_log_file_name(void) {
+FlString app_identity_log_file_name(void) {
     return s_log_file_name;
 }
 
-FlString fl_app_identity_file_watcher_queue(void) {
+FlString app_identity_file_watcher_queue(void) {
     return s_file_watcher_queue;
 }

@@ -160,7 +160,7 @@ static bool resolve_log_dir(FlString base_dir, FlString* dir_path) {
         return false;
     }
 
-    *dir_path = file_build_path_os(s_log_arena, string_from_cstr(home), fl_app_identity_data_dir_name());
+    *dir_path = file_build_path_os(s_log_arena, string_from_cstr(home), app_identity_data_dir_name());
     return true;
 }
 
@@ -218,7 +218,7 @@ bool fl_log_file_init(FlString base_dir) {
         return false;
     }
 
-    FlString log_name = fl_app_identity_log_file_name();
+    FlString log_name = app_identity_log_file_name();
     FlString log_path = file_build_path_os(s_log_arena, dir_path, log_name);
     rotate_log_file(dir_path, log_name, log_path);
 

@@ -41,6 +41,14 @@ typedef struct FlAppSettings {
     bool fullscreen;
     // Whether the user is blocked from resizing the window.
     bool fixed_size;
+    // The subdirectory of the home directory that `fl_log_file_init` writes the log file to when you pass it no
+    // directory (empty uses ".flowi").
+    FlString data_dir_name;
+    // The base name of the log file; the previous run's log is kept next to it with ".old" appended (empty uses
+    // "flowi.log").
+    FlString log_file_name;
+    // The label of the dispatch queue behind each file watch on macOS (empty uses "org.flowi.filewatcher").
+    FlString file_watcher_queue;
 } FlAppSettings;
 
 

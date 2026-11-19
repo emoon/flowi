@@ -39,10 +39,18 @@ pub struct AppSettings {
     pub fullscreen: bool,
     /// Whether the user is blocked from resizing the window.
     pub fixed_size: bool,
+    /// The subdirectory of the home directory that `fl_log_file_init` writes the log file to when you pass it no
+    /// directory (empty uses ".flowi").
+    pub data_dir_name: crate::sys::RawStr,
+    /// The base name of the log file; the previous run's log is kept next to it with ".old" appended (empty uses
+    /// "flowi.log").
+    pub log_file_name: crate::sys::RawStr,
+    /// The label of the dispatch queue behind each file watch on macOS (empty uses "org.flowi.filewatcher").
+    pub file_watcher_queue: crate::sys::RawStr,
 }
 
 const _: () = {
-    assert!(core::mem::size_of::<AppSettings>() == 40, "AppSettings size drift");
+    assert!(core::mem::size_of::<AppSettings>() == 88, "AppSettings size drift");
     assert!(core::mem::align_of::<AppSettings>() == 8, "AppSettings align drift");
     assert!(core::mem::offset_of!(AppSettings, window_title) == 0, "AppSettings.window_title offset drift");
     assert!(core::mem::offset_of!(AppSettings, width) == 16, "AppSettings.width offset drift");
@@ -51,5 +59,8 @@ const _: () = {
     assert!(core::mem::offset_of!(AppSettings, renderer) == 28, "AppSettings.renderer offset drift");
     assert!(core::mem::offset_of!(AppSettings, fullscreen) == 32, "AppSettings.fullscreen offset drift");
     assert!(core::mem::offset_of!(AppSettings, fixed_size) == 33, "AppSettings.fixed_size offset drift");
+    assert!(core::mem::offset_of!(AppSettings, data_dir_name) == 40, "AppSettings.data_dir_name offset drift");
+    assert!(core::mem::offset_of!(AppSettings, log_file_name) == 56, "AppSettings.log_file_name offset drift");
+    assert!(core::mem::offset_of!(AppSettings, file_watcher_queue) == 72, "AppSettings.file_watcher_queue offset drift");
 };
 
