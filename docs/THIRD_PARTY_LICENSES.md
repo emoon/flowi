@@ -54,7 +54,7 @@ notices in the file. "Modified" means edited after copying.
 | [teeny-sha1](https://github.com/CTrabant/teeny-sha1) | `src/core/hash.c` (SHA1 section) | MIT (full notice in the file) | 2017 CTrabant | Modified: flowi types and hex output wrapper |
 | MD5 (Colin Plumb) | `src/core/hash.c` (MD5 section) | Public domain | 1993 Colin Plumb (no copyright claimed) | Modified: flowi API wrapper |
 | SHA256 ([Brad Conte](https://github.com/B-Con/crypto-algorithms)) | `src/core/hash.c` (SHA256 section) | Public domain | Brad Conte | Modified: flowi API wrapper |
-| [stb_textedit](https://github.com/nothings/stb) v1.14 | `src/ui/stb_textedit.h` | Public domain (Unlicense) or MIT, at your option (end of file) | Sean Barrett | Modified: compiler diagnostic pragmas added |
+| [stb_textedit](https://github.com/nothings/stb) v1.16 | `external/stb/stb_textedit.h` | Public domain (Unlicense) or MIT, at your option (end of file) | Sean Barrett | Not modified |
 | [Roboto Regular](https://github.com/googlefonts/roboto) 2.001047 | `examples/data/Roboto-Regular.ttf` | Apache License 2.0 | 2015 Google Inc. | Not modified |
 
 The Roboto license text ships beside the font in
