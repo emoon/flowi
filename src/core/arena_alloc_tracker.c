@@ -89,12 +89,74 @@ void arena_alloc_tracker_reset(ArenaAllocTracker* tracker) {
     mutex_unlock(&tracker->mutex);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static int top_insert_pos(const ArenaAllocEntry* result, int result_count, int capacity, u64 total_bytes) {
+    for (int i = 0; i < result_count; i++) {
+        if (total_bytes > result[i].total_bytes) {
+            return i;
+        }
+    }
+
+    return result_count < capacity ? result_count : result_count - 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static int top_insert(ArenaAllocEntry* result, int result_count, int capacity, const TrackerSlot* slot) {
+    bool has_room = result_count < capacity;
+
+    if (!has_room && slot->total_bytes <= result[result_count - 1].total_bytes) {
+        return result_count;
+    }
+
+    int insert_pos = top_insert_pos(result, result_count, capacity, slot->total_bytes);
+    int shift_end = has_room ? result_count : capacity - 1;
+
+    for (int j = shift_end; j > insert_pos; j--) {
+        result[j] = result[j - 1];
+    }
+
+    result[insert_pos] = (ArenaAllocEntry) {
+        .file = slot->file,
+        .line = slot->line,
+        .total_bytes = slot->total_bytes,
+        .alloc_count = slot->alloc_count,
+    };
+
+    return has_room ? result_count + 1 : result_count;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static int top_collect(const ArenaAllocTracker* tracker, ArenaAllocEntry* result, int capacity) {
+    int result_count = 0;
+
+    for (u32 i = 0; i < TRACKER_TABLE_SIZE; i++) {
+        const TrackerSlot* slot = &tracker->slots[i];
+        if (slot->occupied) {
+            result_count = top_insert(result, result_count, capacity, slot);
+        }
+    }
+
+    return result_count;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 int arena_alloc_tracker_get_top(ArenaAllocTracker* tracker, FlArena* output_arena, int max_entries,
                                 ArenaAllocEntry** out_entries) {
-    if (tracker == nullptr || output_arena == nullptr || out_entries == nullptr || max_entries <= 0) {
-        if (out_entries) {
-            *out_entries = nullptr;
-        }
+    if (out_entries == nullptr) {
+        return 0;
+    }
+
+    *out_entries = nullptr;
+
+    if (tracker == nullptr || output_arena == nullptr) {
+        return 0;
+    }
+
+    if (max_entries <= 0) {
         return 0;
     }
 
@@ -103,50 +165,13 @@ int arena_alloc_tracker_get_top(ArenaAllocTracker* tracker, FlArena* output_aren
     int count = (int)tracker->entry_count;
     if (count == 0) {
         mutex_unlock(&tracker->mutex);
-        *out_entries = nullptr;
         return 0;
     }
 
     int collect_count = count < max_entries ? count : max_entries;
     ArenaAllocEntry* result = arena_alloc_array(output_arena, ArenaAllocEntry, collect_count);
 
-    // Insertion sort: maintain a sorted array of top N entries
-    int result_count = 0;
-
-    for (u32 i = 0; i < TRACKER_TABLE_SIZE; i++) {
-        TrackerSlot* slot = &tracker->slots[i];
-        if (!slot->occupied) {
-            continue;
-        }
-
-        // Insertion point in sorted result, descending by total_bytes
-        if (result_count < collect_count || slot->total_bytes > result[result_count - 1].total_bytes) {
-            int insert_pos = result_count < collect_count ? result_count : result_count - 1;
-
-            for (int j = 0; j < result_count && j < collect_count; j++) {
-                if (slot->total_bytes > result[j].total_bytes) {
-                    insert_pos = j;
-                    break;
-                }
-            }
-
-            int shift_end = result_count < collect_count ? result_count : collect_count - 1;
-            for (int j = shift_end; j > insert_pos; j--) {
-                result[j] = result[j - 1];
-            }
-
-            result[insert_pos] = (ArenaAllocEntry) {
-                .file = slot->file,
-                .line = slot->line,
-                .total_bytes = slot->total_bytes,
-                .alloc_count = slot->alloc_count,
-            };
-
-            if (result_count < collect_count) {
-                result_count++;
-            }
-        }
-    }
+    int result_count = top_collect(tracker, result, collect_count);
 
     mutex_unlock(&tracker->mutex);
 

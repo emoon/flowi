@@ -21,6 +21,23 @@ typedef struct {
     CACHE_ALIGNED slot_t slots[SLOTS];
 } queue_t;
 
+static inline bool claim_cursor(_Atomic size_t* counter, size_t* cursor) {
+    size_t expected = *cursor;
+    if (atomic_compare_exchange_strong(counter, &expected, *cursor + 1)) {
+        return true;
+    }
+
+    *cursor = expected;
+    return false;
+}
+
+// Reloads the cursor after a stale slot; false when it did not move (queue full/empty).
+static inline bool reload_cursor(_Atomic size_t* counter, size_t* cursor) {
+    size_t prev = *cursor;
+    *cursor = atomic_load(counter);
+    return *cursor != prev;
+}
+
 // The queue is fixed-capacity (SLOTS entries); both operations are non-blocking and report
 // full/empty via the return value. There is no blocking variant: callers own the policy for a
 // saturated queue.
@@ -28,20 +45,17 @@ static inline bool try_enqueue(queue_t* queue, const void* item) {
     size_t head = atomic_load(&queue->head);
     for (;;) {
         slot_t* slot = &queue->slots[head % SLOTS];
-        if ((head / SLOTS) * 2 == atomic_load(&slot->turn)) {
-            size_t expected_head = head;
-            if (atomic_compare_exchange_strong(&queue->head, &expected_head, head + 1)) {
-                memcpy(slot->data, item, SLOT);
-                atomic_store(&slot->turn, (head / SLOTS) * 2 + 1);
-                return true;
-            }
-            head = expected_head;
-        } else {
-            size_t prev_head = head;
-            head = atomic_load(&queue->head);
-            if (head == prev_head) {
+        if ((head / SLOTS) * 2 != atomic_load(&slot->turn)) {
+            if (!reload_cursor(&queue->head, &head)) {
                 return false;
             }
+            continue;
+        }
+
+        if (claim_cursor(&queue->head, &head)) {
+            memcpy(slot->data, item, SLOT);
+            atomic_store(&slot->turn, (head / SLOTS) * 2 + 1);
+            return true;
         }
     }
 }
@@ -50,20 +64,17 @@ static inline bool try_dequeue(queue_t* queue, void* item) {
     size_t tail = atomic_load(&queue->tail);
     for (;;) {
         slot_t* slot = &queue->slots[tail % SLOTS];
-        if ((tail / SLOTS) * 2 + 1 == atomic_load(&slot->turn)) {
-            size_t expected_tail = tail;
-            if (atomic_compare_exchange_strong(&queue->tail, &expected_tail, tail + 1)) {
-                memcpy(item, slot->data, SLOT);
-                atomic_store(&slot->turn, (tail / SLOTS) * 2 + 2);
-                return true;
-            }
-            tail = expected_tail;
-        } else {
-            size_t prev_tail = tail;
-            tail = atomic_load(&queue->tail);
-            if (tail == prev_tail) {
+        if ((tail / SLOTS) * 2 + 1 != atomic_load(&slot->turn)) {
+            if (!reload_cursor(&queue->tail, &tail)) {
                 return false;
             }
+            continue;
+        }
+
+        if (claim_cursor(&queue->tail, &tail)) {
+            memcpy(item, slot->data, SLOT);
+            atomic_store(&slot->turn, (tail / SLOTS) * 2 + 2);
+            return true;
         }
     }
 }

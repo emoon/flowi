@@ -111,24 +111,22 @@ FlHost* host_create(FlArena* arena, const FlHostSettings* settings, const FlRend
     return host;
 }
 
-void host_destroy(FlHost* host) {
-    if (!host) {
-        return;
+static void host_release_surfaces(FlHost* host) {
+    // Surfaces are torn down after the contexts and the shared tier, and before the backend that created them.
+    if (host->backend.destroy_surface) {
+        for (i32 i = 0; i < host->surface_count; i++) {
+            host->backend.destroy_surface(host->backend.user_data, host->surfaces[i]);
+        }
     }
-
-    // The host's own window goes first, because contexts are torn down before the shared tier they attach to. A
-    // multi-window caller has no window here and has already detached its own.
-    if (host->window_ctx) {
-        ui_destroy(host->window_ctx);
-        host->window_ctx = nullptr;
+    host->surface_count = 0;
+    if (host->owns_backend && host->backend.destroy) {
+        host->backend.destroy(host->backend.user_data);
     }
+}
 
-    // Image loads still running on job workers reach the backend and the shared registry, which are destroyed
-    // below, and read through the asset mount closed next. Stop and drain them first.
-    if (host->owns_image_system) {
-        image_stop_loading();
-    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static void host_release_assets_and_shared(FlHost* host) {
     // The mount lives in the process-global VFS (its own arena), so it is closed explicitly. The host arena does
     // not reclaim it.
     if (host->asset_mount) {
@@ -143,17 +141,11 @@ void host_destroy(FlHost* host) {
         ui_shared_destroy(host->shared);
         host->shared = nullptr;
     }
-    // Surfaces are torn down after the contexts and the shared tier, and before the backend that created them.
-    if (host->backend.destroy_surface) {
-        for (i32 i = 0; i < host->surface_count; i++) {
-            host->backend.destroy_surface(host->backend.user_data, host->surfaces[i]);
-        }
-    }
-    host->surface_count = 0;
-    if (host->owns_backend && host->backend.destroy) {
-        host->backend.destroy(host->backend.user_data);
-    }
+}
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void host_reset_singletons(FlHost* host) {
     // The font cache goes after the backend, which may hold a glyph cache built from these faces, and before
     // vfs_destroy, because a face still loading owns a VFS handle that font_cache_destroy closes. Its FreeType
     // library and per-face arenas are heap-owned, so the caller's arena does not reclaim them.
@@ -173,6 +165,31 @@ void host_destroy(FlHost* host) {
         vfs_destroy();
         host->owns_vfs = false;
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void host_destroy(FlHost* host) {
+    if (!host) {
+        return;
+    }
+
+    // The host's own window goes first, because contexts are torn down before the shared tier they attach to. A
+    // multi-window caller has no window here and has already detached its own.
+    if (host->window_ctx) {
+        ui_destroy(host->window_ctx);
+        host->window_ctx = nullptr;
+    }
+
+    // Image loads still running on job workers reach the backend and the shared registry, which are destroyed
+    // below, and read through the asset mount closed next. Stop and drain them first.
+    if (host->owns_image_system) {
+        image_stop_loading();
+    }
+
+    host_release_assets_and_shared(host);
+    host_release_surfaces(host);
+    host_reset_singletons(host);
 
     // The arena is the caller's; it frees the FlHost allocation along with everything else on it.
 }

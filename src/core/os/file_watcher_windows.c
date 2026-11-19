@@ -102,11 +102,8 @@ static bool start_directory_watch(WindowsWatcherData* data, DWORD filter, bool r
     return true;
 }
 
-FileWatcherError platform_start_watching(FileWatcherState* state) {
-    if (FW_ID == LOG_CHANNEL_INVALID) {
-        FW_ID = fl_log_register_channel(FL_S("FILE_WATCHER"));
-    }
-
+// Returns INVALID_HANDLE_VALUE on failure, with the error already logged.
+static HANDLE open_watch_directory(FileWatcherState* state, DWORD* out_error) {
     OsPath os_path = string_to_os_path(get_file_watcher_registry()->arena, state->watch_path);
 
     // FILE_FLAG_BACKUP_SEMANTICS is required to open a directory handle
@@ -115,9 +112,22 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
                       nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
 
     if (dir_handle == INVALID_HANDLE_VALUE) {
-        DWORD error = GetLastError();
-        logc_error(FW_ID, "FileWatcher[%u]: Failed to open directory: 0x%x", state->handle, error);
-        return map_windows_error(error);
+        *out_error = GetLastError();
+        logc_error(FW_ID, "FileWatcher[%u]: Failed to open directory: 0x%x", state->handle, *out_error);
+    }
+
+    return dir_handle;
+}
+
+FileWatcherError platform_start_watching(FileWatcherState* state) {
+    if (FW_ID == LOG_CHANNEL_INVALID) {
+        FW_ID = fl_log_register_channel(FL_S("FILE_WATCHER"));
+    }
+
+    DWORD open_error = 0;
+    HANDLE dir_handle = open_watch_directory(state, &open_error);
+    if (dir_handle == INVALID_HANDLE_VALUE) {
+        return map_windows_error(open_error);
     }
 
     WindowsWatcherData* data = arena_alloc_zero(get_file_watcher_registry()->arena, WindowsWatcherData);
@@ -156,23 +166,21 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
     return FileWatcherError_Success;
 }
 
-void platform_stop_watching(FileWatcherState* state) {
-    if (!state || !state->platform_data) {
+// CancelIo only requests cancellation: the kernel can still write into the OVERLAPPED structure and
+// the read buffer until the completion is delivered, so the handles stay open until GetOverlappedResult
+// returns. That wait normally completes immediately with ERROR_OPERATION_ABORTED.
+static void cancel_pending_read(WindowsWatcherData* data) {
+    if (!data->read_pending || data->dir_handle == INVALID_HANDLE_VALUE) {
         return;
     }
 
-    WindowsWatcherData* data = (WindowsWatcherData*)state->platform_data;
+    CancelIo(data->dir_handle);
+    DWORD bytes_transferred = 0;
+    GetOverlappedResult(data->dir_handle, &data->overlapped, &bytes_transferred, TRUE);
+    data->read_pending = false;
+}
 
-    // CancelIo only requests cancellation: the kernel can still write into the OVERLAPPED structure and
-    // the read buffer until the completion is delivered, so the handles stay open until GetOverlappedResult
-    // returns. That wait normally completes immediately with ERROR_OPERATION_ABORTED.
-    if (data->read_pending && data->dir_handle != INVALID_HANDLE_VALUE) {
-        CancelIo(data->dir_handle);
-        DWORD bytes_transferred = 0;
-        GetOverlappedResult(data->dir_handle, &data->overlapped, &bytes_transferred, TRUE);
-        data->read_pending = false;
-    }
-
+static void close_watcher_handles(WindowsWatcherData* data) {
     if (data->event_handle != nullptr && data->event_handle != INVALID_HANDLE_VALUE) {
         CloseHandle(data->event_handle);
         data->event_handle = nullptr;
@@ -182,112 +190,149 @@ void platform_stop_watching(FileWatcherState* state) {
         CloseHandle(data->dir_handle);
         data->dir_handle = INVALID_HANDLE_VALUE;
     }
+}
+
+void platform_stop_watching(FileWatcherState* state) {
+    if (!state || !state->platform_data) {
+        return;
+    }
+
+    WindowsWatcherData* data = (WindowsWatcherData*)state->platform_data;
+
+    cancel_pending_read(data);
+    close_watcher_handles(data);
 
     state->platform_data = nullptr;
 
     logc_debug(FW_ID, "FileWatcher[%u]: Windows watcher stopped", state->handle);
 }
 
+typedef enum PollStep {
+    PollStep_Continue,
+    PollStep_Done,
+    PollStep_Failed,
+} PollStep;
+
+static bool is_pollable(const FileWatcherState* state) {
+    if (!state || !state->is_active) {
+        return false;
+    }
+    return state->platform_data != nullptr;
+}
+
+static bool restart_directory_watch(FileWatcherState* state, WindowsWatcherData* data) {
+    return start_directory_watch(data, get_notify_filter(&state->config), state->config.recursive);
+}
+
+static PollStep fail_watch(FileWatcherState* state) {
+    state->is_active = false;
+    return PollStep_Failed;
+}
+
+static FlString notification_full_path(FlArena* arena, FlString watch_path, const FILE_NOTIFY_INFORMATION* fni,
+                                       int utf8_len) {
+    DWORD filename_len = fni->FileNameLength / sizeof(WCHAR); // Length is in bytes
+
+    char* utf8_buffer = arena_alloc_array(arena, char, utf8_len + 1);
+    WideCharToMultiByte(CP_UTF8, 0, fni->FileName, filename_len, utf8_buffer, utf8_len, nullptr, nullptr);
+    utf8_buffer[utf8_len] = '\0';
+
+    return fl_path_join(arena, watch_path, string_from_cstr(utf8_buffer));
+}
+
+static void dispatch_notification(FileWatcherState* state, const FILE_NOTIFY_INFORMATION* fni) {
+    DWORD filename_len = fni->FileNameLength / sizeof(WCHAR); // Length is in bytes
+    int utf8_len = WideCharToMultiByte(CP_UTF8, 0, fni->FileName, filename_len, nullptr, 0, nullptr, nullptr);
+    u32 change_types = map_windows_action_to_change_types(fni->Action);
+
+    if (utf8_len <= 0 || change_types == 0) {
+        return;
+    }
+
+    FlArena* temp_arena = arena_new();
+    FlString full_path = notification_full_path(temp_arena, state->watch_path, fni, utf8_len);
+
+    // Attributes are readable for created/modified files, but not for deleted ones
+    bool is_directory = !(change_types & FlFileChangeType_Deleted) && file_directory_exists_os(full_path);
+
+    logc_debug(FW_ID, "FileWatcher[%u]: %S (types: 0x%x, dir: %d)", state->handle, full_path, change_types,
+               is_directory);
+    add_file_change(state, full_path, FL_S(""), change_types, is_directory);
+
+    fl_arena_destroy(temp_arena);
+}
+
+static void process_notifications(FileWatcherState* state, const u8* buffer) {
+    const FILE_NOTIFY_INFORMATION* fni = (const FILE_NOTIFY_INFORMATION*)buffer;
+
+    while (true) {
+        dispatch_notification(state, fni);
+
+        if (fni->NextEntryOffset == 0) {
+            return;
+        }
+        fni = (const FILE_NOTIFY_INFORMATION*)((const u8*)fni + fni->NextEntryOffset);
+    }
+}
+
+// Consumes the completed read: Continue to poll for another batch, Done to stop polling this round.
+static PollStep complete_read(FileWatcherState* state, WindowsWatcherData* data) {
+    DWORD bytes_transferred = 0;
+    BOOL result = GetOverlappedResult(data->dir_handle, &data->overlapped, &bytes_transferred,
+                                      FALSE // Don't wait (event already signaled)
+    );
+
+    if (!result) {
+        DWORD error = GetLastError();
+        if (error == ERROR_IO_INCOMPLETE) {
+            return PollStep_Done;
+        }
+        logc_error(FW_ID, "FileWatcher[%u]: GetOverlappedResult failed: 0x%x", state->handle, error);
+        return fail_watch(state);
+    }
+
+    data->read_pending = false;
+
+    logc_debug(FW_ID, "FileWatcher[%u]: ReadDirectoryChanges completed, %lu bytes transferred", state->handle,
+               bytes_transferred);
+
+    if (bytes_transferred == 0) {
+        logc_warning(FW_ID, "FileWatcher[%u]: Change buffer overflow or watcher closed", state->handle);
+        return restart_directory_watch(state, data) ? PollStep_Done : fail_watch(state);
+    }
+
+    process_notifications(state, data->buffer);
+
+    if (!restart_directory_watch(state, data)) {
+        logc_error(FW_ID, "FileWatcher[%u]: Failed to restart directory watch", state->handle);
+        return fail_watch(state);
+    }
+
+    return PollStep_Continue;
+}
+
 FileWatcherError platform_poll_changes(FileWatcherState* state) {
-    if (!state || !state->platform_data || !state->is_active) {
+    if (!is_pollable(state)) {
         return FileWatcherError_Success;
     }
 
     WindowsWatcherData* data = (WindowsWatcherData*)state->platform_data;
 
     int poll_iterations = 0;
-    while (data->read_pending) {
-        DWORD wait_result = WaitForSingleObject(data->event_handle, 0);
-        if (wait_result != WAIT_OBJECT_0) {
-            if (poll_iterations > 0) {
-                logc_debug(FW_ID, "FileWatcher[%u]: Processed %d event batches", state->handle, poll_iterations);
-            }
-            return FileWatcherError_Success;
-        }
-
+    while (data->read_pending && WaitForSingleObject(data->event_handle, 0) == WAIT_OBJECT_0) {
         poll_iterations++;
 
-        DWORD bytes_transferred = 0;
-        BOOL result = GetOverlappedResult(data->dir_handle, &data->overlapped, &bytes_transferred,
-                                          FALSE // Don't wait (event already signaled)
-        );
-
-        if (!result) {
-            DWORD error = GetLastError();
-            if (error == ERROR_IO_INCOMPLETE) {
-                return FileWatcherError_Success;
-            } else {
-                logc_error(FW_ID, "FileWatcher[%u]: GetOverlappedResult failed: 0x%x", state->handle, error);
-                state->is_active = false;
-                return FileWatcherError_SystemError;
-            }
-        }
-
-        data->read_pending = false;
-
-        logc_debug(FW_ID, "FileWatcher[%u]: ReadDirectoryChanges completed, %lu bytes transferred", state->handle,
-                   bytes_transferred);
-
-        if (bytes_transferred == 0) {
-            logc_warning(FW_ID, "FileWatcher[%u]: Change buffer overflow or watcher closed", state->handle);
-
-            DWORD filter = get_notify_filter(&state->config);
-            if (!start_directory_watch(data, filter, state->config.recursive)) {
-                state->is_active = false;
-                return FileWatcherError_SystemError;
-            }
-            return FileWatcherError_Success;
-        }
-
-        FILE_NOTIFY_INFORMATION* fni = (FILE_NOTIFY_INFORMATION*)data->buffer;
-
-        while (true) {
-            WCHAR* filename_w = fni->FileName;
-            DWORD filename_len = fni->FileNameLength / sizeof(WCHAR); // Length is in bytes
-
-            int utf8_len = WideCharToMultiByte(CP_UTF8, 0, filename_w, filename_len, nullptr, 0, nullptr, nullptr);
-            if (utf8_len > 0) {
-                FlArena* temp_arena = arena_new();
-                char* utf8_buffer = arena_alloc_array(temp_arena, char, utf8_len + 1);
-                WideCharToMultiByte(CP_UTF8, 0, filename_w, filename_len, utf8_buffer, utf8_len, nullptr, nullptr);
-                utf8_buffer[utf8_len] = '\0';
-
-                FlString filename = string_from_cstr(utf8_buffer);
-                FlString full_path = fl_path_join(temp_arena, state->watch_path, filename);
-
-                u32 change_types = map_windows_action_to_change_types(fni->Action);
-
-                if (change_types != 0) {
-                    // GetFileAttributesW works for created/modified files, but not for deleted ones
-                    bool is_directory = false;
-                    if (!(change_types & FlFileChangeType_Deleted)) {
-                        OsPath full_path_os = string_to_os_path(temp_arena, full_path);
-                        DWORD attributes = GetFileAttributesW(os_path_str(full_path_os));
-                        if (attributes != INVALID_FILE_ATTRIBUTES) {
-                            is_directory = (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-                        }
-                    }
-
-                    logc_debug(FW_ID, "FileWatcher[%u]: %S (types: 0x%x, dir: %d)", state->handle, full_path,
-                               change_types, is_directory);
-                    add_file_change(state, full_path, FL_S(""), change_types, is_directory);
-                }
-
-                fl_arena_destroy(temp_arena);
-            }
-
-            if (fni->NextEntryOffset == 0) {
-                break;
-            }
-            fni = (FILE_NOTIFY_INFORMATION*)((u8*)fni + fni->NextEntryOffset);
-        }
-
-        DWORD filter = get_notify_filter(&state->config);
-        if (!start_directory_watch(data, filter, state->config.recursive)) {
-            logc_error(FW_ID, "FileWatcher[%u]: Failed to restart directory watch", state->handle);
-            state->is_active = false;
+        PollStep step = complete_read(state, data);
+        if (step == PollStep_Failed) {
             return FileWatcherError_SystemError;
         }
+        if (step == PollStep_Done) {
+            return FileWatcherError_Success;
+        }
+    }
+
+    if (poll_iterations > 0) {
+        logc_debug(FW_ID, "FileWatcher[%u]: Processed %d event batches", state->handle, poll_iterations);
     }
 
     return FileWatcherError_Success;

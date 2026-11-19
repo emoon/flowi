@@ -1,5 +1,26 @@
 #include "utf8.h"
 
+static bool is_invalid_scalar(u32 cp) {
+    return cp > UTF8_MAX_CODEPOINT || (cp >= 0xD800 && cp <= 0xDFFF);
+}
+
+static bool decode_continuations(const u8* bytes, u32 len, u32* cp) {
+    for (u32 i = 1; i < len; i++) {
+        u8 b = bytes[i];
+        if (!utf8_is_continuation(b)) {
+            return false;
+        }
+        *cp = (*cp << 6) | (b & 0x3F);
+    }
+
+    return true;
+}
+
+static bool is_overlong(u32 cp, u32 len) {
+    static const u32 min_cp[] = { 0, 0, 0x80, 0x800, 0x10000 };
+    return cp < min_cp[len];
+}
+
 // Bounds-checked UTF-8 decoder
 
 const char* utf8_decode_safe(const char* ptr, const char* end, u32* codepoint) {
@@ -17,39 +38,20 @@ const char* utf8_decode_safe(const char* ptr, const char* end, u32* codepoint) {
     }
 
     u32 len = utf8_sequence_length(b0);
-    if (len == 0) {
-        // Invalid lead byte
+    if (len == 0 || ptr + len > end) {
         *codepoint = UTF8_REPLACEMENT_CHAR;
         return ptr + 1;
     }
 
-    if (ptr + len > end) {
-        *codepoint = UTF8_REPLACEMENT_CHAR;
-        return ptr + 1;
-    }
-
-    // Extract initial bits from lead byte
     static const u8 masks[] = { 0, 0x7F, 0x1F, 0x0F, 0x07 };
     u32 cp = b0 & masks[len];
 
-    for (u32 i = 1; i < len; i++) {
-        u8 b = (u8)ptr[i];
-        if (!utf8_is_continuation(b)) {
-            *codepoint = UTF8_REPLACEMENT_CHAR;
-            return ptr + 1;
-        }
-        cp = (cp << 6) | (b & 0x3F);
-    }
-
-    // Validate: not a surrogate, not out of range
-    if (cp > UTF8_MAX_CODEPOINT || (cp >= 0xD800 && cp <= 0xDFFF)) {
+    if (!decode_continuations((const u8*)ptr, len, &cp)) {
         *codepoint = UTF8_REPLACEMENT_CHAR;
-        return ptr + len;
+        return ptr + 1;
     }
 
-    // Validate: not overlong
-    static const u32 min_cp[] = { 0, 0, 0x80, 0x800, 0x10000 };
-    if (cp < min_cp[len]) {
+    if (is_invalid_scalar(cp) || is_overlong(cp, len)) {
         *codepoint = UTF8_REPLACEMENT_CHAR;
         return ptr + len;
     }
@@ -71,7 +73,7 @@ u64 utf8_codepoint_count(FlString str) {
 }
 
 u32 utf8_encode(char* buf, u32 cp) {
-    if (cp > UTF8_MAX_CODEPOINT || (cp >= 0xD800 && cp <= 0xDFFF)) {
+    if (is_invalid_scalar(cp)) {
         return 0;
     }
 
@@ -100,6 +102,10 @@ u32 utf8_encode(char* buf, u32 cp) {
     return 4;
 }
 
+static bool is_literal_replacement_char(const u8* bytes, u64 remaining) {
+    return remaining >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBF && bytes[2] == 0xBD;
+}
+
 bool utf8_is_valid(FlString str) {
     const char* ptr = str.data;
     const char* end = str.data + str.length;
@@ -108,20 +114,11 @@ bool utf8_is_valid(FlString str) {
         u32 cp;
         const char* next = utf8_decode_safe(ptr, end, &cp);
 
-        // Replacement char means invalid (unless input actually contains U+FFFD)
-        if (cp == UTF8_REPLACEMENT_CHAR && ptr < end) {
-            // Check if it's actually U+FFFD in the input (EF BF BD)
-            if (end - ptr >= 3 && (u8)ptr[0] == 0xEF && (u8)ptr[1] == 0xBF && (u8)ptr[2] == 0xBD) {
-                ptr = next;
-                continue;
-            }
+        if (cp == UTF8_REPLACEMENT_CHAR && !is_literal_replacement_char((const u8*)ptr, (u64)(end - ptr))) {
             return false;
         }
 
         ptr = next;
-        if (ptr == nullptr) {
-            break;
-        }
     }
 
     return true;

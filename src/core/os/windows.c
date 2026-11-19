@@ -68,17 +68,34 @@ static FlString wide_to_string(struct FlArena* arena, const wchar_t* wide) {
 }
 
 // The caller owns result.name and result.is_valid.
-static void filestat_from_attributes(FileStat* result, DWORD file_attributes, DWORD size_low, DWORD size_high,
-                                     FILETIME write_time) {
+static void filestat_from_attributes(FileStat* result, const WIN32_FILE_ATTRIBUTE_DATA* attrs) {
     LARGE_INTEGER size;
-    size.LowPart = size_low;
-    size.HighPart = size_high;
+    size.LowPart = attrs->nFileSizeLow;
+    size.HighPart = (LONG)attrs->nFileSizeHigh;
     result->size = (u64)size.QuadPart;
-    result->modification_time = filetime_to_unix_ms(write_time);
-    result->is_directory = (file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    result->modification_time = filetime_to_unix_ms(attrs->ftLastWriteTime);
+    result->is_directory = (attrs->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
     result->is_regular_file = !result->is_directory;
-    result->is_symlink = (file_attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-    result->mode = file_attributes;
+    result->is_symlink = (attrs->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+    result->mode = attrs->dwFileAttributes;
+}
+
+static void filestat_from_find_data(FileStat* result, const WIN32_FIND_DATAW* find_data) {
+    WIN32_FILE_ATTRIBUTE_DATA attrs = {
+        .dwFileAttributes = find_data->dwFileAttributes,
+        .ftLastWriteTime = find_data->ftLastWriteTime,
+        .nFileSizeHigh = find_data->nFileSizeHigh,
+        .nFileSizeLow = find_data->nFileSizeLow,
+    };
+    filestat_from_attributes(result, &attrs);
+}
+
+static bool is_separator(char c) {
+    return c == '\\' || c == '/';
+}
+
+static bool is_dot_entry(const wchar_t* name) {
+    return wcscmp(name, L".") == 0 || wcscmp(name, L"..") == 0;
 }
 
 // Returns INVALID_HANDLE_VALUE on failure.
@@ -250,8 +267,15 @@ i64 file_open_write_os(FlString path, bool append) {
     return (i64)file;
 }
 
+static bool write_args_valid(i64 fd, const u8* data, i64 size) {
+    if (fd < 0 || size <= 0) {
+        return false;
+    }
+    return data != nullptr;
+}
+
 i64 file_write_to_handle_os(i64 fd, const u8* data, i64 size) {
-    if (fd < 0 || data == nullptr || size <= 0) {
+    if (!write_args_valid(fd, data, size)) {
         return -1;
     }
 
@@ -419,6 +443,48 @@ bool file_create_directory_os(FlString path) {
     return success != 0;
 }
 
+static char* path_copy_cstr(struct FlArena* arena, FlString path) {
+    char* copy = arena_alloc_array(arena, char, path.length + 1);
+    memcpy(copy, path.data, path.length);
+    copy[path.length] = '\0';
+    return copy;
+}
+
+static bool has_drive_prefix(const char* path, u64 length) {
+    if (length < 3) {
+        return false;
+    }
+    return path[1] == ':' && is_separator(path[2]);
+}
+
+// Skips the drive letter ("C:\") or the leading separator of a UNC or rooted path.
+static char* skip_root_prefix(char* path, u64 length) {
+    if (has_drive_prefix(path, length)) {
+        return path + 3;
+    }
+    if (is_separator(path[0])) {
+        return path + 1;
+    }
+    return path;
+}
+
+static char* skip_to_separator(char* p) {
+    while (*p != '\0' && !is_separator(*p)) {
+        p++;
+    }
+    return p;
+}
+
+// A concurrent creator can make the component between the existence check and the create
+// call; the component existing is the desired outcome, so only a create failure with the
+// directory still absent is an error.
+static bool ensure_directory_os(FlString path) {
+    if (file_directory_exists_os(path)) {
+        return true;
+    }
+    return file_create_directory_os(path) || file_directory_exists_os(path);
+}
+
 bool file_create_directory_recursive_os(FlString path) {
     if (string_is_empty(path)) {
         return false;
@@ -430,37 +496,18 @@ bool file_create_directory_recursive_os(FlString path) {
 
     arena_scratch_auto(temp);
 
-    char* path_copy = arena_alloc_array(temp.arena, char, path.length + 1);
-    memcpy(path_copy, path.data, path.length);
-    path_copy[path.length] = '\0';
-
-    char* p = path_copy;
-
-    // Skip drive letter for Windows (e.g., "C:\")
-    if (path.length >= 3 && path_copy[1] == ':' && (path_copy[2] == '\\' || path_copy[2] == '/')) {
-        p += 3;
-    }
-    // Skip leading slash/backslash for UNC or rooted paths
-    else if (*p == '/' || *p == '\\') {
-        p++;
-    }
+    char* path_copy = path_copy_cstr(temp.arena, path);
+    char* p = skip_root_prefix(path_copy, path.length);
 
     while (*p != '\0') {
-        while (*p != '\0' && *p != '/' && *p != '\\') {
-            p++;
-        }
+        p = skip_to_separator(p);
 
         char saved = *p;
         *p = '\0';
 
-        // A concurrent creator can make the component between the existence check and the create
-        // call; the component existing is the desired outcome, so only a create failure with the
-        // directory still absent is an error.
         FlString component = (FlString) { .data = path_copy, .length = (u64)(p - path_copy) };
-        if (!file_directory_exists_os(component)) {
-            if (!file_create_directory_os(component) && !file_directory_exists_os(component)) {
-                return false;
-            }
+        if (!ensure_directory_os(component)) {
+            return false;
         }
 
         *p = saved;
@@ -507,7 +554,30 @@ bool file_remove_directory_os(FlString path) {
     return success != 0;
 }
 
-bool file_remove_directory_recursive_os(FlString path) {
+static void remove_directory_entry(FlArena* arena, FlString dir_path, const WIN32_FIND_DATAW* find_data) {
+    if (is_dot_entry(find_data->cFileName)) {
+        return;
+    }
+
+    FlString item_name = wide_to_string(arena, find_data->cFileName);
+    if (string_is_empty(item_name)) {
+        return;
+    }
+
+    FlString item_path = file_build_path_os(arena, dir_path, item_name);
+
+    bool is_directory = (find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    bool is_link = (find_data->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+    if (is_directory && is_link) {
+        file_remove_directory_os(item_path);
+    } else if (is_directory) {
+        file_remove_directory_recursive_os(item_path);
+    } else {
+        file_delete_os(item_path);
+    }
+}
+
+static void remove_directory_contents(FlString path) {
     arena_scratch_auto(temp);
 
     FlString search_pattern = fl_string_concat(temp.arena, path, FL_S("\\*"));
@@ -515,34 +585,20 @@ bool file_remove_directory_recursive_os(FlString path) {
 
     WIN32_FIND_DATAW find_data;
     HANDLE find_handle = FindFirstFileW(os_path_str(search_os_path), &find_data);
-
-    if (find_handle != INVALID_HANDLE_VALUE) {
-        do {
-            if (wcscmp(find_data.cFileName, L".") == 0 || wcscmp(find_data.cFileName, L"..") == 0) {
-                continue;
-            }
-
-            FlString item_name = wide_to_string(temp.arena, find_data.cFileName);
-            if (!string_is_empty(item_name)) {
-                FlString item_path = file_build_path_os(temp.arena, path, item_name);
-
-                bool is_directory = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-                bool is_link = (find_data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-                if (is_directory && is_link) {
-                    file_remove_directory_os(item_path);
-                } else if (is_directory) {
-                    file_remove_directory_recursive_os(item_path);
-                } else {
-                    file_delete_os(item_path);
-                }
-            }
-        } while (FindNextFileW(find_handle, &find_data));
-
-        FindClose(find_handle);
+    if (find_handle == INVALID_HANDLE_VALUE) {
+        return;
     }
 
-    bool success = file_remove_directory_os(path);
-    return success;
+    do {
+        remove_directory_entry(temp.arena, path, &find_data);
+    } while (FindNextFileW(find_handle, &find_data));
+
+    FindClose(find_handle);
+}
+
+bool file_remove_directory_recursive_os(FlString path) {
+    remove_directory_contents(path);
+    return file_remove_directory_os(path);
 }
 
 u64 get_current_time_ms_os(void) {
@@ -562,8 +618,7 @@ FileStat file_stat_os(FlString path) {
     WIN32_FILE_ATTRIBUTE_DATA attrs;
     if (GetFileAttributesExW(os_path_str(os_path), GetFileExInfoStandard, &attrs) != 0) {
         result.name = (FlString) { 0 }; // Not used for single file stat
-        filestat_from_attributes(&result, attrs.dwFileAttributes, attrs.nFileSizeLow, attrs.nFileSizeHigh,
-                                 attrs.ftLastWriteTime);
+        filestat_from_attributes(&result, &attrs);
         result.is_valid = true;
     }
 
@@ -579,9 +634,8 @@ FlString file_build_path_os(struct FlArena* arena, FlString base_path, FlString 
     }
 
     // Check if we need a separator (Windows uses backslash, but also accepts forward slash)
-    bool base_ends_with_sep
-        = (base_path.data[base_path.length - 1] == '\\' || base_path.data[base_path.length - 1] == '/');
-    bool relative_starts_with_sep = (relative_path.data[0] == '\\' || relative_path.data[0] == '/');
+    bool base_ends_with_sep = is_separator(base_path.data[base_path.length - 1]);
+    bool relative_starts_with_sep = is_separator(relative_path.data[0]);
 
     if (base_ends_with_sep && relative_starts_with_sep) {
         FlString relative_without_sep = { relative_path.data + 1, relative_path.length - 1 };
@@ -623,53 +677,47 @@ DirHandle dir_open_os(FlArena* arena, FlString path) {
     return handle;
 }
 
+static bool next_raw_entry(WindowsDirData* dir_data) {
+    // FindFirstFileW already produced the first entry when the directory was opened.
+    if (dir_data->first_call) {
+        dir_data->first_call = false;
+        return true;
+    }
+    return FindNextFileW(dir_data->find_handle, &dir_data->find_data) != 0;
+}
+
+static bool convert_entry_name(WindowsDirData* dir_data) {
+    int name_len = WideCharToMultiByte(CP_UTF8, 0, dir_data->find_data.cFileName, -1, dir_data->utf8_filename,
+                                       sizeof(dir_data->utf8_filename), nullptr, nullptr);
+    return name_len > 0;
+}
+
+// An entry with no representable name cannot be joined onto a path, so it must not be
+// returned as valid: callers loop on is_valid and would build a path from nothing.
+static bool next_usable_entry(WindowsDirData* dir_data) {
+    while (next_raw_entry(dir_data)) {
+        if (!is_dot_entry(dir_data->find_data.cFileName) && convert_entry_name(dir_data)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
     FileStat result = { 0 };
-    result.is_valid = false;
 
     if (!dir_handle || !dir_handle->is_valid) {
         return result;
     }
 
     WindowsDirData* dir_data = (WindowsDirData*)dir_handle->platform_data;
-    if (dir_data->find_handle == INVALID_HANDLE_VALUE) {
+    if (dir_data->find_handle == INVALID_HANDLE_VALUE || !next_usable_entry(dir_data)) {
         return result;
     }
 
-    BOOL found;
-    if (dir_data->first_call) {
-        found = TRUE; // We already have the first result from FindFirstFile
-        dir_data->first_call = false;
-    } else {
-        found = FindNextFileW(dir_data->find_handle, &dir_data->find_data);
-    }
-
-    while (found) {
-        // Skip . and ..
-        if ((dir_data->find_data.cFileName[0] == L'.' && dir_data->find_data.cFileName[1] == L'\0')
-            || (dir_data->find_data.cFileName[0] == L'.' && dir_data->find_data.cFileName[1] == L'.'
-                && dir_data->find_data.cFileName[2] == L'\0')) {
-            found = FindNextFileW(dir_data->find_handle, &dir_data->find_data);
-            continue;
-        }
-
-        int name_len = WideCharToMultiByte(CP_UTF8, 0, dir_data->find_data.cFileName, -1, dir_data->utf8_filename,
-                                           sizeof(dir_data->utf8_filename), nullptr, nullptr);
-        if (name_len <= 0) {
-            // An entry with no representable name cannot be joined onto a path, so it must not be
-            // returned as valid: callers loop on is_valid and would build a path from nothing.
-            found = FindNextFileW(dir_data->find_handle, &dir_data->find_data);
-            continue;
-        }
-
-        result.name = fl_string_copy(arena, string_from_cstr(dir_data->utf8_filename));
-        result.is_valid = true;
-
-        filestat_from_attributes(&result, dir_data->find_data.dwFileAttributes, dir_data->find_data.nFileSizeLow,
-                                 dir_data->find_data.nFileSizeHigh, dir_data->find_data.ftLastWriteTime);
-
-        break; // Found valid entry
-    }
+    result.name = fl_string_copy(arena, string_from_cstr(dir_data->utf8_filename));
+    result.is_valid = true;
+    filestat_from_find_data(&result, &dir_data->find_data);
 
     return result;
 }
@@ -857,6 +905,55 @@ int unsetenv_os(const char* name) {
     return _putenv_s(name, "");
 }
 
+static bool query_disk_space(const wchar_t* path, DiskSpaceInfo* out) {
+    ULARGE_INTEGER free_bytes_available;
+    ULARGE_INTEGER total_bytes;
+    ULARGE_INTEGER total_free_bytes;
+
+    if (!GetDiskFreeSpaceExW(path, &free_bytes_available, &total_bytes, &total_free_bytes)) {
+        return false;
+    }
+
+    out->bytes_available = free_bytes_available.QuadPart;
+    out->bytes_total = total_bytes.QuadPart;
+    out->bytes_free = total_free_bytes.QuadPart;
+    out->is_valid = true;
+    return true;
+}
+
+static wchar_t* find_last_separator(wchar_t* path) {
+    wchar_t* last_sep = wcsrchr(path, L'\\');
+    if (!last_sep) {
+        last_sep = wcsrchr(path, L'/');
+    }
+    return last_sep;
+}
+
+static bool is_drive_root_separator(const wchar_t* path, const wchar_t* sep) {
+    return sep == path + 2 && path[1] == L':';
+}
+
+// Returns false once there is no parent left to try.
+static bool truncate_to_parent(wchar_t* path, bool* tried_drive_root) {
+    wchar_t* last_sep = find_last_separator(path);
+    if (last_sep == nullptr) {
+        return false;
+    }
+
+    // At the drive root (e.g. "C:\"): keep the trailing backslash and try once more
+    if (is_drive_root_separator(path, last_sep)) {
+        if (*tried_drive_root) {
+            return false;
+        }
+        *tried_drive_root = true;
+        path[3] = L'\0';
+        return true;
+    }
+
+    *last_sep = L'\0';
+    return true;
+}
+
 DiskSpaceInfo get_disk_space_os(FlString path) {
     DiskSpaceInfo result = { 0 };
 
@@ -868,43 +965,15 @@ DiskSpaceInfo get_disk_space_os(FlString path) {
     OsPath os_path = string_to_os_path(temp.arena, path);
 
     const wchar_t* orig_path = os_path_str(os_path);
-
-    ULARGE_INTEGER free_bytes_available;
-    ULARGE_INTEGER total_bytes;
-    ULARGE_INTEGER total_free_bytes;
-
     size_t path_len = wcslen(orig_path);
     wchar_t* path_copy = arena_alloc_array(temp.arena, wchar_t, path_len + 1);
     wcscpy(path_copy, orig_path);
 
     // Walk up the directory tree until an existing path is found: the target file may not exist yet
     bool tried_drive_root = false;
-    while (path_copy[0] != L'\0') {
-        if (GetDiskFreeSpaceExW(path_copy, &free_bytes_available, &total_bytes, &total_free_bytes)) {
-            result.bytes_available = free_bytes_available.QuadPart;
-            result.bytes_total = total_bytes.QuadPart;
-            result.bytes_free = total_free_bytes.QuadPart;
-            result.is_valid = true;
+    while (path_copy[0] != L'\0' && !query_disk_space(path_copy, &result)) {
+        if (!truncate_to_parent(path_copy, &tried_drive_root)) {
             break;
-        }
-
-        wchar_t* last_sep = wcsrchr(path_copy, L'\\');
-        if (!last_sep) {
-            last_sep = wcsrchr(path_copy, L'/');
-        }
-        if (last_sep == nullptr) {
-            break;
-        }
-
-        // At the drive root (e.g. "C:\"): keep the trailing backslash and try once more
-        if (last_sep == path_copy + 2 && path_copy[1] == L':') {
-            if (tried_drive_root) {
-                break; // Already tried drive root, give up
-            }
-            tried_drive_root = true;
-            path_copy[3] = L'\0';
-        } else {
-            *last_sep = L'\0';
         }
     }
 

@@ -336,6 +336,73 @@ void fl_jobs_create(FlArena* arena, const int num_threads) {
     }
 }
 
+static JobInfo* job_acquire(Jobs* self, FlJobsFunc func, void* user_data, JobPriority priority) {
+    mutex_lock(&self->free_list_mutex);
+    JobInfo* job = self->first_free_entity;
+    if (job != nullptr) {
+        self->first_free_entity = self->first_free_entity->next;
+        atomic_fetch_add(&job->generation, 1); // Increment generation to invalidate old handles
+    } else {
+        job = arena_alloc_zero(self->arena, JobInfo);
+        atomic_fetch_add(&job->generation, 1);
+        atomic_fetch_add(&self->total_jobs_allocated, 1);
+    }
+    mutex_unlock(&self->free_list_mutex);
+
+    atomic_store(&job->function, func);
+    atomic_store(&job->user_data, user_data);
+    atomic_store(&job->first_dependent, nullptr);
+    atomic_store(&job->priority, (u32)priority); // Store priority for stale entry detection
+    job->next_dependent = nullptr;
+
+    return job;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlJobHandle job_handle_of(const Jobs* self, JobInfo* job) {
+    u64 job_index = (u64)(job - self->start_jobs);
+    u64 generation = atomic_load(&job->generation);
+    return (job_index << JOB_HANDLE_INDEX_SHIFT) | generation;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool job_status_is_done(u32 status) {
+    return status == JOB_STATUS_COMPLETED || status == JOB_STATUS_FREE || status == JOB_STATUS_PROMOTING;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static JobInfo* live_dependency_job(Jobs* self, FlJobHandle dependency) {
+    if (dependency == 0 || dependency == JOB_HANDLE_IMMEDIATE_COMPLETE) {
+        return nullptr;
+    }
+
+    const u64 dep_index = (dependency & JOB_HANDLE_INDEX_MASK) >> JOB_HANDLE_INDEX_SHIFT;
+    const u64 dep_generation = dependency & JOB_HANDLE_GEN_MASK;
+
+    if (dep_index >= atomic_load(&self->total_jobs_allocated)) {
+        return nullptr;
+    }
+
+    JobInfo* dep_job = &self->start_jobs[dep_index];
+
+    // Not paired with the status read below: the dependency can finish and its slot be reused across the
+    // free-list section, leaving that read and the prepend on the new occupant. That is harmless: a slot is
+    // only recycled after its job completed, so the dependency is done, and the re-check after the prepend
+    // releases the job when the occupant reports COMPLETED/FREE/PROMOTING. It can cost a wait but never
+    // breaks the ordering.
+    if (atomic_load(&dep_job->generation) != dep_generation) {
+        // The dependency was recycled: treat as no dependency.
+        return nullptr;
+    }
+
+    return dep_job;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 FlJobHandle fl_jobs_add_job_with_priority(FlJobsFunc func, void* user_data, JobPriority priority) {
     Jobs* self = g_global_job_system;
     priority = clamp_priority(priority);
@@ -354,27 +421,8 @@ FlJobHandle fl_jobs_add_job_with_priority(FlJobsFunc func, void* user_data, JobP
     }
 
     // Get a job from the free list or allocate. Guarded: jobs are added from any non-worker thread.
-    mutex_lock(&self->free_list_mutex);
-    JobInfo* job = self->first_free_entity;
-    if (job != nullptr) {
-        self->first_free_entity = self->first_free_entity->next;
-        atomic_fetch_add(&job->generation, 1); // Increment generation to invalidate old handles
-    } else {
-        job = arena_alloc_zero(self->arena, JobInfo);
-        atomic_fetch_add(&job->generation, 1);
-        atomic_fetch_add(&self->total_jobs_allocated, 1);
-    }
-    mutex_unlock(&self->free_list_mutex);
-
-    u64 job_index = (u64)(job - self->start_jobs);
-    u64 generation = atomic_load(&job->generation);
-    u64 handle = (job_index << JOB_HANDLE_INDEX_SHIFT) | generation;
-
-    atomic_store(&job->function, func);
-    atomic_store(&job->user_data, user_data);
-    atomic_store(&job->first_dependent, nullptr);
-    atomic_store(&job->priority, (u32)priority); // Store priority for stale entry detection
-    job->next_dependent = nullptr;
+    JobInfo* job = job_acquire(self, func, user_data, priority);
+    u64 handle = job_handle_of(self, job);
     // Status must be the last write: NOT_STARTED makes the job claimable by any worker, so every
     // field a worker reads when executing must already be published (matches the dependency path).
     atomic_store(&job->status, JOB_STATUS_NOT_STARTED);
@@ -396,61 +444,20 @@ FlJobHandle fl_jobs_add_job_with_priority_and_dependency(FlJobsFunc func, void* 
     FL_VALIDATE_RET(self != nullptr, 0);
     FL_VALIDATE_RET(func != nullptr, 0);
 
-    if (dependency == 0) {
-        return fl_jobs_add_job_with_priority(func, user_data, priority);
-    }
-
-    if (dependency == JOB_HANDLE_IMMEDIATE_COMPLETE) {
-        return fl_jobs_add_job_with_priority(func, user_data, priority);
-    }
-
-    const u64 dep_index = (dependency & JOB_HANDLE_INDEX_MASK) >> JOB_HANDLE_INDEX_SHIFT;
-    const u64 dep_generation = dependency & JOB_HANDLE_GEN_MASK;
-
-    if (dep_index >= atomic_load(&self->total_jobs_allocated)) {
-        return fl_jobs_add_job_with_priority(func, user_data, priority);
-    }
-
-    JobInfo* dep_job = &self->start_jobs[dep_index];
-
-    // Not paired with the status read below: the dependency can finish and its slot be reused across the
-    // free-list section, leaving that read and the prepend on the new occupant. That is harmless: a slot is
-    // only recycled after its job completed, so the dependency is done, and the re-check after the prepend
-    // releases the job when the occupant reports COMPLETED/FREE/PROMOTING. It can cost a wait but never
-    // breaks the ordering.
-    if (atomic_load(&dep_job->generation) != dep_generation) {
-        // The dependency was recycled: treat as no dependency.
+    JobInfo* dep_job = live_dependency_job(self, dependency);
+    if (dep_job == nullptr) {
         return fl_jobs_add_job_with_priority(func, user_data, priority);
     }
 
     // Get a job from the free list or allocate. Guarded: a worker reaches this too, so the free list is
     // contended by workers and producers alike.
-    mutex_lock(&self->free_list_mutex);
-    JobInfo* job = self->first_free_entity;
-    if (job != nullptr) {
-        self->first_free_entity = self->first_free_entity->next;
-        atomic_fetch_add(&job->generation, 1); // Increment generation to invalidate old handles
-    } else {
-        job = arena_alloc_zero(self->arena, JobInfo);
-        atomic_fetch_add(&job->generation, 1);
-        atomic_fetch_add(&self->total_jobs_allocated, 1);
-    }
-    mutex_unlock(&self->free_list_mutex);
-
-    u64 job_index = (u64)(job - self->start_jobs);
-    u64 generation = atomic_load(&job->generation);
-    u64 handle = (job_index << JOB_HANDLE_INDEX_SHIFT) | generation;
-
-    atomic_store(&job->function, func);
-    atomic_store(&job->user_data, user_data);
-    atomic_store(&job->first_dependent, nullptr);
-    atomic_store(&job->priority, (u32)priority); // Store priority for stale entry detection
-    job->next_dependent = nullptr;
+    JobInfo* job = job_acquire(self, func, user_data, priority);
+    u64 handle = job_handle_of(self, job);
 
     // PROMOTING counts as complete: its function has run and its dependent list has been, or is being,
     // drained, so a new dependent must be scheduled directly rather than enqueued onto that list.
     u32 dep_status = atomic_load_explicit(&dep_job->status, memory_order_acquire);
-    if (dep_status == JOB_STATUS_COMPLETED || dep_status == JOB_STATUS_FREE || dep_status == JOB_STATUS_PROMOTING) {
+    if (job_status_is_done(dep_status)) {
         atomic_store(&job->status, JOB_STATUS_NOT_STARTED);
         schedule_job_with_priority(self, job, priority);
         return handle;
@@ -468,7 +475,7 @@ FlJobHandle fl_jobs_add_job_with_priority_and_dependency(FlJobsFunc func, void* 
     // (release) before the drain, so if the drain already passed the just-added job this re-check
     // observes at least PROMOTING and self-promotes it here.
     dep_status = atomic_load_explicit(&dep_job->status, memory_order_acquire);
-    if (dep_status == JOB_STATUS_COMPLETED || dep_status == JOB_STATUS_FREE || dep_status == JOB_STATUS_PROMOTING) {
+    if (job_status_is_done(dep_status)) {
         u32 expected_status = JOB_STATUS_WAITING_FOR_DEPENDENCY;
         if (atomic_compare_exchange_strong(&job->status, &expected_status, JOB_STATUS_NOT_STARTED)) {
             schedule_job_with_priority(self, job, priority);

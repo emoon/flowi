@@ -124,34 +124,48 @@ struct FlApp {
 // resolves its arena from the process-global UI context; v1 hosts a single app per process.
 static bool s_frame_active;
 
+typedef struct {
+    FlAppFrameFn fn;
+    void* user_data;
+} FrameBinding;
+
+typedef struct {
+    FlWindow* os_window;
+    bool is_main;
+    FrameBinding frame;
+    int width;
+    int height;
+} WindowAttach;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Attach a host-level window to the shared tier: create its render surface and its UI context, wire the shared
 // font cache + default font onto it, and append it to the window list. os_window must already exist, because the GPU
 // windowed path builds its render backend against the context before the surface does. The caller owns the
 // FlAppWindow handle; attach only fills the fields it owns and clears pending, so a pre-set on_close survives
 // materialization. Returns false (logging) on failure; appends on success.
 
-static bool app_attach_window(FlApp* app, FlAppWindow* w, FlWindow* os_window, bool is_main, FlAppFrameFn frame,
-                              void* user_data, int width, int height) {
+static bool app_attach_window(FlApp* app, FlAppWindow* w, const WindowAttach* attach) {
     if (app->window_count >= FL_APP_MAX_WINDOWS) {
         log_error("fl_app: window list full (%d)", FL_APP_MAX_WINDOWS);
         return false;
     }
 
-    w->os_window = os_window;
-    w->is_main = is_main;
-    w->frame = frame;
-    w->user_data = user_data;
-    w->width = width;
-    w->height = height;
+    w->os_window = attach->os_window;
+    w->is_main = attach->is_main;
+    w->frame = attach->frame.fn;
+    w->user_data = attach->frame.user_data;
+    w->width = attach->width;
+    w->height = attach->height;
     w->pending = false;       // materialized: it now joins the live window list
     w->applied_scale = -1.0f; // sentinel: forces the first per-window scale compose to apply
 
-    w->surface = host_surface_create(app->host, width, height);
+    w->surface = host_surface_create(app->host, attach->width, attach->height);
     if (!w->surface) {
         return false;
     }
 
-    w->ctx = host_window_attach(app->host, w->surface, width, height);
+    w->ctx = host_window_attach(app->host, w->surface, attach->width, attach->height);
     if (!w->ctx) {
         // This window never joins app->windows, so the destroy loop cannot reach it. The surface is freed here.
         host_surface_destroy(app->host, w->surface);
@@ -221,17 +235,7 @@ static void app_dock_close_promoted_window(void* ud, void* host_window) {
 }
 
 // Every fl_app_create failure path bails identically: tear down whatever came up (fl_app_destroy null-checks every
-// subsystem, so it is safe at any point in the bring-up) and return nullptr. They are macros so that log_error
-// reports the call-site line: FL_APP_FAIL for a failure that owns its message, FL_APP_BAIL for one whose callee
-// already logged.
-#define FL_APP_FAIL(app, cond, msg) \
-    do {                            \
-        if (cond) {                 \
-            log_error(msg);         \
-            fl_app_destroy(app);    \
-            return nullptr;         \
-        }                           \
-    } while (0)
+// subsystem, so it is safe at any point in the bring-up) and return nullptr. The failing step has already logged.
 #define FL_APP_BAIL(app, cond)   \
     do {                         \
         if (cond) {              \
@@ -240,19 +244,26 @@ static void app_dock_close_promoted_window(void* ud, void* host_window) {
         }                        \
     } while (0)
 
+typedef struct {
+    bool check_init;
+    const char* init_err;
+    const char* window_err;
+} MainWindowProbe;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Create the main window's OS handle from the already-assigned window_backend at the requested size + title. The
 // SDL paths must probe create_window first (a failed backend init leaves it nullptr); the headless backend is always
 // initialized, so it passes check_init=false.
-static FlWindow* app_create_main_window(FlApp* app, const FlAppSettings* settings, bool check_init,
-                                        const char* init_err, const char* window_err) {
-    if (check_init && !app->window_backend.create_window) {
-        log_error("%s", init_err);
+static FlWindow* app_create_main_window(FlApp* app, const FlAppSettings* settings, const MainWindowProbe* probe) {
+    if (probe->check_init && !app->window_backend.create_window) {
+        log_error("%s", probe->init_err);
         return nullptr;
     }
     FlWindowConfig window_cfg = fl_app_main_window_config(settings, &app->window_backend);
     FlWindow* win = app->window_backend.create_window(app->window_backend.user_data, &window_cfg);
     if (!win) {
-        log_error("%s", window_err);
+        log_error("%s", probe->window_err);
         return nullptr;
     }
     // Recorded so a bail between here and a successful attach still releases the platform window (the teardown
@@ -260,6 +271,124 @@ static FlWindow* app_create_main_window(FlApp* app, const FlAppSettings* setting
     app->pending_main_os_window = win;
     return win;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Resolve the effective renderer. On APPLE the software windowed backend is not built: windowed + software
+// maps to Metal, headless keeps the software default. FlAppRenderer_Gpu and _Metal both name the GPU
+// compute backend (one GL, one Metal), so both take the GPU path (create_gpu_renderer picks by build).
+static bool app_uses_gpu(const FlAppSettings* settings) {
+    FlAppRenderer renderer = settings->renderer;
+#ifdef __APPLE__
+    if (!settings->headless && renderer == FlAppRenderer_Software) {
+        renderer = FlAppRenderer_Metal;
+    }
+#endif
+    return renderer == FlAppRenderer_Gpu || renderer == FlAppRenderer_Metal;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if FL_APP_HAVE_GPU
+static bool app_init_gpu_headless(FlApp* app) {
+    // fl_app_gpu owns the EGL surfaceless context and builds the backend against it.
+    app->gpu = fl_app_gpu_create_headless(app->arena, &app->gpu_backend);
+    if (!app->gpu || app->gpu_backend.render == nullptr) {
+        log_error("fl_app: GPU renderer initialization failed");
+        return false;
+    }
+    app->adopted_gpu_backend = true;
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool app_init_gpu_windowed(FlApp* app, const FlAppSettings* settings, FlWindow** main_os_window) {
+#if FL_APP_HAVE_SDL
+    // Windowed GPU: the SDL WindowBackend owns the OS windows + the shared compositor. Create the backend
+    // + the main window first so the GPU render backend can be built against its context. APPLE uses the
+    // Metal windowed mode (CAMetalLayer compositor); every other platform uses SDL-GL.
+#ifdef __APPLE__
+    app->window_backend = sdl_window_backend_create(app->arena, FlWindowBackendMode_Metal);
+#else
+    app->window_backend = sdl_window_backend_create(app->arena, FlWindowBackendMode_Gl);
+#endif
+    const MainWindowProbe probe = { .check_init = true,
+                                    .init_err = "fl_app: SDL window backend initialization failed",
+                                    .window_err = "fl_app: SDL window creation failed" };
+    *main_os_window = app_create_main_window(app, settings, &probe);
+    if (!*main_os_window || !fl_app_gpu_create_backend(app->arena, &app->gpu_backend)) {
+        return false;
+    }
+    app->adopted_gpu_backend = true;
+    return true;
+#else
+    (void)settings;
+    (void)main_os_window;
+    log_error("fl_app: windowed GPU mode requires the SDL host (build with FLOWI_SDL_BACKEND)");
+    return false;
+#endif
+}
+#endif
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool app_init_gpu(FlApp* app, const FlAppSettings* settings, FlWindow** main_os_window) {
+#if FL_APP_HAVE_GPU
+    if (app->headless) {
+        return app_init_gpu_headless(app);
+    }
+    return app_init_gpu_windowed(app, settings, main_os_window);
+#else
+    (void)app;
+    (void)settings;
+    (void)main_os_window;
+    log_error("fl_app: GPU renderer requires the EGL/GL build (OpenGL_EGL_FOUND -> FL_APP_HAVE_GPU); "
+              "use FlAppRenderer_Software or enable the GPU build");
+    return false;
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool app_init_cpu_window(FlApp* app, const FlAppSettings* settings, bool use_gpu, FlWindow** main_os_window) {
+    if (app->headless) {
+        // The headless window backend supplies a fixed drawable size + neutral content scale, the injected-event
+        // pump, and cursor / hidden-drag recording. Present is a no-op (the GPU reads back from its offscreen
+        // RGBA8 target instead).
+        app->window_backend = headless_window_backend_create(app->arena);
+        const MainWindowProbe probe = { .check_init = false, .window_err = "fl_app: headless window creation failed" };
+        *main_os_window = app_create_main_window(app, settings, &probe);
+        if (!*main_os_window) {
+            return false;
+        }
+        log_info("fl_app: headless harness ready (mouse/wheel/key/text/window-close injection; gamepad/axis deferred)");
+        return true;
+    }
+
+    if (use_gpu) {
+        return true;
+    }
+
+#if FL_APP_HAVE_SDL
+    // Windowed software: the SDL WindowBackend in software mode owns the OS window and presents the software
+    // renderer's CPU pixel buffer. (Windowed GPU created its GL-mode backend + window above.)
+    app->window_backend = sdl_window_backend_create(app->arena, FlWindowBackendMode_Software);
+    const MainWindowProbe probe = { .check_init = true,
+                                    .init_err = "fl_app: SDL software window backend initialization failed",
+                                    .window_err = "fl_app: SDL software window creation failed" };
+    *main_os_window = app_create_main_window(app, settings, &probe);
+    return *main_os_window != nullptr;
+#else
+    (void)settings;
+    (void)main_os_window;
+    log_error("fl_app: windowed mode requires the SDL host (build with FLOWI_SDL_BACKEND); "
+              "use headless=true or enable the bindings build");
+    return false;
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlApp* fl_app_create(const FlAppSettings* settings) {
     FL_ASSERT(settings != nullptr);
@@ -275,54 +404,14 @@ FlApp* fl_app_create(const FlAppSettings* settings) {
     app->headless = settings->headless;
     app->ui_zoom = 1.0f; // DPI-correct until the user calls fl_app_set_ui_zoom
 
-    // Resolve the effective renderer. On APPLE the software windowed backend is not built: windowed + software
-    // maps to Metal, headless keeps the software default. FlAppRenderer_Gpu and _Metal both name the GPU
-    // compute backend (one GL, one Metal), so both take the GPU path (create_gpu_renderer picks by build).
-    FlAppRenderer renderer = settings->renderer;
-#ifdef __APPLE__
-    if (!settings->headless && renderer == FlAppRenderer_Software) {
-        renderer = FlAppRenderer_Metal;
-    }
-#endif
-    const bool use_gpu = (renderer == FlAppRenderer_Gpu || renderer == FlAppRenderer_Metal);
+    const bool use_gpu = app_uses_gpu(settings);
 
     // The main window's OS handle. The windowed-GPU path creates it early (the render backend builds against its
     // GL/Metal surface); the headless and windowed-software paths create it after the globals. Every path has one.
     FlWindow* main_os_window = nullptr;
 
     if (use_gpu) {
-#if FL_APP_HAVE_GPU
-        if (app->headless) {
-            // fl_app_gpu owns the EGL surfaceless context and builds the backend against it.
-            app->gpu = fl_app_gpu_create_headless(arena, &app->gpu_backend);
-            FL_APP_FAIL(app, !app->gpu || app->gpu_backend.render == nullptr,
-                        "fl_app: GPU renderer initialization failed");
-            app->adopted_gpu_backend = true;
-        } else {
-#if FL_APP_HAVE_SDL
-            // Windowed GPU: the SDL WindowBackend owns the OS windows + the shared compositor. Create the backend
-            // + the main window first so the GPU render backend can be built against its context. APPLE uses the
-            // Metal windowed mode (CAMetalLayer compositor); every other platform uses SDL-GL.
-#ifdef __APPLE__
-            app->window_backend = sdl_window_backend_create(arena, FlWindowBackendMode_Metal);
-#else
-            app->window_backend = sdl_window_backend_create(arena, FlWindowBackendMode_Gl);
-#endif
-            main_os_window = app_create_main_window(app, settings, /*check_init*/ true,
-                                                    "fl_app: SDL window backend initialization failed",
-                                                    "fl_app: SDL window creation failed");
-            FL_APP_BAIL(app, !main_os_window);
-            FL_APP_BAIL(app, !fl_app_gpu_create_backend(arena, &app->gpu_backend));
-            app->adopted_gpu_backend = true;
-#else
-            FL_APP_FAIL(app, true, "fl_app: windowed GPU mode requires the SDL host (build with FLOWI_SDL_BACKEND)");
-#endif
-        }
-#else
-        FL_APP_FAIL(app, true,
-                    "fl_app: GPU renderer requires the EGL/GL build (OpenGL_EGL_FOUND -> FL_APP_HAVE_GPU); "
-                    "use FlAppRenderer_Software or enable the GPU build");
-#endif
+        FL_APP_BAIL(app, !app_init_gpu(app, settings, &main_os_window));
     }
 
     // The embedded tier: shared resource tier, VFS + image system, font cache, and the hidden working-directory
@@ -333,36 +422,14 @@ FlApp* fl_app_create(const FlAppSettings* settings) {
     app->host = host_create(arena, &host_settings, app->adopted_gpu_backend ? &app->gpu_backend : nullptr);
     FL_APP_BAIL(app, !app->host);
 
-    if (app->headless) {
-        // The headless window backend supplies a fixed drawable size + neutral content scale, the injected-event
-        // pump, and cursor / hidden-drag recording. Present is a no-op (the GPU reads back from its offscreen
-        // RGBA8 target instead).
-        app->window_backend = headless_window_backend_create(arena);
-        main_os_window = app_create_main_window(app, settings, /*check_init*/ false, nullptr,
-                                                "fl_app: headless window creation failed");
-        FL_APP_BAIL(app, !main_os_window);
-        log_info("fl_app: headless harness ready (mouse/wheel/key/text/window-close injection; gamepad/axis deferred)");
-    } else if (!use_gpu) {
-#if FL_APP_HAVE_SDL
-        // Windowed software: the SDL WindowBackend in software mode owns the OS window and presents the software
-        // renderer's CPU pixel buffer. (Windowed GPU created its GL-mode backend + window above.)
-        app->window_backend = sdl_window_backend_create(arena, FlWindowBackendMode_Software);
-        main_os_window = app_create_main_window(app, settings, /*check_init*/ true,
-                                                "fl_app: SDL software window backend initialization failed",
-                                                "fl_app: SDL software window creation failed");
-        FL_APP_BAIL(app, !main_os_window);
-#else
-        FL_APP_FAIL(app, true,
-                    "fl_app: windowed mode requires the SDL host (build with FLOWI_SDL_BACKEND); "
-                    "use headless=true or enable the bindings build");
-#endif
-    }
+    FL_APP_BAIL(app, !app_init_cpu_window(app, settings, use_gpu, &main_os_window));
 
     // Attach the main window (windows[0]). Its frame callback is supplied per-tick by fl_app_tick (nullptr here).
     FlAppWindow* main_win = arena_alloc(app->arena, FlAppWindow);
     *main_win = (FlAppWindow) { 0 };
-    FL_APP_BAIL(app, !app_attach_window(app, main_win, main_os_window, /*is_main*/ true, nullptr, nullptr,
-                                        settings->width, settings->height));
+    const WindowAttach main_attach
+        = { .os_window = main_os_window, .is_main = true, .width = settings->width, .height = settings->height };
+    FL_APP_BAIL(app, !app_attach_window(app, main_win, &main_attach));
     // windows[] now owns the OS handle; drop the pending reference so teardown never destroys it twice.
     app->pending_main_os_window = nullptr;
 
@@ -376,8 +443,7 @@ FlApp* fl_app_create(const FlAppSettings* settings) {
 
 // Create the OS window + surface + context for a (non-main) window into the caller-provided handle. Shared by the
 // immediate open path and the mid-frame deferred-open materialization. Returns false (logging, no leak) on failure.
-static bool app_open_window_into(FlApp* app, FlAppWindow* w, const FlWindowSettings* settings, FlAppFrameFn frame,
-                                 void* user_data) {
+static bool app_open_window_into(FlApp* app, FlAppWindow* w, const FlWindowSettings* settings, FrameBinding frame) {
     FlWindowConfig window_cfg = { .title = settings->title,
                                   .width = settings->width,
                                   .height = settings->height,
@@ -389,7 +455,12 @@ static bool app_open_window_into(FlApp* app, FlAppWindow* w, const FlWindowSetti
         log_error("fl_app: window creation failed");
         return false;
     }
-    if (!app_attach_window(app, w, os_window, /*is_main*/ false, frame, user_data, settings->width, settings->height)) {
+    const WindowAttach attach = { .os_window = os_window,
+                                 .is_main = false,
+                                 .frame = frame,
+                                 .width = settings->width,
+                                 .height = settings->height };
+    if (!app_attach_window(app, w, &attach)) {
         // Surface/context creation failed after the OS window came up; drop the OS window so it does not leak.
         if (app->window_backend.destroy_window) {
             app->window_backend.destroy_window(app->window_backend.user_data, os_window);
@@ -433,7 +504,7 @@ FlAppWindow* fl_app_window_open(FlApp* app, const FlWindowSettings* settings, Fl
     }
 
     // Between-frame open: create the window immediately.
-    if (!app_open_window_into(app, w, settings, frame, user_data)) {
+    if (!app_open_window_into(app, w, settings, (FrameBinding) { frame, user_data })) {
         return nullptr;
     }
     return w;
@@ -445,13 +516,66 @@ FlAppWindow* fl_app_window_open(FlApp* app, const FlWindowSettings* settings, Fl
 static void app_apply_pending_opens(FlApp* app) {
     for (int i = 0; i < app->pending_open_count; i++) {
         FlAppWindow* w = app->pending_opens[i].handle;
-        if (!app_open_window_into(app, w, &app->pending_opens[i].settings, w->frame, w->user_data)) {
+        if (!app_open_window_into(app, w, &app->pending_opens[i].settings, (FrameBinding) { w->frame, w->user_data })) {
             w->pending = false; // left inert: never entered the window list
             log_error("fl_app: deferred window open failed");
         }
     }
     app->pending_open_count = 0;
 }
+
+static FlWindow* app_first_os_window(const FlApp* app) {
+    for (int i = 0; i < app->window_count; i++) {
+        if (app->windows[i]->os_window) {
+            return app->windows[i]->os_window;
+        }
+    }
+    return nullptr;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void app_destroy_os_windows(FlApp* app) {
+    if (!app->window_backend.destroy_window) {
+        return;
+    }
+
+    for (int i = 0; i < app->window_count; i++) {
+        if (app->windows[i]->os_window) {
+            app->window_backend.destroy_window(app->window_backend.user_data, app->windows[i]->os_window);
+        }
+    }
+    // A main window created but not yet appended to windows[] when fl_app_create bailed lives only here; the
+    // loop above cannot reach it. nullptr on the success path, so this is then a no-op.
+    if (app->pending_main_os_window) {
+        app->window_backend.destroy_window(app->window_backend.user_data, app->pending_main_os_window);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void app_detach_window_contexts(FlApp* app) {
+    for (int i = 0; i < app->window_count; i++) {
+        if (app->windows[i]->ctx) {
+            host_window_detach(app->host, app->windows[i]->ctx);
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The shared GL context must be current against a live window before any render-backend GL teardown (the
+// host's destroy_surface + destroy, both of which delete GL objects). The headless backend owns no GL context
+// here (its render context is the EGL one torn down below), so it leaves make_current nullptr and this is
+// skipped.
+static void app_make_shared_context_current(FlApp* app) {
+    FlWindow* target = app_first_os_window(app);
+    if (app->window_backend.make_current && target) {
+        app->window_backend.make_current(app->window_backend.user_data, target);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_app_destroy(FlApp* app) {
     if (!app) {
@@ -462,23 +586,8 @@ void fl_app_destroy(FlApp* app) {
     // the process-global VFS and image-system singletons it owns), then every window's OS handle. The GPU render
     // backend frees its GL objects while a window (and so the shared GL context) is still alive; the OS windows
     // go last, the final one tearing the shared GL context down.
-    for (int i = 0; i < app->window_count; i++) {
-        if (app->windows[i]->ctx) {
-            host_window_detach(app->host, app->windows[i]->ctx);
-        }
-    }
-    // The shared GL context must be current against a live window before any render-backend GL teardown (the
-    // host's destroy_surface + destroy, both of which delete GL objects). The headless backend owns no GL context
-    // here (its render context is the EGL one torn down below), so it leaves make_current nullptr and this loop is
-    // skipped.
-    if (app->window_backend.make_current) {
-        for (int i = 0; i < app->window_count; i++) {
-            if (app->windows[i]->os_window) {
-                app->window_backend.make_current(app->window_backend.user_data, app->windows[i]->os_window);
-                break;
-            }
-        }
-    }
+    app_detach_window_contexts(app);
+    app_make_shared_context_current(app);
     // The host reclaims any surface still outstanding in the right order (after the shared tier, before the
     // backend), so the window loop above does not have to.
     host_destroy(app->host);
@@ -496,18 +605,7 @@ void fl_app_destroy(FlApp* app) {
 #endif
     // Windows are torn down before the backend that created them. The window backend's last destroy_window tears
     // down its shared GL state.
-    if (app->window_backend.destroy_window) {
-        for (int i = 0; i < app->window_count; i++) {
-            if (app->windows[i]->os_window) {
-                app->window_backend.destroy_window(app->window_backend.user_data, app->windows[i]->os_window);
-            }
-        }
-        // A main window created but not yet appended to windows[] when fl_app_create bailed lives only here; the
-        // loop above cannot reach it. nullptr on the success path, so this is then a no-op.
-        if (app->pending_main_os_window) {
-            app->window_backend.destroy_window(app->window_backend.user_data, app->pending_main_os_window);
-        }
-    }
+    app_destroy_os_windows(app);
     if (app->window_backend.destroy) {
         app->window_backend.destroy(app->window_backend.user_data);
     }
@@ -614,6 +712,40 @@ static void fl_app_apply_window_scale(FlApp* app, FlAppWindow* win) {
     }
 }
 
+#if FL_APP_HAVE_GPU
+// Windowed GPU: resolve the surface texture and let the backend composite it over the window + present. Returns
+// false when the backend has no present slot.
+static bool app_present_gpu(FlApp* app, FlAppWindow* win) {
+    if (!app->window_backend.present) {
+        return false;
+    }
+
+    FlSurfaceHandle tex = { 0 };
+    if (fl_app_gpu_surface_texture(win->surface, &tex, nullptr, nullptr)) {
+        app->window_backend.present(app->window_backend.user_data, win->os_window, tex);
+    }
+    return true;
+}
+#endif
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Windowed software: read back the offscreen RGB24 buffer and let the backend blit it to the window.
+static void app_present_software(FlApp* app, FlAppWindow* win) {
+    if (!app->window_backend.present_software) {
+        return;
+    }
+
+    FlPixelReadback rb;
+    if (host_read_pixels(app->host, win->surface, &rb)) {
+        const FlRgb24Frame frame
+            = { .pixels = rb.pixels, .width = rb.width, .height = rb.height, .stride = rb.stride };
+        app->window_backend.present_software(app->window_backend.user_data, win->os_window, &frame);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Present one window's rendered surface, selecting by whichever present slot the backend provides: windowed GPU
 // composites the surface texture (present); windowed software blits the software renderer's CPU pixel buffer
 // (present_software). Headless no-ops for both renderers (the readback is the surface).
@@ -622,31 +754,16 @@ static void fl_app_window_present(FlApp* app, FlAppWindow* win) {
         return;
     }
 #if FL_APP_HAVE_GPU
-    // Windowed GPU: resolve the surface texture and let the backend composite it over the window + present.
-    if (app->window_backend.present) {
-        FlSurfaceHandle tex = { 0 };
-        if (fl_app_gpu_surface_texture(win->surface, &tex, nullptr, nullptr)) {
-            app->window_backend.present(app->window_backend.user_data, win->os_window, tex);
-        }
+    if (app_present_gpu(app, win)) {
         return;
     }
 #endif
-    // Windowed software: read back the offscreen RGB24 buffer and let the backend blit it to the window.
-    if (app->window_backend.present_software) {
-        FlPixelReadback rb;
-        if (host_read_pixels(app->host, win->surface, &rb)) {
-            const FlRgb24Frame frame
-                = { .pixels = rb.pixels, .width = rb.width, .height = rb.height, .stride = rb.stride };
-            app->window_backend.present_software(app->window_backend.user_data, win->os_window, &frame);
-        }
-    }
+    app_present_software(app, win);
 }
 
-// One window's slice of a tick: make its context current, track its live size, recompose its scale, snapshot
-// input, run its frame callback, flush its cursor, and present it. dt is the one shared step sampled in fl_app_tick.
-static void fl_app_tick_window(FlApp* app, FlAppWindow* win, float dt, FlAppFrameFn frame, void* user_data) {
-    ui_make_current(win->ctx);
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static void app_track_window_size(FlApp* app, FlAppWindow* win) {
     // Track the live window-pixel size: a tiling WM or HiDPI display hands back a size that differs from the
     // requested size, and the user can resize the window. On the first tick (applied_* start at 0) and on any
     // change, push the true pixel size through ui_set_display_resolution, which resizes the render backend
@@ -662,6 +779,33 @@ static void fl_app_tick_window(FlApp* app, FlAppWindow* win, float dt, FlAppFram
         win->applied_width = win_w;
         win->applied_height = win_h;
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Flush this window's per-frame resolved cursor shape + sticky visibility. Cursor state is per-window; the
+// relative-mouse grab and the warp-back are not, and are flushed once per tick in fl_app_flush_pointer_capture. The
+// core and platform FlCursor types are field-copied, not reinterpret-cast, so the two need not share a layout.
+static void app_flush_window_cursor(FlApp* app, FlAppWindow* win) {
+    if (!win->os_window) {
+        return;
+    }
+
+    FlCursor requested = fl_cursor_get_requested();
+    FlCursor fl_cursor = { .shape = (FlCursorShape)requested.shape };
+    void* ud = app->window_backend.user_data;
+    app->window_backend.set_cursor(ud, win->os_window, fl_cursor);
+    app->window_backend.set_cursor_visible(ud, win->os_window, fl_cursor_get_visible());
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// One window's slice of a tick: make its context current, track its live size, recompose its scale, snapshot
+// input, run its frame callback, flush its cursor, and present it. dt is the one shared step sampled in fl_app_tick.
+static void fl_app_tick_window(FlApp* app, FlAppWindow* win, float dt, FrameBinding frame) {
+    ui_make_current(win->ctx);
+
+    app_track_window_size(app, win);
 
     // Recompose every tick (dedup'd on the unchanged product): a resize can move the window to a different-DPI
     // monitor, and content scale tracks that.
@@ -673,62 +817,64 @@ static void fl_app_tick_window(FlApp* app, FlAppWindow* win, float dt, FlAppFram
 
     ui_update_begin(win->ctx);
     s_frame_active = true;
-    if (frame) {
-        frame(user_data);
+    if (frame.fn) {
+        frame.fn(frame.user_data);
     }
     s_frame_active = false;
     ui_update_end(win->ctx, dt);
 
-    // Flush this window's per-frame resolved cursor shape + sticky visibility. Cursor state is per-window; the
-    // relative-mouse grab and the warp-back are not, and are flushed once per tick in
-    // fl_app_flush_pointer_capture. The core and platform FlCursor types are field-copied, not reinterpret-cast,
-    // so the two need not share a layout.
-    FlCursor requested = fl_cursor_get_requested();
-    FlCursor fl_cursor = { .shape = (FlCursorShape)requested.shape };
-    bool cursor_visible = fl_cursor_get_visible();
-
-    if (win->os_window) {
-        void* ud = app->window_backend.user_data;
-        app->window_backend.set_cursor(ud, win->os_window, fl_cursor);
-        app->window_backend.set_cursor_visible(ud, win->os_window, cursor_visible);
-    }
+    app_flush_window_cursor(app, win);
 
     fl_app_window_present(app, win);
 }
 
-// Resolve and flush the app-global pointer-capture state once per tick, after every window has ticked. The
-// relative-mouse grab and the one-shot warp-back are app-global OS pointer state, but a hidden drag is owned by a
-// single window, so the grab must reflect whichever window currently holds one, not the last window ticked.
-// Scan the windows for the drag owner (relative mode sticky-on for its whole drag) and for a pending warp-back
-// (set on the frame a drag ends, when relative mode is already back off), then flush both once.
-static void fl_app_flush_pointer_capture(FlApp* app) {
-    bool relative = false;
-    bool have_warp = false;
-    FlAppWindow* warp_win = nullptr;
-    float warp_x = 0.0f, warp_y = 0.0f;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef struct {
+    bool relative;
+    FlAppWindow* warp_win;
+    float warp_x;
+    float warp_y;
+} PointerCapture;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Scan the windows for the drag owner (relative mode sticky-on for its whole drag) and for a pending warp-back (set
+// on the frame a drag ends, when relative mode is already back off).
+static PointerCapture app_scan_pointer_capture(FlApp* app) {
+    PointerCapture capture = { 0 };
 
     for (int i = 0; i < app->window_count; i++) {
         FlAppWindow* win = app->windows[i];
         ui_make_current(win->ctx);
-        if (ui_get_relative_mouse_mode()) {
-            relative = true;
-        }
+        capture.relative |= ui_get_relative_mouse_mode();
+
         float wx, wy;
         if (ui_take_pending_warp(&wx, &wy)) {
-            have_warp = true;
-            warp_win = win;
-            warp_x = wx;
-            warp_y = wy;
+            capture.warp_win = win;
+            capture.warp_x = wx;
+            capture.warp_y = wy;
         }
     }
+
+    return capture;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Resolve and flush the app-global pointer-capture state once per tick, after every window has ticked. The
+// relative-mouse grab and the one-shot warp-back are app-global OS pointer state, but a hidden drag is owned by a
+// single window, so the grab must reflect whichever window currently holds one, not the last window ticked.
+static void fl_app_flush_pointer_capture(FlApp* app) {
+    PointerCapture capture = app_scan_pointer_capture(app);
 
     // The grab is global OS state (SDL_SetRelativeMouseMode / the headless backend's single flag), so the window
     // argument is immaterial for the relative-mode flush; the warp targets the owning window's coordinates.
     if (app->window_count > 0 && app->windows[0]->os_window) {
         void* ud = app->window_backend.user_data;
-        app->window_backend.set_relative_mouse_mode(ud, app->windows[0]->os_window, relative);
-        if (have_warp) {
-            app->window_backend.warp_mouse(ud, warp_win->os_window, warp_x, warp_y);
+        app->window_backend.set_relative_mouse_mode(ud, app->windows[0]->os_window, capture.relative);
+        if (capture.warp_win) {
+            app->window_backend.warp_mouse(ud, capture.warp_win->os_window, capture.warp_x, capture.warp_y);
         }
     }
 }
@@ -780,7 +926,7 @@ bool fl_app_tick(FlApp* app, void* user_data, FlAppFrameFn frame) {
         FlAppWindow* win = app->windows[i];
         FlAppFrameFn win_frame = win->is_main ? frame : win->frame;
         void* win_user_data = win->is_main ? user_data : win->user_data;
-        fl_app_tick_window(app, win, dt, win_frame, win_user_data);
+        fl_app_tick_window(app, win, dt, (FrameBinding) { win_frame, win_user_data });
     }
 
     // Every window has refreshed its records: retire the ones no window touched.
