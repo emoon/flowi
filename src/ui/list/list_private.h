@@ -4,11 +4,11 @@
 // helpers the keyboard, marquee and drag gestures all use. Nothing outside src/ui/ui_list.c, src/ui/ui_tree.c and
 // src/ui/list/ includes this.
 
-#include "../list_geometry.h"
-#include "../list_ids.h"
-#include "../list_rows.h"
-#include "../list_uniform.h"
-#include "../ui_list.h"
+#include "list_geometry.h"
+#include "list_ids.h"
+#include "list_rows.h"
+#include "list_uniform.h"
+#include "ui_list.h"
 #include "../type_ahead.h"
 #include "../ui_private.h"
 #include <core/hashmap.h>

@@ -10,7 +10,7 @@
 #include <flowi/ui/theme.h>
 #include "ui/layout.h"
 #include "ui/ui.h"
-#include "ui/ui_list.h"
+#include "ui/list/ui_list.h"
 #include "ui/ui_selection.h"
 
 #define GALLERY_TABLE_HEIGHT 200.0f

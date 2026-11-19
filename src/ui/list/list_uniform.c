@@ -6,15 +6,15 @@
 #include <core/math.h>
 #include <core/hashmap.h>
 #include <core/log.h>
-#include "layout.h"
+#include "../layout.h"
 #include "list_geometry.h"
 #include "list_ids.h"
-#include "pixel_snap.h"
-#include "scroll_core.h"
-#include "ui.h"
-#include "ui_private.h"
-#include "ui_scroll.h"
-#include "wheel_scope.h"
+#include "../pixel_snap.h"
+#include "../scroll_core.h"
+#include "../ui.h"
+#include "../ui_private.h"
+#include "../ui_scroll.h"
+#include "../wheel_scope.h"
 #include <string.h>
 
 #define LIST_UNIFORM_SCROLL_SPEED 12.0f // Smooth scroll lerp factor (per-caller override)

@@ -42,7 +42,7 @@
 #include "layout.h"
 #include "wheel_scope.h"
 #include "scroll_core.h"
-#include "list_uniform.h"
+#include "list/list_uniform.h"
 #include "localization.h"
 #include "pixel_snap.h"
 #include "clay_to_render_ir.h"
@@ -52,7 +52,7 @@
 #include <ui/render_backend.h>
 #include "render_ir.h"
 #include "ui_hit_test.h"
-#include "ui_list.h"
+#include "list/ui_list.h"
 #include "ui_tree.h"
 #include "menu/ui_menu.h"
 #include "ui_navigation.h"

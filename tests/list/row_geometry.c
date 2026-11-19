@@ -1,7 +1,7 @@
 // Row Geometry tests
 
 #include "list/common.h"
-#include "ui/list_geometry.h"
+#include "ui/list/list_geometry.h"
 
 // Row Geometry (list_geometry.h): pure functions from a row height, a gap and a row count to where rows are. The
 // cases use rows 24 px tall with a 2 px gap at scale 1, so row N starts at N * 26.

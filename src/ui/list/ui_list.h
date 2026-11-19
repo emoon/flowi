@@ -6,8 +6,8 @@
 
 #include <core/types.h>
 #include <flowi/ui/ui_list.h>
-#include <ui/list_api.h>
-#include "ui_selection.h"
+#include <ui/list/list_api.h>
+#include "../ui_selection.h"
 
 typedef struct FlArena FlArena;
 

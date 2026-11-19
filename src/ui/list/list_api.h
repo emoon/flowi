@@ -6,7 +6,7 @@
 // into include/flowi/ui/list.h. This internal header keeps the hand-written pieces that stay outside the
 // generator: the opaque FlListContext.
 
-#include "ui_types.h"
+#include "../ui_types.h"
 #include <flowi/arena/arena.h>
 #include <flowi/ui/list.h>
 #include <flowi/ui/ui_selection.h>

@@ -8,7 +8,7 @@
 // The List keeps only the gesture anchor across frames; the resolved selection lives only here. The set
 // interprets the u64 as pure identity, never as data.
 
-#include "list_rows.h"
+#include "list/list_rows.h"
 #include <core/types.h>
 #include <flowi/ui/selection.h>
 #include <flowi/ui/ui_selection.h> // @generated FlSelectionSet (api_gen)
