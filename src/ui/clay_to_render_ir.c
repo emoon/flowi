@@ -64,93 +64,111 @@ static void clay_image_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
 // (dx, dy). Widths, radii, sweeps, intensities, font sizes, and effect offsets are deltas/extents and are not
 // translated.
 
+typedef void (*SpliceTranslateFn)(void* payload, float dx, float dy);
+
+static void shift_rect(FlRect* rect, float dx, float dy) {
+    rect->x += dx;
+    rect->y += dy;
+}
+
+static void splice_fill_rect(void* payload, float dx, float dy) {
+    FlCmdFillRect* c = (FlCmdFillRect*)payload;
+    shift_rect(&c->rect, dx, dy);
+}
+
+static void splice_border(void* payload, float dx, float dy) {
+    shift_rect(&((FlCmdBorder*)payload)->rect, dx, dy);
+}
+
+static void splice_text_run(void* payload, float dx, float dy) {
+    FlCmdTextRun* c = (FlCmdTextRun*)payload;
+    FlGlyph* glyphs = (FlGlyph*)(c + 1);
+    for (u32 i = 0; i < c->glyph_count; i++) {
+        glyphs[i].x += dx;
+        glyphs[i].y += dy;
+    }
+}
+
+static void splice_image(void* payload, float dx, float dy) {
+    shift_rect(&((FlCmdImage*)payload)->dst, dx, dy);
+}
+
+static void splice_clip_push(void* payload, float dx, float dy) {
+    shift_rect(&((FlCmdClipPush*)payload)->rect, dx, dy);
+}
+
+static void splice_polyline(void* payload, float dx, float dy) {
+    FlCmdPolyline* c = (FlCmdPolyline*)payload;
+    c->baseline_y += dy;
+    FlPolyPoint* pts = (FlPolyPoint*)(c + 1);
+    for (u32 i = 0; i < c->point_count; i++) {
+        pts[i].x += dx;
+        pts[i].y += dy;
+    }
+}
+
+static void splice_arc(void* payload, float dx, float dy) {
+    FlCmdArc* c = (FlCmdArc*)payload;
+    c->cx += dx;
+    c->cy += dy;
+}
+
+static void splice_circle(void* payload, float dx, float dy) {
+    FlCmdCircle* c = (FlCmdCircle*)payload;
+    c->cx += dx;
+    c->cy += dy;
+}
+
+static void splice_diamond(void* payload, float dx, float dy) {
+    FlCmdDiamond* c = (FlCmdDiamond*)payload;
+    c->cx += dx;
+    c->cy += dy;
+}
+
+static void splice_bars(void* payload, float dx, float dy) {
+    FlCmdBarSet* c = (FlCmdBarSet*)payload;
+    c->baseline_y += dy;
+    FlBar* bars = (FlBar*)(c + 1);
+    for (u32 i = 0; i < c->bar_count; i++) {
+        bars[i].x += dx;
+    }
+}
+
+static const SpliceTranslateFn SPLICE_TRANSLATORS[] = {
+    [FlCmd_FillRect] = splice_fill_rect,
+    [FlCmd_Border] = splice_border,
+    [FlCmd_TextRun] = splice_text_run,
+    [FlCmd_Image] = splice_image,
+    [FlCmd_ClipPush] = splice_clip_push,
+    [FlCmd_Polyline] = splice_polyline,
+    [FlCmd_Arc] = splice_arc,
+    [FlCmd_Circle] = splice_circle,
+    [FlCmd_Diamond] = splice_diamond,
+    [FlCmd_Bar] = splice_bars,
+};
+
+// Snap to the device-pixel grid in absolute space, now that the element origin (carrying a fractional
+// scroll offset or fractional DPI) is folded in.
+static void splice_snap_fill_rect(FlCmdFillRect* c) {
+    c->rect.x = roundf(c->rect.x);
+    c->rect.y = roundf(c->rect.y);
+    c->rect.w = roundf(c->rect.w);
+    c->rect.h = roundf(c->rect.h);
+}
+
 static void splice_paint_record(FlArena* arena, const FlCmdHeader* rec, float dx, float dy) {
     fl_arena_align(arena, 8); // records start 8-aligned; byte_size is a multiple of 8 so the walk stays valid
     FlCmdHeader* dst = (FlCmdHeader*)arena_alloc_array(arena, u8, rec->byte_size);
     memcpy(dst, rec, rec->byte_size);
 
     void* payload = dst + 1;
-    switch ((FlCmdKind)dst->kind) {
-        case FlCmd_FillRect: {
-            FlCmdFillRect* c = (FlCmdFillRect*)payload;
-            c->rect.x += dx;
-            c->rect.y += dy;
-            if (dst->flags & FL_SNAP_DEVICE_PX) {
-                // Snap to the device-pixel grid in absolute space, now that the element origin (carrying a fractional
-                // scroll offset or fractional DPI) is folded in.
-                c->rect.x = roundf(c->rect.x);
-                c->rect.y = roundf(c->rect.y);
-                c->rect.w = roundf(c->rect.w);
-                c->rect.h = roundf(c->rect.h);
-            }
-            break;
-        }
-        case FlCmd_Border: {
-            FlCmdBorder* c = (FlCmdBorder*)payload;
-            c->rect.x += dx;
-            c->rect.y += dy;
-            break;
-        }
-        case FlCmd_TextRun: {
-            FlCmdTextRun* c = (FlCmdTextRun*)payload;
-            FlGlyph* glyphs = (FlGlyph*)(c + 1);
-            for (u32 i = 0; i < c->glyph_count; i++) {
-                glyphs[i].x += dx;
-                glyphs[i].y += dy;
-            }
-            break;
-        }
-        case FlCmd_Image: {
-            FlCmdImage* c = (FlCmdImage*)payload;
-            c->dst.x += dx;
-            c->dst.y += dy;
-            break;
-        }
-        case FlCmd_ClipPush: {
-            FlCmdClipPush* c = (FlCmdClipPush*)payload;
-            c->rect.x += dx;
-            c->rect.y += dy;
-            break;
-        }
-        case FlCmd_ClipPop:
-            break;
-        case FlCmd_Polyline: {
-            FlCmdPolyline* c = (FlCmdPolyline*)payload;
-            c->baseline_y += dy;
-            FlPolyPoint* pts = (FlPolyPoint*)(c + 1);
-            for (u32 i = 0; i < c->point_count; i++) {
-                pts[i].x += dx;
-                pts[i].y += dy;
-            }
-            break;
-        }
-        case FlCmd_Arc: {
-            FlCmdArc* c = (FlCmdArc*)payload;
-            c->cx += dx;
-            c->cy += dy;
-            break;
-        }
-        case FlCmd_Circle: {
-            FlCmdCircle* c = (FlCmdCircle*)payload;
-            c->cx += dx;
-            c->cy += dy;
-            break;
-        }
-        case FlCmd_Diamond: {
-            FlCmdDiamond* c = (FlCmdDiamond*)payload;
-            c->cx += dx;
-            c->cy += dy;
-            break;
-        }
-        case FlCmd_Bar: {
-            FlCmdBarSet* c = (FlCmdBarSet*)payload;
-            c->baseline_y += dy;
-            FlBar* bars = (FlBar*)(c + 1);
-            for (u32 i = 0; i < c->bar_count; i++) {
-                bars[i].x += dx;
-            }
-            break;
-        }
+    const u32 kind = dst->kind;
+    if (kind >= sizeof(SPLICE_TRANSLATORS) / sizeof(SPLICE_TRANSLATORS[0]) || SPLICE_TRANSLATORS[kind] == nullptr) {
+        return;
+    }
+    SPLICE_TRANSLATORS[kind](payload, dx, dy);
+    if (kind == FlCmd_FillRect && (dst->flags & FL_SNAP_DEVICE_PX)) {
+        splice_snap_fill_rect((FlCmdFillRect*)payload);
     }
 }
 
@@ -172,6 +190,20 @@ static void clay_custom_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     }
 }
 
+static float text_baseline_y(Clay_BoundingBox bb, Clay_TextVerticalAlignment align, float ascender,
+                             float descender) {
+    switch (align) {
+        case CLAY_TEXT_VALIGN_TOP:
+            return bb.y + ascender;
+        case CLAY_TEXT_VALIGN_CENTER:
+            return bb.y + bb.height / 2.0f + (ascender + descender) / 2.0f;
+        case CLAY_TEXT_VALIGN_BOTTOM:
+            return bb.y + bb.height + descender;
+        default:
+            return bb.y + bb.height;
+    }
+}
+
 static void clay_text_to_ir(FlArena* arena, FlFontCache* font_cache, const Clay_RenderCommand* cmd) {
     const Clay_TextRenderData* text_data = &cmd->renderData.text;
     const Clay_BoundingBox bb = cmd->boundingBox;
@@ -190,22 +222,7 @@ static void clay_text_to_ir(FlArena* arena, FlFontCache* font_cache, const Clay_
 
     float ascender = (float)glyph_list.ascender / 64.0f;
     float descender = (float)glyph_list.descender / 64.0f;
-    float baseline_y;
-    switch (text_data->verticalAlignment) {
-        case CLAY_TEXT_VALIGN_TOP:
-            baseline_y = bb.y + ascender;
-            break;
-        case CLAY_TEXT_VALIGN_CENTER:
-            baseline_y = bb.y + bb.height / 2.0f + (ascender + descender) / 2.0f;
-            break;
-        case CLAY_TEXT_VALIGN_BOTTOM:
-            baseline_y = bb.y + bb.height + descender;
-            break;
-        case CLAY_TEXT_VALIGN_BASELINE:
-        default:
-            baseline_y = bb.y + bb.height;
-            break;
-    }
+    float baseline_y = text_baseline_y(bb, text_data->verticalAlignment, ascender, descender);
 
     // 1:1 scale: layout already sizes glyphs at the resolved font size; there is no separate display zoom here.
     // Letter spacing is applied between glyphs (n−1 gaps), the same rule font_cache_measure_text and the painter
@@ -215,35 +232,39 @@ static void clay_text_to_ir(FlArena* arena, FlFontCache* font_cache, const Clay_
                       baseline_y, (float)text_data->letterSpacing);
 }
 
+static void clay_scissor_start_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
+    ir_clip_push(arena, to_em_rect(cmd->boundingBox));
+}
+
+static void clay_scissor_end_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
+    (void)cmd;
+    ir_clip_pop(arena);
+}
+
+typedef void (*ClayTranslateFn)(FlArena* arena, const Clay_RenderCommand* cmd);
+
+static const ClayTranslateFn CLAY_TRANSLATORS[] = {
+    [CLAY_RENDER_COMMAND_TYPE_RECTANGLE] = clay_rectangle_to_ir,
+    [CLAY_RENDER_COMMAND_TYPE_IMAGE] = clay_image_to_ir,
+    [CLAY_RENDER_COMMAND_TYPE_BORDER] = clay_border_to_ir,
+    [CLAY_RENDER_COMMAND_TYPE_SCISSOR_START] = clay_scissor_start_to_ir,
+    [CLAY_RENDER_COMMAND_TYPE_SCISSOR_END] = clay_scissor_end_to_ir,
+    [CLAY_RENDER_COMMAND_TYPE_CUSTOM] = clay_custom_to_ir,
+};
+
+static void clay_command_to_ir(FlArena* arena, FlFontCache* font_cache, const Clay_RenderCommand* cmd) {
+    const unsigned type = (unsigned)cmd->commandType;
+    if (type == CLAY_RENDER_COMMAND_TYPE_TEXT) {
+        clay_text_to_ir(arena, font_cache, cmd);
+    } else if (type < sizeof(CLAY_TRANSLATORS) / sizeof(CLAY_TRANSLATORS[0]) && CLAY_TRANSLATORS[type] != nullptr) {
+        CLAY_TRANSLATORS[type](arena, cmd);
+    }
+}
+
 void fl_clay_to_render_ir(FlArena* arena, FlFontCache* font_cache, Clay_RenderCommand* clay_commands, int clay_count) {
     perf_scope_function();
 
     for_count(i, clay_count) {
-        Clay_RenderCommand* cmd = &clay_commands[i];
-        switch (cmd->commandType) {
-            case CLAY_RENDER_COMMAND_TYPE_RECTANGLE:
-                clay_rectangle_to_ir(arena, cmd);
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_IMAGE:
-                clay_image_to_ir(arena, cmd);
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_TEXT:
-                clay_text_to_ir(arena, font_cache, cmd);
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_BORDER:
-                clay_border_to_ir(arena, cmd);
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START:
-                ir_clip_push(arena, to_em_rect(cmd->boundingBox));
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_SCISSOR_END:
-                ir_clip_pop(arena);
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_CUSTOM:
-                clay_custom_to_ir(arena, cmd);
-                break;
-            default:
-                break;
-        }
+        clay_command_to_ir(arena, font_cache, &clay_commands[i]);
     }
 }

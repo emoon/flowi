@@ -59,6 +59,30 @@ bool fl_vfs_init(FlArena* arena) {
     return true;
 }
 
+// Inserted immediately before the LocalFS fallback.
+static void vfs_insert_before_fallback(VfsState* self, VfsPluginEntry* entry, VfsPluginEntry* fallback) {
+    entry->next = fallback;
+    entry->prev = fallback->prev;
+    if (fallback->prev != nullptr) {
+        fallback->prev->next = entry;
+    } else {
+        self->plugin_first = entry;
+    }
+    fallback->prev = entry;
+}
+
+// Appended at the tail (the fallback itself during fl_vfs_init, or before any fallback exists).
+static void vfs_append_driver(VfsState* self, VfsPluginEntry* entry) {
+    entry->next = nullptr;
+    entry->prev = self->plugin_last;
+    if (self->plugin_last != nullptr) {
+        self->plugin_last->next = entry;
+    } else {
+        self->plugin_first = entry;
+    }
+    self->plugin_last = entry;
+}
+
 void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
     profile_function_auto_nc("vfs:vfs_register_driver", PROFILE_COLOR_CYAN);
     VfsState* self = g_vfs_state;
@@ -77,25 +101,9 @@ void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
 
     VfsPluginEntry* fallback = self->builtin_fallback;
     if (fallback != nullptr && plugin != fallback->plugin) {
-        // Inserted immediately before the LocalFS fallback.
-        entry->next = fallback;
-        entry->prev = fallback->prev;
-        if (fallback->prev != nullptr) {
-            fallback->prev->next = entry;
-        } else {
-            self->plugin_first = entry;
-        }
-        fallback->prev = entry;
+        vfs_insert_before_fallback(self, entry, fallback);
     } else {
-        // Append at the tail (the fallback itself during fl_vfs_init, or before any fallback exists).
-        entry->next = nullptr;
-        entry->prev = self->plugin_last;
-        if (self->plugin_last != nullptr) {
-            self->plugin_last->next = entry;
-        } else {
-            self->plugin_first = entry;
-        }
-        self->plugin_last = entry;
+        vfs_append_driver(self, entry);
     }
 
     logc_info(VFS_ID, "VFS driver registered: %S", plugin->plugin_name);
@@ -135,49 +143,44 @@ static void vfs_free_data_result(FlVfsData* result, bool free_data_buffer) {
     mi_free(result);
 }
 
-// Frees what the op's job produced.
-static void vfs_op_free_result(VfsOp* op) {
-    FlVfsData* result = atomic_load_explicit(&op->result_data, memory_order_acquire);
+// Frees the data an op's job published, if it published any.
+static void vfs_op_free_payload(VfsOp* op, FlVfsData* result) {
+    if (!result) {
+        return;
+    }
 
     switch (op->op_type) {
-        case VfsOp_Mount: {
+        case VfsOp_Mount:
             // Owns nothing of its own: a mount's storage belongs to the FlVfsMount, not to this op.
             break;
-        }
 
-        case VfsOp_MountList: {
-            if (result) {
-                FlVfsFileList* list = (FlVfsFileList*)result;
-                // With a result_arena the listing lives in that arena, destroyed below; without one this is
-                // the error path, where the struct was mi_alloc'd on its own.
-                if (!op->result_arena) {
-                    mi_free(list);
-                }
+        case VfsOp_MountList:
+            // With a result_arena the listing lives in that arena, destroyed by the caller; without one this is
+            // the error path, where the struct was mi_alloc'd on its own.
+            if (!op->result_arena) {
+                mi_free(result);
             }
             break;
-        }
 
-        case VfsOp_FileOpen: {
+        case VfsOp_FileOpen:
             // The driver handle is closed by vfs_op_destroy, outside every lock.
             break;
-        }
 
-        case VfsOp_FileRead: {
-            if (result) {
-                // result->data points at the caller-provided read buffer (fl_vfs_read rejects a nullptr buffer),
-                // so only the result struct is freed here.
-                vfs_free_data_result(result, false);
-            }
+        case VfsOp_FileRead:
+            // result->data points at the caller-provided read buffer (fl_vfs_read rejects a nullptr buffer),
+            // so only the result struct is freed here.
+            vfs_free_data_result(result, false);
             break;
-        }
 
-        case VfsOp_ReadAll: {
-            if (result) {
-                vfs_free_data_result(result, !op->callback_owns_data);
-            }
+        case VfsOp_ReadAll:
+            vfs_free_data_result(result, !op->callback_owns_data);
             break;
-        }
     }
+}
+
+// Frees what the op's job produced.
+static void vfs_op_free_result(VfsOp* op) {
+    vfs_op_free_payload(op, atomic_load_explicit(&op->result_data, memory_order_acquire));
 
     if (op->result_arena) {
         fl_arena_destroy(op->result_arena);
@@ -260,18 +263,28 @@ static bool vfs_id_in_use_locked(VfsState* self, FlVfsHandle id) {
     return hashmap_get(&self->slots, id) || hashmap_get(&self->retiring, id);
 }
 
-// Caller holds handle_lock. Picks the op's id and lists it, taking the slot's reference. A caller-chosen id is refused
-// while it is in use.
-static bool vfs_slot_insert_locked(VfsState* self, VfsOp* op, FlVfsHandle reuse_handle) {
-    if (reuse_handle != FL_VFS_HANDLE_INVALID) {
-        if (vfs_id_in_use_locked(self, reuse_handle)) {
-            return false;
-        }
-        op->id = reuse_handle;
-    } else {
+// Caller holds handle_lock. A caller-chosen id is refused while it is in use.
+static bool vfs_assign_id_locked(VfsState* self, VfsOp* op, FlVfsHandle reuse_handle) {
+    if (reuse_handle == FL_VFS_HANDLE_INVALID) {
         do {
             op->id = self->next_handle_id++;
         } while (op->id == FL_VFS_HANDLE_INVALID || vfs_id_in_use_locked(self, op->id));
+        return true;
+    }
+
+    if (vfs_id_in_use_locked(self, reuse_handle)) {
+        return false;
+    }
+
+    op->id = reuse_handle;
+    return true;
+}
+
+// Caller holds handle_lock. Picks the op's id and lists it, taking the slot's reference. A caller-chosen id is refused
+// while it is in use.
+static bool vfs_slot_insert_locked(VfsState* self, VfsOp* op, FlVfsHandle reuse_handle) {
+    if (!vfs_assign_id_locked(self, op, reuse_handle)) {
+        return false;
     }
 
     atomic_fetch_add_explicit(&op->refs, 1, memory_order_relaxed);
@@ -404,26 +417,34 @@ typedef struct VfsJobList {
 // Caller holds handle_lock. Collects the jobs the ops of mount still name, or of every listed mount when mount is
 // nullptr, including ops whose id was closed but whose job has not finished. The handles are plain values: no op
 // pointer leaves the lock.
+static void vfs_append_mount_jobs(VfsJobList* list, const FlVfsMount* mount) {
+    for_each_list(op, mount->ops_first) {
+        FlJobHandle job = atomic_load_explicit(&op->job_handle, memory_order_acquire);
+        FlJobHandle last = atomic_load_explicit(&op->last_job, memory_order_acquire);
+        if (job) {
+            list->jobs[list->count++] = job;
+        }
+        if (last && last != job) {
+            list->jobs[list->count++] = last;
+        }
+    }
+}
+
 static VfsJobList vfs_collect_jobs_locked(VfsState* self, FlVfsMount* mount, FlArena* arena) {
-    FlVfsMount* first = mount ? mount : self->mount_first;
+    if (mount) {
+        VfsJobList list = { .jobs = arena_alloc_array(arena, FlJobHandle, 2ull * mount->ops_count) };
+        vfs_append_mount_jobs(&list, mount);
+        return list;
+    }
 
     u64 capacity = 0;
-    for (FlVfsMount* m = first; m != nullptr; m = mount ? nullptr : m->next) {
+    for_each_list(m, self->mount_first) {
         capacity += 2ull * m->ops_count;
     }
 
     VfsJobList list = { .jobs = arena_alloc_array(arena, FlJobHandle, capacity) };
-    for (FlVfsMount* m = first; m != nullptr; m = mount ? nullptr : m->next) {
-        for_each_list(op, m->ops_first) {
-            FlJobHandle job = atomic_load_explicit(&op->job_handle, memory_order_acquire);
-            FlJobHandle last = atomic_load_explicit(&op->last_job, memory_order_acquire);
-            if (job) {
-                list.jobs[list.count++] = job;
-            }
-            if (last && last != job) {
-                list.jobs[list.count++] = last;
-            }
-        }
+    for_each_list(m, self->mount_first) {
+        vfs_append_mount_jobs(&list, m);
     }
 
     return list;
@@ -748,18 +769,18 @@ FlVfsHandle fl_vfs_mount_read_all_with_options(FlVfsMount* mount, FlString relat
 
 // Two-phase read: allocate handle first, dispatch later.
 
-FlVfsHandle vfs_mount_read_all_prepare(FlVfsMount* mount, FlString relative_path, FlVfsReadCallback callback,
-                                       void* user_data, FlVfsReleaseCallback release, FlVfsHandle reuse_handle) {
+FlVfsHandle vfs_mount_read_all_prepare_with_options(FlVfsMount* mount, FlString relative_path,
+                                                    const VfsReadOptions* options) {
     FL_VALIDATE_RET(mount != nullptr, FL_VFS_HANDLE_INVALID);
 
     VfsOp* op = vfs_op_create(g_vfs_state, &(VfsOpParams) {
                                                .mount = mount,
                                                .path = relative_path,
                                                .op_type = VfsOp_ReadAll,
-                                               .callback = callback,
-                                               .user_data = user_data,
-                                               .release = release,
-                                               .reuse_handle = reuse_handle,
+                                               .callback = options->callback,
+                                               .user_data = options->user_data,
+                                               .release = options->release,
+                                               .reuse_handle = options->reuse_handle,
                                            });
     if (!op) {
         return FL_VFS_HANDLE_INVALID; // Refused, and logged, by vfs_op_create
@@ -792,23 +813,66 @@ FlVfsHandle fl_vfs_mount_open(FlVfsMount* mount, FlString relative_path, u32 fla
                                     });
 }
 
+static bool vfs_read_args_valid(FlVfsHandle file_handle, const void* buffer, i64 size) {
+    return file_handle != FL_VFS_HANDLE_INVALID && buffer && size > 0;
+}
+
+// Acquires the open file a read goes through; refuses a handle that is absent or not a file.
+static VfsOp* vfs_acquire_file_for_read(FlVfsHandle file_handle) {
+    VfsOp* file = vfs_op_acquire(file_handle);
+
+    if (file && file->op_type == VfsOp_FileOpen) {
+        return file;
+    }
+
+    if (file) {
+        vfs_op_release(file);
+    }
+
+    logc_error(VFS_ID, "Invalid file handle for read operation");
+    return nullptr;
+}
+
+static void vfs_read_schedule_chained(VfsOp* op, VfsOp* file, FlJobHandle chain_after) {
+    vfs_op_schedule(op, chain_after);
+    if (g_vfs_test_after_read_scheduled) {
+        g_vfs_test_after_read_scheduled(op->id);
+    }
+    // The next operation (or a wait) on the file chains after this one.
+    atomic_store_explicit(&file->last_job, atomic_load_explicit(&op->job_handle, memory_order_acquire),
+                          memory_order_release);
+}
+
+static void vfs_read_run_inline(VfsOp* op, FlJobHandle chain_after) {
+    // Neither branch goes through the job system, so the op counts as scheduled: a vfs_dispatch must not run it
+    // a second time.
+    atomic_store_explicit(&op->scheduled, true, memory_order_relaxed);
+
+    // A worker runs the op inline, which is only correct once chain_after has finished.
+    if (chain_after != 0 && fl_jobs_is_finished(chain_after) == FlJobsResult_NotFinished) {
+        logc_error(VFS_ID, "fl_vfs_read from a job worker cannot wait for the operation it chains onto; issue it from "
+                           "the main thread");
+        atomic_store_explicit(&op->error_status, VFS_ERROR_WOULD_BLOCK, memory_order_release);
+        atomic_store_explicit(&op->done, true, memory_order_release);
+        return;
+    }
+
+    vfs_ops_execute_sync(op);
+}
+
 // Reads through an open file, chained after the last op on it. The read takes its own reference on the file, so
 // closing the file id while the read is queued or running leaves the file open until the read has run.
 FlVfsHandle fl_vfs_read(FlVfsHandle file_handle, void* buffer, i64 size) {
     VfsState* self = g_vfs_state;
 
-    if (file_handle == FL_VFS_HANDLE_INVALID || !buffer || size <= 0) {
+    if (!vfs_read_args_valid(file_handle, buffer, size)) {
         return FL_VFS_HANDLE_INVALID;
     }
 
     FL_VALIDATE_RET(self != nullptr, FL_VFS_HANDLE_INVALID);
 
-    VfsOp* file = vfs_op_acquire(file_handle);
-    if (!file || file->op_type != VfsOp_FileOpen) {
-        if (file) {
-            vfs_op_release(file);
-        }
-        logc_error(VFS_ID, "Invalid file handle for read operation");
+    VfsOp* file = vfs_acquire_file_for_read(file_handle);
+    if (!file) {
         return FL_VFS_HANDLE_INVALID;
     }
 
@@ -833,28 +897,9 @@ FlVfsHandle fl_vfs_read(FlVfsHandle file_handle, void* buffer, i64 size) {
     FlJobHandle chain_after = atomic_load_explicit(&file->last_job, memory_order_acquire);
 
     if (fl_jobs_is_main_thread()) {
-        vfs_op_schedule(op, chain_after);
-        if (g_vfs_test_after_read_scheduled) {
-            g_vfs_test_after_read_scheduled(op->id);
-        }
-        // The next operation (or a wait) on the file chains after this one.
-        atomic_store_explicit(&file->last_job, atomic_load_explicit(&op->job_handle, memory_order_acquire),
-                              memory_order_release);
+        vfs_read_schedule_chained(op, file, chain_after);
     } else {
-        // Neither branch goes through the job system, so the op counts as scheduled: a vfs_dispatch must not run it
-        // a second time.
-        atomic_store_explicit(&op->scheduled, true, memory_order_relaxed);
-
-        // A worker runs the op inline, which is only correct once chain_after has finished.
-        if (chain_after != 0 && fl_jobs_is_finished(chain_after) == FlJobsResult_NotFinished) {
-            logc_error(VFS_ID,
-                       "fl_vfs_read from a job worker cannot wait for the operation it chains onto; issue it from "
-                       "the main thread");
-            atomic_store_explicit(&op->error_status, VFS_ERROR_WOULD_BLOCK, memory_order_release);
-            atomic_store_explicit(&op->done, true, memory_order_release);
-        } else {
-            vfs_ops_execute_sync(op);
-        }
+        vfs_read_run_inline(op, chain_after);
     }
 
     FlVfsHandle id = op->id;

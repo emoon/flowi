@@ -39,26 +39,27 @@ i32 ui_get_render_command_count(void) {
     return g_ui_ctx->last_render_command_count;
 }
 
+static const UiRenderCommandType CLAY_COMMAND_TYPE_MAP[] = {
+    [CLAY_RENDER_COMMAND_TYPE_RECTANGLE] = UiRenderCmd_Rectangle,
+    [CLAY_RENDER_COMMAND_TYPE_BORDER] = UiRenderCmd_Border,
+    [CLAY_RENDER_COMMAND_TYPE_TEXT] = UiRenderCmd_Text,
+    [CLAY_RENDER_COMMAND_TYPE_IMAGE] = UiRenderCmd_Image,
+    [CLAY_RENDER_COMMAND_TYPE_SCISSOR_START] = UiRenderCmd_ScissorStart,
+    [CLAY_RENDER_COMMAND_TYPE_SCISSOR_END] = UiRenderCmd_ScissorEnd,
+    [CLAY_RENDER_COMMAND_TYPE_CUSTOM] = UiRenderCmd_Custom,
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static UiRenderCommandType map_clay_command_type(Clay_RenderCommandType t) {
-    switch (t) {
-        case CLAY_RENDER_COMMAND_TYPE_RECTANGLE:
-            return UiRenderCmd_Rectangle;
-        case CLAY_RENDER_COMMAND_TYPE_BORDER:
-            return UiRenderCmd_Border;
-        case CLAY_RENDER_COMMAND_TYPE_TEXT:
-            return UiRenderCmd_Text;
-        case CLAY_RENDER_COMMAND_TYPE_IMAGE:
-            return UiRenderCmd_Image;
-        case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START:
-            return UiRenderCmd_ScissorStart;
-        case CLAY_RENDER_COMMAND_TYPE_SCISSOR_END:
-            return UiRenderCmd_ScissorEnd;
-        case CLAY_RENDER_COMMAND_TYPE_CUSTOM:
-            return UiRenderCmd_Custom;
-        default:
-            return UiRenderCmd_None;
+    const size_t index = (size_t)t;
+    if (index >= sizeof(CLAY_COMMAND_TYPE_MAP) / sizeof(CLAY_COMMAND_TYPE_MAP[0])) {
+        return UiRenderCmd_None;
     }
+    return CLAY_COMMAND_TYPE_MAP[index];
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Convert one Clay command into the Clay-independent snapshot type, copying the strings it exposes into
 // arena (the capture fields on FlUiCtx own them; see their declaration).
@@ -136,8 +137,14 @@ void ui_capture_render_commands(FlUiCtx* self, Clay_RenderCommandArray* commands
     self->last_render_command_count = count;
 }
 
+static bool render_command_index_valid(i32 index) {
+    return index >= 0 && index < g_ui_ctx->last_render_command_count;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 bool ui_get_render_command(i32 index, UiRenderCommand* out) {
-    if (index < 0 || index >= g_ui_ctx->last_render_command_count || !out) {
+    if (!render_command_index_valid(index) || !out) {
         return false;
     }
 

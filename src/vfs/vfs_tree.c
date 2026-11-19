@@ -52,9 +52,8 @@ void vfs_tree_cleanup_node(VfsTreeNode* node) {
 
 // Archive loading
 
-bool vfs_tree_try_load_as_archive(VfsState* self, VfsTreeNode* node, VfsPluginEntry* parent, void* parent_handle,
-                                  FlString path, i64 size, FlArena* scratch) {
-    DriverHandle opened = vfs_resolve_open_archive(self, parent, parent_handle, path, size, scratch);
+bool vfs_tree_try_load_as_archive(VfsState* self, VfsTreeNode* node, const ArchiveFile* file, FlArena* scratch) {
+    DriverHandle opened = vfs_resolve_open_archive(self, file, scratch);
 
     if (!opened.handle) {
         return false;
@@ -68,6 +67,73 @@ bool vfs_tree_try_load_as_archive(VfsState* self, VfsTreeNode* node, VfsPluginEn
 
 // Path resolution
 
+typedef struct {
+    VfsState* self;
+    FlArena* scratch;
+    const PathComponents* components;
+    VfsPluginEntry* driver;
+    void* handle;
+    int since_driver; // Entered segments between the node that carries the driver and the current one
+} Locator;
+
+static VfsTreeNode* find_or_create_child(FlVfsMount* mount, VfsTreeNode* parent, FlString name) {
+    VfsTreeNode* child = find_child_node(parent, name);
+    return child ? child : vfs_tree_create_node(mount, parent, name);
+}
+
+static void adopt_node_driver(Locator* locator, const VfsTreeNode* node) {
+    locator->driver = node->plugin_entry;
+    locator->handle = node->handle;
+    locator->since_driver = 0;
+}
+
+// Asks the driver about a node not yet known to be a directory or an archive, and records what it is.
+static void probe_file_node(Locator* locator, VfsTreeNode* node, int index) {
+    FlString below = vfs_path_range(locator->components, index - locator->since_driver, index + 1, locator->scratch);
+    FlVfsSizeResult size_result
+        = locator->driver->plugin->get_size(locator->driver->plugin_instance, locator->handle, below);
+
+    if (size_result.size < 0) {
+        // Not a file the driver knows: a directory, or a virtual one such as a part of a URL. Remembered so
+        // the driver is not asked again.
+        node->is_directory = true;
+        return;
+    }
+
+    const ArchiveFile file = { .container = { .plugin_entry = locator->driver, .handle = locator->handle },
+                               .path = below,
+                               .size = size_result.size };
+
+    if (!vfs_tree_try_load_as_archive(locator->self, node, &file, locator->scratch)) {
+        // A file that is no archive, or one that does not open: the path goes on below it as a plain path,
+        // and it is not read again.
+        node->is_directory = true;
+    }
+}
+
+static void enter_node(Locator* locator, VfsTreeNode* node, int index) {
+    if (!node->plugin_entry && !node->is_directory) {
+        probe_file_node(locator, node, index);
+    }
+
+    // Walk down onto an archive, whether it was already open or just was.
+    if (node->plugin_entry) {
+        adopt_node_driver(locator, node);
+        return;
+    }
+
+    locator->since_driver++;
+}
+
+// An absolute path names a different place than a relative one with the same segments, so it gets its own subtree.
+static VfsTreeNode* locate_start_node(FlVfsMount* mount, const PathComponents* components) {
+    if (!components->is_absolute) {
+        return mount->root_node;
+    }
+
+    return find_or_create_child(mount, mount->root_node, FL_S("/"));
+}
+
 VfsLocation vfs_tree_locate(VfsState* self, FlVfsMount* mount, FlString path, bool is_directory, FlArena* scratch) {
     profile_function_auto_nc("vfs:vfs_tree_locate", PROFILE_COLOR_CYAN);
 
@@ -76,62 +142,22 @@ VfsLocation vfs_tree_locate(VfsState* self, FlVfsMount* mount, FlString path, bo
     // The last segment of a file path is the file itself, which is never entered.
     const int enterable = is_directory || count == 0 ? count : count - 1;
 
-    VfsPluginEntry* driver = mount->root_node->plugin_entry;
-    void* handle = mount->root_node->handle;
+    Locator locator = { .self = self,
+                        .scratch = scratch,
+                        .components = &components,
+                        .driver = mount->root_node->plugin_entry,
+                        .handle = mount->root_node->handle };
 
-    // An absolute path names a different place than a relative one with the same segments, so it gets its own subtree.
-    VfsTreeNode* node = mount->root_node;
-    if (components.is_absolute) {
-        VfsTreeNode* absolute = find_child_node(node, FL_S("/"));
-        node = absolute ? absolute : vfs_tree_create_node(mount, node, FL_S("/"));
-    }
-
-    int since_driver = 0; // Entered segments between the node that carries the driver and the current one
+    VfsTreeNode* node = locate_start_node(mount, &components);
 
     for (int i = 0; i < enterable; i++) {
-        FlString segment = components.segments.items[i];
-        VfsTreeNode* child = find_child_node(node, segment);
-
-        if (!child) {
-            child = vfs_tree_create_node(mount, node, segment);
-        }
-
-        node = child;
-
-        // Walk down onto an archive that is already open.
-        if (node->plugin_entry) {
-            driver = node->plugin_entry;
-            handle = node->handle;
-            since_driver = 0;
-            continue;
-        }
-
-        if (!node->is_directory) {
-            FlString below = vfs_path_range(&components, i - since_driver, i + 1, scratch);
-            FlVfsSizeResult size_result = driver->plugin->get_size(driver->plugin_instance, handle, below);
-
-            if (size_result.size < 0) {
-                // Not a file the driver knows: a directory, or a virtual one such as a part of a URL. Remembered so
-                // the driver is not asked again.
-                node->is_directory = true;
-            } else if (vfs_tree_try_load_as_archive(self, node, driver, handle, below, size_result.size, scratch)) {
-                driver = node->plugin_entry;
-                handle = node->handle;
-                since_driver = 0;
-                continue;
-            } else {
-                // A file that is no archive, or one that does not open: the path goes on below it as a plain path,
-                // and it is not read again.
-                node->is_directory = true;
-            }
-        }
-
-        since_driver++;
+        node = find_or_create_child(mount, node, components.segments.items[i]);
+        enter_node(&locator, node, i);
     }
 
     return (VfsLocation) {
-        .driver = driver,
-        .handle = handle,
-        .path = vfs_path_range(&components, enterable - since_driver, count, scratch),
+        .driver = locator.driver,
+        .handle = locator.handle,
+        .path = vfs_path_range(&components, enterable - locator.since_driver, count, scratch),
     };
 }

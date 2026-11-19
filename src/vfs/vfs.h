@@ -70,8 +70,14 @@ typedef struct VfsReadOptions {
 
 // Two-phase read: allocate handle without dispatching the job.
 // Must be followed by vfs_dispatch() to actually start the operation.
-FlVfsHandle vfs_mount_read_all_prepare(FlVfsMount* mount, FlString relative_path, FlVfsReadCallback callback,
-                                       void* user_data, FlVfsReleaseCallback release, FlVfsHandle reuse_handle);
+FlVfsHandle vfs_mount_read_all_prepare_with_options(FlVfsMount* mount, FlString relative_path,
+                                                    const VfsReadOptions* options);
+
+#define vfs_mount_read_all_prepare(mount, path, ...)                  \
+    ({                                                                \
+        VfsReadOptions _opts = { __VA_ARGS__ };                       \
+        vfs_mount_read_all_prepare_with_options(mount, path, &_opts); \
+    })
 
 // Dispatch a previously prepared handle (from vfs_mount_read_all_prepare).
 void vfs_dispatch(FlVfsHandle handle);

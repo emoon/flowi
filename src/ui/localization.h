@@ -79,6 +79,53 @@ typedef struct LocalizationToken {
     bool is_slot;
 } LocalizationToken;
 
+// The literal run starting at `*cursor`, up to the next brace.
+
+static inline bool localization_literal_token(FlString text, u64* cursor, LocalizationToken* out) {
+    u64 i = *cursor;
+    while (i < text.length && text.data[i] != '{' && text.data[i] != '}') {
+        i++;
+    }
+    if (i == *cursor) {
+        return false;
+    }
+    *out = (LocalizationToken) { .text = fl_string_substr(text, *cursor, i - *cursor) };
+    *cursor = i;
+    return true;
+}
+
+// The brace pair at `*cursor` that stands for one literal brace.
+
+static inline bool localization_escaped_brace_token(FlString text, u64* cursor, LocalizationToken* out) {
+    const u64 i = *cursor;
+    if (i + 1 >= text.length || text.data[i + 1] != text.data[i]) {
+        return false;
+    }
+    *out = (LocalizationToken) { .text = fl_string_substr(text, i, 1) };
+    *cursor = i + 2;
+    return true;
+}
+
+// The brace at `*cursor` as a slot, or as plain text when nothing closes it.
+
+static inline void localization_slot_token(FlString text, u64* cursor, LocalizationToken* out) {
+    const u64 i = *cursor;
+    const char brace = text.data[i];
+    const i64 close = brace == '{' ? fl_string_find_char_from(text, '}', i + 1) : -1;
+    if (close < 0) {
+        // An unterminated slot swallows the rest of the text; a stray closing brace is just itself.
+        const u64 length = brace == '{' ? text.length - i : 1;
+        *out = (LocalizationToken) { .text = fl_string_substr(text, i, length) };
+        *cursor = i + length;
+        return;
+    }
+
+    *out = (LocalizationToken) { .text = fl_string_substr(text, i, (u64)close + 1 - i),
+                                 .body = fl_string_substr(text, i + 1, (u64)close - i - 1),
+                                 .is_slot = true };
+    *cursor = (u64)close + 1;
+}
+
 // Walk text one token at a time from `*cursor`, returning false at the end. {{ and }} are escaped braces, a
 // } that closes nothing and a { that nothing closes are literal text, and everything from a { to its } is
 // one slot.
@@ -87,37 +134,10 @@ static inline bool localization_next_token(FlString text, u64* cursor, Localizat
     if (*cursor >= text.length) {
         return false;
     }
-
-    u64 i = *cursor;
-    while (i < text.length && text.data[i] != '{' && text.data[i] != '}') {
-        i++;
-    }
-    if (i > *cursor) {
-        *out = (LocalizationToken) { .text = fl_string_substr(text, *cursor, i - *cursor) };
-        *cursor = i;
+    if (localization_literal_token(text, cursor, out) || localization_escaped_brace_token(text, cursor, out)) {
         return true;
     }
-
-    const char brace = text.data[i];
-    if (i + 1 < text.length && text.data[i + 1] == brace) {
-        *out = (LocalizationToken) { .text = fl_string_substr(text, i, 1) };
-        *cursor = i + 2;
-        return true;
-    }
-
-    const i64 close = brace == '{' ? fl_string_find_char_from(text, '}', i + 1) : -1;
-    if (close < 0) {
-        // An unterminated slot swallows the rest of the text; a stray closing brace is just itself.
-        const u64 length = brace == '{' ? text.length - i : 1;
-        *out = (LocalizationToken) { .text = fl_string_substr(text, i, length) };
-        *cursor = i + length;
-        return true;
-    }
-
-    *out = (LocalizationToken) { .text = fl_string_substr(text, i, (u64)close + 1 - i),
-                                 .body = fl_string_substr(text, i + 1, (u64)close - i - 1),
-                                 .is_slot = true };
-    *cursor = (u64)close + 1;
+    localization_slot_token(text, cursor, out);
     return true;
 }
 

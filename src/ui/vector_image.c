@@ -106,6 +106,73 @@ static void svg_fill_shape_segments(const NSVGshape* shape, f32 height, FlGlyphS
     }
 }
 
+typedef struct SvgScan {
+    u32 supported;
+    bool have_color;
+    u32 first_color_key;
+    bool multi_color;
+    FlColor mono_color;
+} SvgScan;
+
+static void svg_scan_note_color(SvgScan* scan, FlColor fill) {
+    u32 key = svg_color_key(fill);
+    if (!scan->have_color) {
+        scan->have_color = true;
+        scan->first_color_key = key;
+        scan->mono_color = fill;
+    } else if (key != scan->first_color_key) {
+        scan->multi_color = true;
+    }
+}
+
+// First pass: validate and classify. Any visible gradient/stroke shape rejects the whole image.
+static bool svg_scan_shapes(const NSVGimage* image, SvgScan* scan) {
+    for (const NSVGshape* shape = image->shapes; shape; shape = shape->next) {
+        SvgShapeVerdict verdict = svg_classify_shape(shape);
+        if (verdict == SvgShape_Unsupported) {
+            log_warning("vector_image: unsupported SVG — gradients/strokes are not supported on the GPU vector path; "
+                        "flatten strokes to fills / remove gradients (Illustrator \"Outline Stroke\", Inkscape "
+                        "\"Stroke to Path\", or svgo)");
+            return false;
+        }
+        // A solid fill with no drawable contour contributes nothing.
+        if (verdict != SvgShape_SolidFill || svg_shape_segment_count(shape, image->height) == 0) {
+            continue;
+        }
+        svg_scan_note_color(scan, svg_color(shape->fill.color));
+        scan->supported++;
+    }
+    return true;
+}
+
+static FlVectorShape svg_materialize_shape(FlArena* arena, const NSVGshape* shape, u32 seg_count, f32 height) {
+    FlGlyphSegment* segments = arena_alloc_array(arena, FlGlyphSegment, seg_count);
+    svg_fill_shape_segments(shape, height, segments);
+
+    FlVectorShape out = { 0 };
+    out.segments = segments;
+    out.segment_count = seg_count;
+    out.fill = svg_color(shape->fill.color);
+    out.fill_rule = (shape->fillRule == NSVG_FILLRULE_EVENODD) ? 1 : 0;
+    out.opacity = shape->opacity;
+    return out;
+}
+
+// Second pass: materialize the neutral contours into the persistent arena.
+static FlVectorShape* svg_materialize_shapes(FlArena* arena, const NSVGimage* image, u32 supported) {
+    FlVectorShape* shapes = arena_alloc_array(arena, FlVectorShape, supported);
+    u32 out_index = 0;
+    for (const NSVGshape* shape = image->shapes; shape; shape = shape->next) {
+        u32 seg_count
+            = svg_classify_shape(shape) == SvgShape_SolidFill ? svg_shape_segment_count(shape, image->height) : 0;
+        if (seg_count == 0) {
+            continue;
+        }
+        shapes[out_index++] = svg_materialize_shape(arena, shape, seg_count, image->height);
+    }
+    return shapes;
+}
+
 bool vector_image_parse(const u8* data, size_t size, struct FlArena* arena, FlVectorImage* out) {
     arena_scratch_auto_conflict(temp, arena);
 
@@ -120,74 +187,22 @@ bool vector_image_parse(const u8* data, size_t size, struct FlArena* arena, FlVe
         return false;
     }
 
-    f32 height = image->height;
-
-    // First pass: validate and classify. Any visible gradient/stroke shape rejects the whole image.
-    u32 supported = 0;
-    bool have_color = false;
-    u32 first_color_key = 0;
-    bool multi_color = false;
-    FlColor mono_color = { 0 };
-
-    for (const NSVGshape* shape = image->shapes; shape; shape = shape->next) {
-        SvgShapeVerdict verdict = svg_classify_shape(shape);
-        if (verdict == SvgShape_Unsupported) {
-            log_warning("vector_image: unsupported SVG — gradients/strokes are not supported on the GPU vector path; "
-                        "flatten strokes to fills / remove gradients (Illustrator \"Outline Stroke\", Inkscape "
-                        "\"Stroke to Path\", or svgo)");
-            nsvgDelete(image);
-            return false;
-        }
-        if (verdict != SvgShape_SolidFill) {
-            continue;
-        }
-        if (svg_shape_segment_count(shape, height) == 0) {
-            continue; // a solid fill with no drawable contour contributes nothing
-        }
-        FlColor fill = svg_color(shape->fill.color);
-        u32 key = svg_color_key(fill);
-        if (!have_color) {
-            have_color = true;
-            first_color_key = key;
-            mono_color = fill;
-        } else if (key != first_color_key) {
-            multi_color = true;
-        }
-        supported++;
+    SvgScan scan = { 0 };
+    if (!svg_scan_shapes(image, &scan)) {
+        nsvgDelete(image);
+        return false;
     }
 
-    if (supported == 0) {
+    if (scan.supported == 0) {
         log_warning("vector_image: SVG has no visible solid fill — nothing to draw on the GPU vector path");
         nsvgDelete(image);
         return false;
     }
 
-    // Second pass: materialize the neutral contours into the persistent arena.
-    FlVectorShape* shapes = arena_alloc_array(arena, FlVectorShape, supported);
-    u32 out_index = 0;
-    for (const NSVGshape* shape = image->shapes; shape; shape = shape->next) {
-        if (svg_classify_shape(shape) != SvgShape_SolidFill) {
-            continue;
-        }
-        u32 seg_count = svg_shape_segment_count(shape, height);
-        if (seg_count == 0) {
-            continue;
-        }
-        FlGlyphSegment* segments = arena_alloc_array(arena, FlGlyphSegment, seg_count);
-        svg_fill_shape_segments(shape, height, segments);
-
-        shapes[out_index].segments = segments;
-        shapes[out_index].segment_count = seg_count;
-        shapes[out_index].fill = svg_color(shape->fill.color);
-        shapes[out_index].fill_rule = (shape->fillRule == NSVG_FILLRULE_EVENODD) ? 1 : 0;
-        shapes[out_index].opacity = shape->opacity;
-        out_index++;
-    }
-
-    out->shapes = shapes;
-    out->shape_count = supported;
-    out->classification = multi_color ? FlVectorClass_MultiColor : FlVectorClass_Monochrome;
-    out->mono_color = mono_color;
+    out->shapes = svg_materialize_shapes(arena, image, scan.supported);
+    out->shape_count = scan.supported;
+    out->classification = scan.multi_color ? FlVectorClass_MultiColor : FlVectorClass_Monochrome;
+    out->mono_color = scan.mono_color;
     out->width = image->width;
     out->height = image->height;
 
