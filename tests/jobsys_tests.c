@@ -70,26 +70,17 @@ typedef struct {
     _Atomic u32 next_order;
 } DependencyTestData;
 
-static void ordered_job_a(void* data, FlJobsWorkerInfo info) {
-    (void)info;
-    DependencyTestData* test_data = (DependencyTestData*)data;
-    int order = atomic_fetch_add(&test_data->next_order, 1);
-    atomic_store(&test_data->execution_order[0], order);
-}
+#define DEFINE_ORDERED_JOB(name, slot)                                     \
+    static void name(void* data, FlJobsWorkerInfo info) {                  \
+        (void)info;                                                        \
+        DependencyTestData* test_data = (DependencyTestData*)data;         \
+        int order = atomic_fetch_add(&test_data->next_order, 1);           \
+        atomic_store(&test_data->execution_order[slot], order);            \
+    }
 
-static void ordered_job_b(void* data, FlJobsWorkerInfo info) {
-    (void)info;
-    DependencyTestData* test_data = (DependencyTestData*)data;
-    int order = atomic_fetch_add(&test_data->next_order, 1);
-    atomic_store(&test_data->execution_order[1], order);
-}
-
-static void ordered_job_c(void* data, FlJobsWorkerInfo info) {
-    (void)info;
-    DependencyTestData* test_data = (DependencyTestData*)data;
-    int order = atomic_fetch_add(&test_data->next_order, 1);
-    atomic_store(&test_data->execution_order[2], order);
-}
+DEFINE_ORDERED_JOB(ordered_job_a, 0)
+DEFINE_ORDERED_JOB(ordered_job_b, 1)
+DEFINE_ORDERED_JOB(ordered_job_c, 2)
 
 static void slow_job(void* data, FlJobsWorkerInfo info) {
     (void)info;
@@ -115,60 +106,35 @@ typedef struct {
     bool normal_should_be_done;
 } PriorityOrderData;
 
+static void burn_cpu(int iterations) {
+    volatile int sum = 0;
+    for (int i = 0; i < iterations; i++) {
+        sum += i;
+    }
+    (void)sum;
+}
+
 static void priority_order_job(void* data, FlJobsWorkerInfo info) {
     (void)info;
     PriorityOrderData* test_data = (PriorityOrderData*)data;
 
-    volatile int sum = 0;
-    for (int i = 0; i < 1000; i++) {
-        sum += i;
-    }
-    (void)sum;
+    burn_cpu(1000);
 
     atomic_fetch_add(&test_data->total_completed, 1);
 }
 
-static void priority_high_job(void* data, FlJobsWorkerInfo info) {
-    (void)info;
-    PriorityOrderData* test_data = (PriorityOrderData*)data;
-
-    volatile int sum = 0;
-    for (int i = 0; i < 500; i++) {
-        sum += i;
+#define DEFINE_PRIORITY_COUNT_JOB(name, field)                          \
+    static void name(void* data, FlJobsWorkerInfo info) {               \
+        (void)info;                                                     \
+        PriorityOrderData* test_data = (PriorityOrderData*)data;        \
+        burn_cpu(500);                                                  \
+        atomic_fetch_add(&test_data->field, 1);                         \
+        atomic_fetch_add(&test_data->total_completed, 1);               \
     }
-    (void)sum;
 
-    atomic_fetch_add(&test_data->high_count, 1);
-    atomic_fetch_add(&test_data->total_completed, 1);
-}
-
-static void priority_normal_job(void* data, FlJobsWorkerInfo info) {
-    (void)info;
-    PriorityOrderData* test_data = (PriorityOrderData*)data;
-
-    volatile int sum = 0;
-    for (int i = 0; i < 500; i++) {
-        sum += i;
-    }
-    (void)sum;
-
-    atomic_fetch_add(&test_data->normal_count, 1);
-    atomic_fetch_add(&test_data->total_completed, 1);
-}
-
-static void priority_low_job(void* data, FlJobsWorkerInfo info) {
-    (void)info;
-    PriorityOrderData* test_data = (PriorityOrderData*)data;
-
-    volatile int sum = 0;
-    for (int i = 0; i < 500; i++) {
-        sum += i;
-    }
-    (void)sum;
-
-    atomic_fetch_add(&test_data->low_count, 1);
-    atomic_fetch_add(&test_data->total_completed, 1);
-}
+DEFINE_PRIORITY_COUNT_JOB(priority_high_job, high_count)
+DEFINE_PRIORITY_COUNT_JOB(priority_normal_job, normal_count)
+DEFINE_PRIORITY_COUNT_JOB(priority_low_job, low_count)
 
 typedef struct {
     _Atomic u32 high_completions_before_low_start;
@@ -182,11 +148,7 @@ static void priority_validation_high_job(void* data, FlJobsWorkerInfo info) {
     (void)info;
     PriorityOrderValidationData* d = (PriorityOrderValidationData*)data;
 
-    volatile int sum = 0;
-    for (int i = 0; i < 2000; i++) {
-        sum += i;
-    }
-    (void)sum;
+    burn_cpu(2000);
 
     atomic_fetch_add(&d->high_completed, 1);
     atomic_fetch_add(&d->total_high, 1);
@@ -200,11 +162,7 @@ static void priority_validation_low_job(void* data, FlJobsWorkerInfo info) {
     atomic_fetch_add(&d->high_completions_before_low_start, high_done);
     atomic_fetch_add(&d->low_started, 1);
 
-    volatile int sum = 0;
-    for (int i = 0; i < 2000; i++) {
-        sum += i;
-    }
-    (void)sum;
+    burn_cpu(2000);
 
     atomic_fetch_add(&d->total_low, 1);
 }
@@ -219,11 +177,7 @@ static void reprioritize_job(void* data, FlJobsWorkerInfo info) {
     (void)info;
     ReprioritizeTestData* test_data = (ReprioritizeTestData*)data;
 
-    volatile int sum = 0;
-    for (int i = 0; i < 1000; i++) {
-        sum += i;
-    }
-    (void)sum;
+    burn_cpu(1000);
 
     atomic_fetch_add(&test_data->completed, 1);
 }
@@ -237,6 +191,72 @@ static void check_thread_context(void* data, FlJobsWorkerInfo info) {
     (void)info;
     ThreadCheckData* check_data = (ThreadCheckData*)data;
     check_data->worker_thread_result = fl_jobs_is_main_thread();
+}
+
+static void dependency_data_init(DependencyTestData* test_data) {
+    atomic_store(&test_data->next_order, 0);
+    for (int i = 0; i < 10; i++) {
+        atomic_store(&test_data->execution_order[i], (u32)-1);
+    }
+}
+
+static int dependency_order(DependencyTestData* test_data, int slot) {
+    return atomic_load(&test_data->execution_order[slot]);
+}
+
+static void expect_priority(int* utest_result, FlJobHandle handle, int want) {
+    ASSERT_EQ((int)fl_jobs_get_priority(handle), want);
+}
+
+static void expect_count(int* utest_result, _Atomic u32* counter, u32 want) {
+    ASSERT_EQ(atomic_load(counter), want);
+}
+
+static void expect_status(int* utest_result, FlJobHandle handle, int want) {
+    ASSERT_EQ((int)fl_jobs_is_finished(handle), want);
+}
+
+static void submit_increment_jobs(TestData* test_data, FlJobHandle* handles, int count) {
+    for (int i = 0; i < count; i++) {
+        handles[i] = fl_jobs_add_job(increment_counter, test_data);
+    }
+}
+
+static void wait_all(const FlJobHandle* handles, int count) {
+    for (int i = 0; i < count; i++) {
+        fl_jobs_wait(handles[i]);
+    }
+}
+
+static void run_dependency_chain(DependencyTestData* test_data, FlJobsFunc first_job, bool wait_for_first) {
+    FlJobHandle handle_a = fl_jobs_add_job(first_job, test_data);
+    if (wait_for_first) {
+        fl_jobs_wait(handle_a);
+    }
+
+    FlJobHandle handle_b = fl_jobs_add_job_with_dependency(ordered_job_b, test_data, handle_a);
+    fl_jobs_wait(handle_b);
+}
+
+static void expect_exact_orders(int* utest_result, DependencyTestData* test_data) {
+    ASSERT_EQ(dependency_order(test_data, 0), 0);
+    ASSERT_EQ(dependency_order(test_data, 1), 1);
+}
+
+static void expect_a_before_b(int* utest_result, DependencyTestData* test_data) {
+    ASSERT_TRUE(dependency_order(test_data, 0) < dependency_order(test_data, 1));
+    expect_exact_orders(utest_result, test_data);
+}
+
+static void expect_dependency_runs_first(int* utest_result, FlJobHandle dependency) {
+    DependencyTestData test_data;
+    dependency_data_init(&test_data);
+
+    FlJobHandle handle_a = fl_jobs_add_job_with_dependency(ordered_job_a, &test_data, dependency);
+
+    fl_jobs_wait(handle_a);
+
+    ASSERT_EQ(dependency_order(&test_data, 0), 0);
 }
 
 // Fixtures, one per worker thread count.
@@ -320,7 +340,7 @@ UTEST_F(jobs_1t, basic_functionality) {
 
     fl_jobs_wait(handle);
     ASSERT_EQ(value, 1);
-    ASSERT_EQ((int)fl_jobs_is_finished(handle), (int)FlJobsResult_Finished);
+    expect_status(utest_result, handle, (int)FlJobsResult_Finished);
 }
 
 UTEST_F(jobs_2t, job_handle_validity) {
@@ -332,7 +352,7 @@ UTEST_F(jobs_2t, job_handle_validity) {
     ASSERT_TRUE(handle != (FlJobHandle)-1);
 
     fl_jobs_wait(handle);
-    ASSERT_EQ((int)fl_jobs_is_finished(handle), (int)FlJobsResult_Finished);
+    expect_status(utest_result, handle, (int)FlJobsResult_Finished);
 }
 
 UTEST_F(jobs_2t, is_main_thread) {
@@ -358,14 +378,14 @@ UTEST_F(jobs_2t, priority_get_priority) {
     FlJobHandle normal = fl_jobs_add_job_with_priority(priority_normal_job, &test_data, JobPriority_Normal);
     FlJobHandle low = fl_jobs_add_job_with_priority(priority_low_job, &test_data, JobPriority_Low);
 
-    ASSERT_EQ(fl_jobs_get_priority(high), (int)JobPriority_High);
-    ASSERT_EQ(fl_jobs_get_priority(normal), (int)JobPriority_Normal);
-    ASSERT_EQ(fl_jobs_get_priority(low), (int)JobPriority_Low);
+    expect_priority(utest_result, high, (int)JobPriority_High);
+    expect_priority(utest_result, normal, (int)JobPriority_Normal);
+    expect_priority(utest_result, low, (int)JobPriority_Low);
 
-    ASSERT_EQ((int)fl_jobs_get_priority(0xDEADBEEF), (int)FlJobPriority_Invalid);
+    expect_priority(utest_result, 0xDEADBEEF, (int)FlJobPriority_Invalid);
 
     FlJobHandle invalid = fl_jobs_add_job_with_priority(priority_high_job, &test_data, FlJobPriority_Invalid);
-    ASSERT_EQ(fl_jobs_get_priority(invalid), (int)JobPriority_High);
+    expect_priority(utest_result, invalid, (int)JobPriority_High);
 
     fl_jobs_wait(high);
     fl_jobs_wait(normal);
@@ -399,7 +419,7 @@ UTEST_F(jobs_2t, priority_set_priority) {
     ASSERT_EQ(low_priority, (int)JobPriority_Low);
     ASSERT_TRUE(changed);
     ASSERT_EQ(high_priority, (int)JobPriority_High);
-    ASSERT_EQ(atomic_load(&test_data.low_count), 1u);
+    expect_count(utest_result, &test_data.low_count, 1u);
 }
 
 UTEST_F(jobs_2t, priority_set_on_completed) {
@@ -455,6 +475,11 @@ static void worker_dep_submit_job(void* data, FlJobsWorkerInfo info) {
     atomic_store(&ctx->dependent_handle, dependent);
 }
 
+static void expect_worker_dep_handles(int* utest_result, FlJobHandle submitter, FlJobHandle dependent) {
+    ASSERT_TRUE(submitter != 0);
+    ASSERT_TRUE(dependent != 0);
+}
+
 UTEST_F(jobs_2t, worker_submitted_dependent_waits_for_its_dependency) {
     (void)utest_fixture;
 
@@ -505,11 +530,10 @@ UTEST_F(jobs_2t, worker_submitted_dependent_waits_for_its_dependency) {
 
     ASSERT_TRUE_MSG(ctx.dependency != 0, "the gate job was never scheduled");
     ASSERT_TRUE_MSG(gate_running, "the gate job never started");
-    ASSERT_TRUE(submitter != 0);
-    ASSERT_TRUE(dependent != 0);
+    expect_worker_dep_handles(utest_result, submitter, dependent);
     ASSERT_EQ(runs_while_gated, 0u);
     ASSERT_TRUE_MSG(pending_while_gated, "the dependent was already complete while its dependency still ran");
-    ASSERT_EQ(atomic_load(&ctx.dependent_runs), 1u);
+    expect_count(utest_result, &ctx.dependent_runs, 1u);
     ASSERT_TRUE_MSG(atomic_load(&ctx.dependent_saw_gate_finished),
                     "the dependent ran before the dependency it was ordered after");
 }
@@ -526,7 +550,7 @@ UTEST_F(jobs_2t, is_finished_recycles_job_slot) {
     fl_jobs_wait(handle1);
     ASSERT_EQ(value, 1);
 
-    ASSERT_EQ((int)fl_jobs_is_finished(handle1), (int)FlJobsResult_Finished);
+    expect_status(utest_result, handle1, (int)FlJobsResult_Finished);
 
     // The next job reuses the recycled slot, which increments the generation and invalidates the old handle.
     value = 0;
@@ -534,8 +558,8 @@ UTEST_F(jobs_2t, is_finished_recycles_job_slot) {
     fl_jobs_wait(handle2);
     ASSERT_EQ(value, 1);
 
-    ASSERT_EQ((int)fl_jobs_is_finished(handle1), (int)FlJobsResult_Invalid);
-    ASSERT_EQ((int)fl_jobs_is_finished(handle2), (int)FlJobsResult_Finished);
+    expect_status(utest_result, handle1, (int)FlJobsResult_Invalid);
+    expect_status(utest_result, handle2, (int)FlJobsResult_Finished);
 }
 
 // A handle whose job has completed must never answer NotFinished, however often its slot is recycled
@@ -605,13 +629,9 @@ UTEST_F(jobs_4t, multiple_jobs) {
     TestData test_data = { .counter = 0, .expected_increments = 100 };
 
     FlJobHandle handles[100];
-    for (int i = 0; i < 100; i++) {
-        handles[i] = fl_jobs_add_job(increment_counter, &test_data);
-    }
+    submit_increment_jobs(&test_data, handles, 100);
 
-    for (int i = 0; i < 100; i++) {
-        fl_jobs_wait(handles[i]);
-    }
+    wait_all(handles, 100);
 
     ASSERT_EQ((int)atomic_load(&test_data.counter), 100);
 }
@@ -623,13 +643,11 @@ UTEST_F(jobs_4t, global_system) {
 
     FlJobHandle handles[50];
 
-    for (int i = 0; i < 50; i++) {
-        handles[i] = fl_jobs_add_job(increment_counter, &test_data);
-    }
+    submit_increment_jobs(&test_data, handles, 50);
 
     for (int i = 0; i < 50; i++) {
         fl_jobs_wait(handles[i]);
-        ASSERT_EQ((int)fl_jobs_is_finished(handles[i]), (int)FlJobsResult_Finished);
+        expect_status(utest_result, handles[i], (int)FlJobsResult_Finished);
     }
 
     ASSERT_EQ((int)atomic_load(&test_data.counter), 50);
@@ -641,11 +659,11 @@ UTEST_F(jobs_4t, is_finished_functionality) {
     GatedJob gate = { .release = false };
     FlJobHandle handle = fl_jobs_add_job(gated_job, &gate);
 
-    ASSERT_EQ((int)fl_jobs_is_finished(handle), (int)FlJobsResult_NotFinished);
+    expect_status(utest_result, handle, (int)FlJobsResult_NotFinished);
 
     atomic_store(&gate.release, true);
     fl_jobs_wait(handle);
-    ASSERT_EQ((int)fl_jobs_is_finished(handle), (int)FlJobsResult_Finished);
+    expect_status(utest_result, handle, (int)FlJobsResult_Finished);
 
     // One job per worker in the fixture.
     GatedJob gates[4] = { 0 };
@@ -655,7 +673,7 @@ UTEST_F(jobs_4t, is_finished_functionality) {
     }
 
     for (int i = 0; i < 4; i++) {
-        ASSERT_EQ((int)fl_jobs_is_finished(handles[i]), (int)FlJobsResult_NotFinished);
+        expect_status(utest_result, handles[i], (int)FlJobsResult_NotFinished);
     }
 
     for (int i = 0; i < 4; i++) {
@@ -664,7 +682,7 @@ UTEST_F(jobs_4t, is_finished_functionality) {
 
     for (int i = 0; i < 4; i++) {
         fl_jobs_wait(handles[i]);
-        ASSERT_EQ((int)fl_jobs_is_finished(handles[i]), (int)FlJobsResult_Finished);
+        expect_status(utest_result, handles[i], (int)FlJobsResult_Finished);
     }
 }
 
@@ -672,77 +690,40 @@ UTEST_F(jobs_4t, basic_dependency) {
     (void)utest_fixture;
 
     DependencyTestData test_data;
-    atomic_store(&test_data.next_order, 0);
-    for (int i = 0; i < 10; i++) {
-        atomic_store(&test_data.execution_order[i], (u32)-1);
-    }
+    dependency_data_init(&test_data);
 
-    FlJobHandle handle_a = fl_jobs_add_job(ordered_job_a, &test_data);
-    FlJobHandle handle_b = fl_jobs_add_job_with_dependency(ordered_job_b, &test_data, handle_a);
+    run_dependency_chain(&test_data, ordered_job_a, false);
 
-    fl_jobs_wait(handle_b);
-
-    int order_a = atomic_load(&test_data.execution_order[0]);
-    int order_b = atomic_load(&test_data.execution_order[1]);
-
-    ASSERT_TRUE(order_a < order_b);
-    ASSERT_EQ(order_a, 0);
-    ASSERT_EQ(order_b, 1);
+    expect_a_before_b(utest_result, &test_data);
 }
 
 UTEST_F(jobs_4t, dependency_on_finished_job) {
     (void)utest_fixture;
 
     DependencyTestData test_data;
-    atomic_store(&test_data.next_order, 0);
-    for (int i = 0; i < 10; i++) {
-        atomic_store(&test_data.execution_order[i], (u32)-1);
-    }
+    dependency_data_init(&test_data);
 
-    FlJobHandle handle_a = fl_jobs_add_job(ordered_job_a, &test_data);
-    fl_jobs_wait(handle_a);
+    run_dependency_chain(&test_data, ordered_job_a, true);
 
-    FlJobHandle handle_b = fl_jobs_add_job_with_dependency(ordered_job_b, &test_data, handle_a);
-    fl_jobs_wait(handle_b);
-
-    int order_a = atomic_load(&test_data.execution_order[0]);
-    int order_b = atomic_load(&test_data.execution_order[1]);
-
-    ASSERT_EQ(order_a, 0);
-    ASSERT_EQ(order_b, 1);
+    expect_exact_orders(utest_result, &test_data);
 }
 
 UTEST_F(jobs_4t, dependency_race_condition) {
     (void)utest_fixture;
 
     DependencyTestData test_data;
-    atomic_store(&test_data.next_order, 0);
-    for (int i = 0; i < 10; i++) {
-        atomic_store(&test_data.execution_order[i], (u32)-1);
-    }
+    dependency_data_init(&test_data);
 
-    FlJobHandle handle_a = fl_jobs_add_job(slow_job, &test_data);
+    run_dependency_chain(&test_data, slow_job, false);
 
-    FlJobHandle handle_b = fl_jobs_add_job_with_dependency(ordered_job_b, &test_data, handle_a);
-
-    fl_jobs_wait(handle_b);
-
-    int order_a = atomic_load(&test_data.execution_order[0]);
-    int order_b = atomic_load(&test_data.execution_order[1]);
-
-    ASSERT_TRUE(order_a < order_b);
-    ASSERT_EQ(order_a, 0);
-    ASSERT_EQ(order_b, 1);
+    expect_a_before_b(utest_result, &test_data);
 }
 
 UTEST_F(jobs_4t, multiple_dependents_on_one_job) {
     (void)utest_fixture;
 
     DependencyTestData test_data;
-    atomic_store(&test_data.next_order, 0);
-    for (int i = 0; i < 10; i++) {
-        atomic_store(&test_data.execution_order[i], (u32)-1);
-    }
+    dependency_data_init(&test_data);
 
     FlJobHandle handle_a = fl_jobs_add_job(ordered_job_a, &test_data);
     FlJobHandle handle_b = fl_jobs_add_job_with_dependency(ordered_job_b, &test_data, handle_a);
@@ -751,9 +732,9 @@ UTEST_F(jobs_4t, multiple_dependents_on_one_job) {
     fl_jobs_wait(handle_b);
     fl_jobs_wait(handle_c);
 
-    int order_a = atomic_load(&test_data.execution_order[0]);
-    int order_b = atomic_load(&test_data.execution_order[1]);
-    int order_c = atomic_load(&test_data.execution_order[2]);
+    int order_a = dependency_order(&test_data, 0);
+    int order_b = dependency_order(&test_data, 1);
+    int order_c = dependency_order(&test_data, 2);
 
     ASSERT_TRUE(order_a < order_b);
     ASSERT_TRUE(order_a < order_c);
@@ -763,32 +744,13 @@ UTEST_F(jobs_4t, multiple_dependents_on_one_job) {
 UTEST_F(jobs_4t, invalid_dependency_handle) {
     (void)utest_fixture;
 
-    DependencyTestData test_data;
-    atomic_store(&test_data.next_order, 0);
-    atomic_store(&test_data.execution_order[0], (u32)-1);
-
-    FlJobHandle invalid_handle = 0xDEADBEEF;
-    FlJobHandle handle_a = fl_jobs_add_job_with_dependency(ordered_job_a, &test_data, invalid_handle);
-
-    fl_jobs_wait(handle_a);
-
-    int order_a = atomic_load(&test_data.execution_order[0]);
-    ASSERT_EQ(order_a, 0);
+    expect_dependency_runs_first(utest_result, 0xDEADBEEF);
 }
 
 UTEST_F(jobs_4t, dependency_with_zero_handle) {
     (void)utest_fixture;
 
-    DependencyTestData test_data;
-    atomic_store(&test_data.next_order, 0);
-    atomic_store(&test_data.execution_order[0], (u32)-1);
-
-    FlJobHandle handle_a = fl_jobs_add_job_with_dependency(ordered_job_a, &test_data, 0);
-
-    fl_jobs_wait(handle_a);
-
-    int order_a = atomic_load(&test_data.execution_order[0]);
-    ASSERT_EQ(order_a, 0);
+    expect_dependency_runs_first(utest_result, 0);
 }
 
 UTEST_F(jobs_4t, priority_basic) {
@@ -804,10 +766,10 @@ UTEST_F(jobs_4t, priority_basic) {
     fl_jobs_wait(normal_handle);
     fl_jobs_wait(high_handle);
 
-    ASSERT_EQ(atomic_load(&test_data.high_count), 1u);
-    ASSERT_EQ(atomic_load(&test_data.normal_count), 1u);
-    ASSERT_EQ(atomic_load(&test_data.low_count), 1u);
-    ASSERT_EQ(atomic_load(&test_data.total_completed), 3u);
+    expect_count(utest_result, &test_data.high_count, 1u);
+    expect_count(utest_result, &test_data.normal_count, 1u);
+    expect_count(utest_result, &test_data.low_count, 1u);
+    expect_count(utest_result, &test_data.total_completed, 3u);
 }
 
 UTEST_F(jobs_4t, priority_default_is_normal) {
@@ -827,10 +789,7 @@ UTEST_F(jobs_4t, priority_with_dependency) {
     (void)utest_fixture;
 
     DependencyTestData test_data;
-    atomic_store(&test_data.next_order, 0);
-    for (int i = 0; i < 10; i++) {
-        atomic_store(&test_data.execution_order[i], (u32)-1);
-    }
+    dependency_data_init(&test_data);
 
     FlJobHandle handle_a = fl_jobs_add_job_with_priority(ordered_job_a, &test_data, JobPriority_High);
     FlJobHandle handle_b
@@ -838,10 +797,7 @@ UTEST_F(jobs_4t, priority_with_dependency) {
 
     fl_jobs_wait(handle_b);
 
-    int order_a = atomic_load(&test_data.execution_order[0]);
-    int order_b = atomic_load(&test_data.execution_order[1]);
-
-    ASSERT_TRUE(order_a < order_b);
+    ASSERT_TRUE(dependency_order(&test_data, 0) < dependency_order(&test_data, 1));
 }
 
 UTEST_F(jobs_4t, priority_stress_reprioritize) {
@@ -1015,10 +971,10 @@ UTEST_F(jobs_8t, priority_stress_mixed_submission) {
         fl_jobs_wait(handles[i]);
     }
 
-    ASSERT_EQ(atomic_load(&test_data.high_count), (u32)jobs_per_priority);
-    ASSERT_EQ(atomic_load(&test_data.normal_count), (u32)jobs_per_priority);
-    ASSERT_EQ(atomic_load(&test_data.low_count), (u32)jobs_per_priority);
-    ASSERT_EQ(atomic_load(&test_data.total_completed), (u32)total_jobs);
+    expect_count(utest_result, &test_data.high_count, (u32)jobs_per_priority);
+    expect_count(utest_result, &test_data.normal_count, (u32)jobs_per_priority);
+    expect_count(utest_result, &test_data.low_count, (u32)jobs_per_priority);
+    expect_count(utest_result, &test_data.total_completed, (u32)total_jobs);
 }
 
 UTEST_F(jobs_8t, priority_stress_with_dependencies) {
