@@ -566,7 +566,6 @@ static LogLevel test_log_level(void) {
 
 void process_singletons_reset(void) {
     fl_log_set_level(test_log_level());
-    app_identity_reset();
     fl_log_file_shutdown();
     atomic_store(&s_stub_vfs_read_release, true);
     render_fixture_teardown();

@@ -1,4 +1,3 @@
-#include "../app_identity.h"
 #include "../arena.h"
 #include "../file_watcher_internal.h"
 #include "../fixed_array.h"
@@ -142,7 +141,7 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
 
     MacOSWatcherData* data = arena_alloc(get_file_watcher_registry()->arena, MacOSWatcherData);
     data->stream = stream;
-    const char* queue_name = fl_string_to_cstr(temp.arena, fl_app_identity_file_watcher_queue());
+    const char* queue_name = fl_string_to_cstr(temp.arena, FL_S("org.flowi.filewatcher"));
     data->queue = dispatch_queue_create(queue_name, DISPATCH_QUEUE_SERIAL);
 
     if (!data->queue) {
