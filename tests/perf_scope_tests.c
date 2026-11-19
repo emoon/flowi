@@ -8,6 +8,31 @@ static void burn_measurable_time(void) {
     sleep_ms(1);
 }
 
+#define ENTRY_UNCHECKED (-1)
+
+typedef struct EntryWant {
+    const char* name;
+    int depth;
+    int parent;
+} EntryWant;
+
+static void expect_entry(int* utest_result, const PerfScopeThreadState* state, u32 index, const EntryWant* want) {
+    if (want->name != nullptr) {
+        ASSERT_STREQ(state->entries[index].name, want->name);
+    }
+    if (want->depth != ENTRY_UNCHECKED) {
+        ASSERT_EQ(state->entries[index].depth, (u16)want->depth);
+    }
+    if (want->parent != ENTRY_UNCHECKED) {
+        ASSERT_EQ(state->entries[index].parent_index, (u16)want->parent);
+    }
+}
+
+static void expect_entry_counts(int* utest_result, const PerfScopeThreadState* state, u32 entries, u32 stack_depth) {
+    ASSERT_EQ(state->entry_count, entries);
+    ASSERT_EQ(state->stack_depth, stack_depth);
+}
+
 UTEST(perf_scope, basic_scope) {
     fl_perf_scope_frame_begin();
 
@@ -18,8 +43,7 @@ UTEST(perf_scope, basic_scope) {
 
     PerfScopeThreadState* state = perf_scope_get_thread_state();
     ASSERT_EQ(state->entry_count, (u32)1);
-    ASSERT_STREQ(state->entries[0].name, "test_scope");
-    ASSERT_EQ(state->entries[0].depth, (u16)0);
+    expect_entry(utest_result, state, 0, &(EntryWant) { "test_scope", 0, ENTRY_UNCHECKED });
     ASSERT_GT(state->entries[0].elapsed_ns, (u64)0);
     ASSERT_FALSE(state->overflow);
 }
@@ -39,12 +63,8 @@ UTEST(perf_scope, nested_scopes) {
     PerfScopeThreadState* state = perf_scope_get_thread_state();
     ASSERT_EQ(state->entry_count, (u32)2);
 
-    ASSERT_STREQ(state->entries[0].name, "outer");
-    ASSERT_EQ(state->entries[0].depth, (u16)0);
-
-    ASSERT_STREQ(state->entries[1].name, "inner");
-    ASSERT_EQ(state->entries[1].depth, (u16)1);
-    ASSERT_EQ(state->entries[1].parent_index, (u16)0);
+    expect_entry(utest_result, state, 0, &(EntryWant) { "outer", 0, ENTRY_UNCHECKED });
+    expect_entry(utest_result, state, 1, &(EntryWant) { "inner", 1, 0 });
 
     ASSERT_GE(state->entries[0].elapsed_ns, state->entries[1].elapsed_ns);
 }
@@ -124,13 +144,12 @@ UTEST(perf_scope, cleanup_early_return) {
     helper_with_early_return(false);
 
     PerfScopeThreadState* state = perf_scope_get_thread_state();
-    ASSERT_EQ(state->entry_count, (u32)2);
-    ASSERT_EQ(state->stack_depth, (u32)0);
+    expect_entry_counts(utest_result, state, 2, 0);
 
-    ASSERT_STREQ(state->entries[0].name, "helper");
-    ASSERT_STREQ(state->entries[1].name, "helper");
-    ASSERT_GT(state->entries[0].elapsed_ns, (u64)0);
-    ASSERT_GT(state->entries[1].elapsed_ns, (u64)0);
+    for (u32 i = 0; i < 2; i++) {
+        expect_entry(utest_result, state, i, &(EntryWant) { "helper", ENTRY_UNCHECKED, ENTRY_UNCHECKED });
+        ASSERT_GT(state->entries[i].elapsed_ns, (u64)0);
+    }
 }
 
 UTEST(perf_scope, cleanup_goto) {
@@ -144,9 +163,8 @@ UTEST(perf_scope, cleanup_goto) {
     }
 
     PerfScopeThreadState* state = perf_scope_get_thread_state();
-    ASSERT_EQ(state->entry_count, (u32)1);
-    ASSERT_EQ(state->stack_depth, (u32)0);
-    ASSERT_STREQ(state->entries[0].name, "goto_test");
+    expect_entry_counts(utest_result, state, 1, 0);
+    expect_entry(utest_result, state, 0, &(EntryWant) { "goto_test", ENTRY_UNCHECKED, ENTRY_UNCHECKED });
 }
 
 UTEST(perf_scope, sequential_siblings) {
@@ -162,20 +180,10 @@ UTEST(perf_scope, sequential_siblings) {
     PerfScopeThreadState* state = perf_scope_get_thread_state();
     ASSERT_EQ(state->entry_count, (u32)4);
 
-    ASSERT_STREQ(state->entries[0].name, "parent");
-    ASSERT_EQ(state->entries[0].depth, (u16)0);
-
-    ASSERT_STREQ(state->entries[1].name, "child_a");
-    ASSERT_EQ(state->entries[1].depth, (u16)1);
-    ASSERT_EQ(state->entries[1].parent_index, (u16)0);
-
-    ASSERT_STREQ(state->entries[2].name, "child_b");
-    ASSERT_EQ(state->entries[2].depth, (u16)1);
-    ASSERT_EQ(state->entries[2].parent_index, (u16)0);
-
-    ASSERT_STREQ(state->entries[3].name, "child_c");
-    ASSERT_EQ(state->entries[3].depth, (u16)1);
-    ASSERT_EQ(state->entries[3].parent_index, (u16)0);
+    expect_entry(utest_result, state, 0, &(EntryWant) { "parent", 0, ENTRY_UNCHECKED });
+    expect_entry(utest_result, state, 1, &(EntryWant) { "child_a", 1, 0 });
+    expect_entry(utest_result, state, 2, &(EntryWant) { "child_b", 1, 0 });
+    expect_entry(utest_result, state, 3, &(EntryWant) { "child_c", 1, 0 });
 }
 
 static void named_function_for_test(void) {
@@ -191,7 +199,7 @@ UTEST(perf_scope, scope_function_captures_func) {
 
     PerfScopeThreadState* state = perf_scope_get_thread_state();
     ASSERT_EQ(state->entry_count, (u32)1);
-    ASSERT_STREQ(state->entries[0].name, "named_function_for_test");
+    expect_entry(utest_result, state, 0, &(EntryWant) { "named_function_for_test", ENTRY_UNCHECKED, ENTRY_UNCHECKED });
 }
 
 UTEST(perf_scope, deep_nesting_depths) {
@@ -209,14 +217,10 @@ UTEST(perf_scope, deep_nesting_depths) {
 
     PerfScopeThreadState* state = perf_scope_get_thread_state();
     ASSERT_EQ(state->entry_count, (u32)4);
-    ASSERT_EQ(state->entries[0].depth, (u16)0);
-    ASSERT_EQ(state->entries[1].depth, (u16)1);
-    ASSERT_EQ(state->entries[2].depth, (u16)2);
-    ASSERT_EQ(state->entries[3].depth, (u16)3);
-
-    ASSERT_EQ(state->entries[1].parent_index, (u16)0);
-    ASSERT_EQ(state->entries[2].parent_index, (u16)1);
-    ASSERT_EQ(state->entries[3].parent_index, (u16)2);
+    expect_entry(utest_result, state, 0, &(EntryWant) { nullptr, 0, ENTRY_UNCHECKED });
+    expect_entry(utest_result, state, 1, &(EntryWant) { nullptr, 1, 0 });
+    expect_entry(utest_result, state, 2, &(EntryWant) { nullptr, 2, 1 });
+    expect_entry(utest_result, state, 3, &(EntryWant) { nullptr, 3, 2 });
 }
 
 UTEST(perf_scope, loop_scopes) {
@@ -227,11 +231,9 @@ UTEST(perf_scope, loop_scopes) {
     }
 
     PerfScopeThreadState* state = perf_scope_get_thread_state();
-    ASSERT_EQ(state->entry_count, (u32)5);
-    ASSERT_EQ(state->stack_depth, (u32)0);
+    expect_entry_counts(utest_result, state, 5, 0);
 
     for (u32 i = 0; i < 5; i++) {
-        ASSERT_STREQ(state->entries[i].name, "iteration");
-        ASSERT_EQ(state->entries[i].depth, (u16)0);
+        expect_entry(utest_result, state, i, &(EntryWant) { "iteration", 0, ENTRY_UNCHECKED });
     }
 }

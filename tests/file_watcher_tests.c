@@ -74,6 +74,83 @@ static bool wait_for_file_watcher_changes(FlFileWatcherHandle handle, int max_po
     return false;
 }
 
+static u32 change_type_count(u32 change_types) {
+    const u32 flags[] = { FlFileChangeType_Created, FlFileChangeType_Modified, FlFileChangeType_Deleted,
+                          FlFileChangeType_Moved, FlFileChangeType_Renamed };
+    u32 count = 0;
+    for (u32 i = 0; i < sizeof_array(flags); i++) {
+        if (change_types & flags[i]) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static bool any_change_coalesced(FileChangeIterator* changes) {
+    bool found_coalesced = false;
+
+    file_change_iterator_reset(changes);
+    while (file_change_iterator_has_next(changes)) {
+        FileChange change = file_change_iterator_next(changes);
+        if (change_type_count(change.change_types) > 1) {
+            found_coalesced = true;
+        }
+    }
+    return found_coalesced;
+}
+
+static u32 count_changes_with_type(FileChangeIterator* changes, u32 type) {
+    u32 count = 0;
+
+    file_change_iterator_reset(changes);
+    while (file_change_iterator_has_next(changes)) {
+        FileChange change = file_change_iterator_next(changes);
+        if (change.change_types & type) {
+            count++;
+        }
+    }
+    return count;
+}
+
+// Polls for up to 2s, which is long enough for slow ARM CI hardware.
+static bool wait_for_public_changes(uint32_t handle) {
+    bool pending = false;
+    for (int i = 0; i < 200 && !pending; i++) {
+        pending = fl_file_watcher_has_changes(handle);
+        if (!pending) {
+            sleep_us(10000);
+        }
+    }
+    return pending;
+}
+
+static const FlFileChange* find_change_ending_with(const FlFileChanges* batch, const char* name) {
+    for (uint32_t i = 0; i < batch->count; i++) {
+        if (path_ends_with(batch->changes[i].path, name)) {
+            return &batch->changes[i];
+        }
+    }
+    return nullptr;
+}
+
+static void expect_entry_not_handed_out(int* utest_result, const FlFileChanges* later, uint64_t created_at) {
+    for (uint32_t c = 0; c < later->count; c++) {
+        const bool is_same_entry
+            = path_ends_with(later->changes[c].path, "created.txt") && later->changes[c].timestamp == created_at;
+        ASSERT_FALSE_MSG(is_same_entry, "the creation was handed out by a second batch");
+    }
+}
+
+static void expect_creation_not_repeated(int* utest_result, uint32_t handle, FlArena* arena, uint64_t created_at) {
+    for (int i = 0; i < 20; i++) {
+        if (fl_file_watcher_has_changes(handle)) {
+            const FlFileChanges later = fl_file_watcher_take_changes(handle, arena);
+            expect_entry_not_handed_out(utest_result, &later, created_at);
+        }
+        sleep_us(5000);
+    }
+}
+
 UTEST(file_watcher, create_and_destroy) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -127,27 +204,14 @@ UTEST(file_watcher, public_api_reports_a_created_file_once) {
 
     ASSERT_TRUE(create_test_file(test_file, "test content"));
 
-    // Poll for up to 2s, which is long enough for slow ARM CI hardware.
-    bool pending = false;
-    for (int i = 0; i < 200 && !pending; i++) {
-        pending = fl_file_watcher_has_changes(handle);
-        if (!pending) {
-            sleep_us(10000);
-        }
-    }
+    bool pending = wait_for_public_changes(handle);
     ASSERT_TRUE_MSG(pending, "the created file was never reported");
 
     const FlFileChanges batch = fl_file_watcher_take_changes(handle, arena);
     ASSERT_GT(batch.count, 0U);
     ASSERT_FALSE(batch.has_overflow);
 
-    const FlFileChange* created = nullptr;
-    for (uint32_t i = 0; i < batch.count; i++) {
-        if (path_ends_with(batch.changes[i].path, "created.txt")) {
-            created = &batch.changes[i];
-            break;
-        }
-    }
+    const FlFileChange* created = find_change_ending_with(&batch, "created.txt");
     ASSERT_TRUE_MSG(created != nullptr, "no change names the created file");
     ASSERT_TRUE((created->change_types & FlFileChangeType_Created) != 0);
     ASSERT_FALSE(created->is_directory);
@@ -155,17 +219,7 @@ UTEST(file_watcher, public_api_reports_a_created_file_once) {
     // A later event for the same file (a modify from the write) may still arrive, and a platform may flag it Created
     // again, but it carries a later timestamp: a take that did not clear the batch would hand out the same entry.
     const uint64_t created_at = created->timestamp;
-    for (int i = 0; i < 20; i++) {
-        if (fl_file_watcher_has_changes(handle)) {
-            const FlFileChanges later = fl_file_watcher_take_changes(handle, arena);
-            for (uint32_t c = 0; c < later.count; c++) {
-                const bool is_same_entry
-                    = path_ends_with(later.changes[c].path, "created.txt") && later.changes[c].timestamp == created_at;
-                ASSERT_FALSE_MSG(is_same_entry, "the creation was handed out by a second batch");
-            }
-        }
-        sleep_us(5000);
-    }
+    expect_creation_not_repeated(utest_result, handle, arena, created_at);
 
     fl_file_watcher_stop(handle);
     ASSERT_FALSE(fl_file_watcher_is_active(handle));
@@ -469,26 +523,9 @@ UTEST(file_watcher, multiple_file_operations) {
     FileChangeIterator changes = file_watcher_get_changes(handle, arena);
     ASSERT_GT(changes.count, 0U);
 
-    u32 create_count = 0;
-    u32 modify_count = 0;
-    u32 delete_count = 0;
-
-    file_change_iterator_reset(&changes);
-    while (file_change_iterator_has_next(&changes)) {
-        FileChange change = file_change_iterator_next(&changes);
-        if (change.change_types & FlFileChangeType_Created)
-            create_count++;
-        if (change.change_types & FlFileChangeType_Modified)
-            modify_count++;
-        if (change.change_types & FlFileChangeType_Deleted)
-            delete_count++;
-    }
-
     // Exact counts depend on how the OS coalesces and reports events.
+    u32 create_count = count_changes_with_type(&changes, FlFileChangeType_Created);
     ASSERT_GT(create_count, 0U);
-
-    (void)modify_count;
-    (void)delete_count;
 
     file_watcher_stop(handle);
     cleanup_path(test_file1);
@@ -531,27 +568,7 @@ UTEST(file_watcher, event_coalescing_rapid_changes) {
     ASSERT_GT(changes.count, 0U);
     ASSERT_LE(changes.count, 8U);
 
-    file_change_iterator_reset(&changes);
-    bool found_coalesced = false;
-
-    while (file_change_iterator_has_next(&changes)) {
-        FileChange change = file_change_iterator_next(&changes);
-        u32 type_count = 0;
-        if (change.change_types & FlFileChangeType_Created)
-            type_count++;
-        if (change.change_types & FlFileChangeType_Modified)
-            type_count++;
-        if (change.change_types & FlFileChangeType_Deleted)
-            type_count++;
-        if (change.change_types & FlFileChangeType_Moved)
-            type_count++;
-        if (change.change_types & FlFileChangeType_Renamed)
-            type_count++;
-
-        if (type_count > 1) {
-            found_coalesced = true;
-        }
-    }
+    bool found_coalesced = any_change_coalesced(&changes);
 
     ASSERT_TRUE(found_coalesced || changes.count <= 2);
 

@@ -8,6 +8,10 @@
 #include <unistd.h>
 #endif
 
+static FlArena* test_arena(void) {
+    return arena_new(.reserved_size = MB(64));
+}
+
 static FlString create_test_name(FlArena* arena, const char* base_name) {
     u32 pid = get_process_id_os();
     return fl_sprintf_arena(arena, "%s_%u", base_name, pid);
@@ -25,8 +29,84 @@ static FlString create_test_dir_path(FlArena* arena, const char* test_name) {
     return file_build_path_os(arena, temp_dir, unique_name);
 }
 
+static FlString invalid_os_path(void) {
+#ifdef _WIN32
+    return FL_S("Z:\\non\\existent\\directory\\file.txt");
+#else
+    return FL_S("/non/existent/directory/file.txt");
+#endif
+}
+
+static i64 write_text(FlString path, FlString content) {
+    return file_write_os(path, (const u8*)content.data, (i64)content.length);
+}
+
+static void expect_write_bytes(int* utest_result, FlString path, const u8* data, i64 size) {
+    ASSERT_EQ(file_write_os(path, data, size), size);
+}
+
+static void expect_write_text(int* utest_result, FlString path, FlString content) {
+    expect_write_bytes(utest_result, path, (const u8*)content.data, (i64)content.length);
+}
+
+static void expect_dirs_exist(int* utest_result, const FlString* paths, u32 count, bool want) {
+    for (u32 i = 0; i < count; i++) {
+        ASSERT_EQ(file_directory_exists_os(paths[i]), want);
+    }
+}
+
+static void expect_files_exist(int* utest_result, const FlString* paths, u32 count, bool want) {
+    for (u32 i = 0; i < count; i++) {
+        ASSERT_EQ(file_exists_os(paths[i]), want);
+    }
+}
+
+static void expect_file(int* utest_result, FlString path, bool want) {
+    ASSERT_EQ(file_exists_os(path), want);
+}
+
+static void expect_dir(int* utest_result, FlString path, bool want) {
+    ASSERT_EQ(file_directory_exists_os(path), want);
+}
+
+static void expect_disk_space_bounds(int* utest_result, DiskSpaceInfo info) {
+    ASSERT_LE(info.bytes_available, info.bytes_free);
+    ASSERT_LE(info.bytes_free, info.bytes_total);
+    ASSERT_LE(info.bytes_available, info.bytes_total);
+}
+
+static void expect_disk_space_empty(int* utest_result, DiskSpaceInfo info) {
+    ASSERT_FALSE(info.is_valid);
+    ASSERT_EQ(info.bytes_total, 0ULL);
+    ASSERT_EQ(info.bytes_free, 0ULL);
+    ASSERT_EQ(info.bytes_available, 0ULL);
+}
+
+static void expect_dir_created(int* utest_result, FlString path) {
+    ASSERT_TRUE(file_create_directory_os(path));
+    ASSERT_TRUE(file_directory_exists_os(path));
+}
+
+static void expect_dir_created_recursive(int* utest_result, FlString path) {
+    ASSERT_TRUE(file_create_directory_recursive_os(path));
+    ASSERT_TRUE(file_directory_exists_os(path));
+}
+
+static void expect_handle_write(int* utest_result, FlString path, FlString content, bool append) {
+    i64 fd = file_open_write_os(path, append);
+    ASSERT_GE(fd, 0);
+    file_write_to_handle_os(fd, (const u8*)content.data, (i64)content.length);
+    file_close_handle_os(fd);
+}
+
+
+static void expect_disk_space_valid(int* utest_result, DiskSpaceInfo info) {
+    ASSERT_TRUE(info.is_valid);
+    ASSERT_GT(info.bytes_total, 0ULL);
+}
+
 UTEST(os_api, get_temp_directory_basic) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString temp_dir = get_temp_directory_os(arena);
 
@@ -39,7 +119,7 @@ UTEST(os_api, get_temp_directory_basic) {
 }
 
 UTEST(os_api, get_temp_directory_consistency) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString temp_dir1 = get_temp_directory_os(arena);
     FlString temp_dir2 = get_temp_directory_os(arena);
@@ -63,31 +143,30 @@ UTEST(os_api, get_process_id_consistency) {
 }
 
 UTEST(os_api, file_write_basic) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "file_write_basic");
     FlString test_content = FL_S("Hello, OS API test!");
 
-    i64 bytes_written = file_write_os(file_path, (const u8*)test_content.data, (i64)test_content.length);
-    ASSERT_EQ(bytes_written, (i64)test_content.length);
+    expect_write_text(utest_result, file_path, test_content);
 
-    ASSERT_TRUE(file_exists_os(file_path));
+    expect_file(utest_result, file_path, true);
 
     file_delete_os(file_path);
-    ASSERT_FALSE(file_exists_os(file_path));
+    expect_file(utest_result, file_path, false);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, file_write_empty) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "file_write_empty");
 
     i64 bytes_written = file_write_os(file_path, nullptr, 0);
     ASSERT_EQ(bytes_written, 0);
 
-    ASSERT_TRUE(file_exists_os(file_path));
+    expect_file(utest_result, file_path, true);
 
     file_delete_os(file_path);
 
@@ -95,7 +174,7 @@ UTEST(os_api, file_write_empty) {
 }
 
 UTEST(os_api, file_write_large_content) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "file_write_large");
 
@@ -105,10 +184,9 @@ UTEST(os_api, file_write_large_content) {
         large_content[i] = (u8)(i % 256);
     }
 
-    i64 bytes_written = file_write_os(file_path, large_content, (i64)content_size);
-    ASSERT_EQ(bytes_written, (i64)content_size);
+    expect_write_bytes(utest_result, file_path, large_content, (i64)content_size);
 
-    ASSERT_TRUE(file_exists_os(file_path));
+    expect_file(utest_result, file_path, true);
 
     file_delete_os(file_path);
 
@@ -116,19 +194,17 @@ UTEST(os_api, file_write_large_content) {
 }
 
 UTEST(os_api, file_write_overwrite) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "file_write_overwrite");
     FlString content1 = FL_S("First content");
     FlString content2 = FL_S("Second content");
 
-    i64 bytes1 = file_write_os(file_path, (const u8*)content1.data, (i64)content1.length);
-    ASSERT_EQ(bytes1, (i64)content1.length);
-    ASSERT_TRUE(file_exists_os(file_path));
+    expect_write_text(utest_result, file_path, content1);
+    expect_file(utest_result, file_path, true);
 
-    i64 bytes2 = file_write_os(file_path, (const u8*)content2.data, (i64)content2.length);
-    ASSERT_EQ(bytes2, (i64)content2.length);
-    ASSERT_TRUE(file_exists_os(file_path));
+    expect_write_text(utest_result, file_path, content2);
+    expect_file(utest_result, file_path, true);
 
     file_delete_os(file_path);
 
@@ -136,32 +212,30 @@ UTEST(os_api, file_write_overwrite) {
 }
 
 UTEST(os_api, directory_create_and_remove) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString dir_path = create_test_dir_path(arena, "dir_create_remove");
 
-    ASSERT_FALSE(file_directory_exists_os(dir_path));
+    expect_dir(utest_result, dir_path, false);
 
-    ASSERT_TRUE(file_create_directory_os(dir_path));
-    ASSERT_TRUE(file_directory_exists_os(dir_path));
+    expect_dir_created(utest_result, dir_path);
 
     ASSERT_TRUE(file_remove_directory_os(dir_path));
-    ASSERT_FALSE(file_directory_exists_os(dir_path));
+    expect_dir(utest_result, dir_path, false);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, directory_create_existing) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString dir_path = create_test_dir_path(arena, "dir_create_existing");
 
-    ASSERT_TRUE(file_create_directory_os(dir_path));
-    ASSERT_TRUE(file_directory_exists_os(dir_path));
+    expect_dir_created(utest_result, dir_path);
 
     // Platform behavior varies on an already-existing directory, but must not crash.
     file_create_directory_os(dir_path);
-    ASSERT_TRUE(file_directory_exists_os(dir_path));
+    expect_dir(utest_result, dir_path, true);
 
     file_remove_directory_os(dir_path);
 
@@ -169,79 +243,69 @@ UTEST(os_api, directory_create_existing) {
 }
 
 UTEST(os_api, directory_recursive_remove_with_files) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString base_dir = create_test_dir_path(arena, "dir_recursive");
     FlString sub_dir = file_build_path_os(arena, base_dir, FL_S("subdir"));
     FlString file1 = file_build_path_os(arena, base_dir, FL_S("file1.txt"));
     FlString file2 = file_build_path_os(arena, sub_dir, FL_S("file2.txt"));
     FlString test_content = FL_S("Test file content");
+    const FlString dirs[] = { base_dir, sub_dir };
+    const FlString files[] = { file1, file2 };
 
     ASSERT_TRUE(file_create_directory_os(base_dir));
     ASSERT_TRUE(file_create_directory_os(sub_dir));
 
-    ASSERT_EQ(file_write_os(file1, (const u8*)test_content.data, (i64)test_content.length), (i64)test_content.length);
-    ASSERT_EQ(file_write_os(file2, (const u8*)test_content.data, (i64)test_content.length), (i64)test_content.length);
+    expect_write_text(utest_result, file1, test_content);
+    expect_write_text(utest_result, file2, test_content);
 
-    ASSERT_TRUE(file_directory_exists_os(base_dir));
-    ASSERT_TRUE(file_directory_exists_os(sub_dir));
-    ASSERT_TRUE(file_exists_os(file1));
-    ASSERT_TRUE(file_exists_os(file2));
+    expect_dirs_exist(utest_result, dirs, 2, true);
+    expect_files_exist(utest_result, files, 2, true);
 
     ASSERT_TRUE(file_remove_directory_recursive_os(base_dir));
 
-    ASSERT_FALSE(file_directory_exists_os(base_dir));
-    ASSERT_FALSE(file_directory_exists_os(sub_dir));
-    ASSERT_FALSE(file_exists_os(file1));
-    ASSERT_FALSE(file_exists_os(file2));
+    expect_dirs_exist(utest_result, dirs, 2, false);
+    expect_files_exist(utest_result, files, 2, false);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, directory_recursive_remove_nested) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString base_dir = create_test_dir_path(arena, "dir_nested");
     FlString level1 = file_build_path_os(arena, base_dir, FL_S("level1"));
     FlString level2 = file_build_path_os(arena, level1, FL_S("level2"));
     FlString level3 = file_build_path_os(arena, level2, FL_S("level3"));
+    const FlString levels[] = { base_dir, level1, level2, level3 };
 
-    ASSERT_TRUE(file_create_directory_os(base_dir));
-    ASSERT_TRUE(file_create_directory_os(level1));
-    ASSERT_TRUE(file_create_directory_os(level2));
-    ASSERT_TRUE(file_create_directory_os(level3));
+    for (u32 i = 0; i < 4; i++) {
+        ASSERT_TRUE(file_create_directory_os(levels[i]));
+    }
 
-    ASSERT_TRUE(file_directory_exists_os(base_dir));
-    ASSERT_TRUE(file_directory_exists_os(level1));
-    ASSERT_TRUE(file_directory_exists_os(level2));
-    ASSERT_TRUE(file_directory_exists_os(level3));
+    expect_dirs_exist(utest_result, levels, 4, true);
 
     ASSERT_TRUE(file_remove_directory_recursive_os(base_dir));
 
-    ASSERT_FALSE(file_directory_exists_os(base_dir));
-    ASSERT_FALSE(file_directory_exists_os(level1));
-    ASSERT_FALSE(file_directory_exists_os(level2));
-    ASSERT_FALSE(file_directory_exists_os(level3));
+    expect_dirs_exist(utest_result, levels, 4, false);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, directory_create_recursive_nested) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString base_dir = create_test_dir_path(arena, "recursive_create");
     FlString level1 = file_build_path_os(arena, base_dir, FL_S("level1"));
     FlString level2 = file_build_path_os(arena, level1, FL_S("level2"));
     FlString level3 = file_build_path_os(arena, level2, FL_S("level3"));
+    const FlString levels[] = { base_dir, level1, level2, level3 };
 
-    ASSERT_FALSE(file_directory_exists_os(base_dir));
+    expect_dir(utest_result, base_dir, false);
 
     ASSERT_TRUE(file_create_directory_recursive_os(level3));
 
-    ASSERT_TRUE(file_directory_exists_os(base_dir));
-    ASSERT_TRUE(file_directory_exists_os(level1));
-    ASSERT_TRUE(file_directory_exists_os(level2));
-    ASSERT_TRUE(file_directory_exists_os(level3));
+    expect_dirs_exist(utest_result, levels, 4, true);
 
     file_remove_directory_recursive_os(base_dir);
 
@@ -249,15 +313,12 @@ UTEST(os_api, directory_create_recursive_nested) {
 }
 
 UTEST(os_api, directory_create_recursive_existing) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString dir_path = create_test_dir_path(arena, "recursive_existing");
 
-    ASSERT_TRUE(file_create_directory_recursive_os(dir_path));
-    ASSERT_TRUE(file_directory_exists_os(dir_path));
-
-    ASSERT_TRUE(file_create_directory_recursive_os(dir_path));
-    ASSERT_TRUE(file_directory_exists_os(dir_path));
+    expect_dir_created_recursive(utest_result, dir_path);
+    expect_dir_created_recursive(utest_result, dir_path);
 
     file_remove_directory_os(dir_path);
 
@@ -269,14 +330,13 @@ UTEST(os_api, directory_create_recursive_empty_path) {
 }
 
 UTEST(os_api, directory_create_recursive_single_level) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString dir_path = create_test_dir_path(arena, "recursive_single");
 
-    ASSERT_FALSE(file_directory_exists_os(dir_path));
+    expect_dir(utest_result, dir_path, false);
 
-    ASSERT_TRUE(file_create_directory_recursive_os(dir_path));
-    ASSERT_TRUE(file_directory_exists_os(dir_path));
+    expect_dir_created_recursive(utest_result, dir_path);
 
     file_remove_directory_os(dir_path);
 
@@ -284,12 +344,14 @@ UTEST(os_api, directory_create_recursive_single_level) {
 }
 
 UTEST(os_api, full_workflow_integration) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString base_dir = create_test_dir_path(arena, "integration_test");
     FlString sub_dir = file_build_path_os(arena, base_dir, FL_S("data"));
     FlString config_file = file_build_path_os(arena, base_dir, FL_S("config.txt"));
     FlString data_file = file_build_path_os(arena, sub_dir, FL_S("data.bin"));
+    const FlString dirs[] = { base_dir, sub_dir };
+    const FlString files[] = { config_file, data_file };
 
     FlString config_content = FL_S("# Test configuration file\nversion=1.0\ndebug=true\n");
 
@@ -302,66 +364,56 @@ UTEST(os_api, full_workflow_integration) {
     ASSERT_TRUE(file_create_directory_os(base_dir));
     ASSERT_TRUE(file_create_directory_os(sub_dir));
 
-    ASSERT_EQ(file_write_os(config_file, (const u8*)config_content.data, (i64)config_content.length),
-              (i64)config_content.length);
-    ASSERT_EQ(file_write_os(data_file, binary_data, (i64)data_size), (i64)data_size);
+    expect_write_text(utest_result, config_file, config_content);
+    expect_write_bytes(utest_result, data_file, binary_data, (i64)data_size);
 
-    ASSERT_TRUE(file_directory_exists_os(base_dir));
-    ASSERT_TRUE(file_directory_exists_os(sub_dir));
-    ASSERT_TRUE(file_exists_os(config_file));
-    ASSERT_TRUE(file_exists_os(data_file));
+    expect_dirs_exist(utest_result, dirs, 2, true);
+    expect_files_exist(utest_result, files, 2, true);
 
     ASSERT_TRUE(file_remove_directory_recursive_os(base_dir));
 
-    ASSERT_FALSE(file_directory_exists_os(base_dir));
-    ASSERT_FALSE(file_directory_exists_os(sub_dir));
-    ASSERT_FALSE(file_exists_os(config_file));
-    ASSERT_FALSE(file_exists_os(data_file));
+    expect_dirs_exist(utest_result, dirs, 2, false);
+    expect_files_exist(utest_result, files, 2, false);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, cross_platform_path_handling) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString temp_dir = get_temp_directory_os(arena);
     FlString test_name = create_test_name(arena, "path_test");
     FlString test_path = file_build_path_os(arena, temp_dir, test_name);
 
-    ASSERT_TRUE(file_create_directory_os(test_path));
-    ASSERT_TRUE(file_directory_exists_os(test_path));
+    expect_dir_created(utest_result, test_path);
 
     FlString file_name = FL_S("test_file.txt");
     FlString file_path = file_build_path_os(arena, test_path, file_name);
     FlString content = FL_S("Cross-platform path test");
 
-    ASSERT_EQ(file_write_os(file_path, (const u8*)content.data, (i64)content.length), (i64)content.length);
-    ASSERT_TRUE(file_exists_os(file_path));
+    expect_write_text(utest_result, file_path, content);
+    expect_file(utest_result, file_path, true);
 
     ASSERT_TRUE(file_remove_directory_recursive_os(test_path));
-    ASSERT_FALSE(file_directory_exists_os(test_path));
+    expect_dir(utest_result, test_path, false);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, file_write_invalid_path) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
-#ifdef _WIN32
-    FlString invalid_path = FL_S("Z:\\non\\existent\\directory\\file.txt");
-#else
-    FlString invalid_path = FL_S("/non/existent/directory/file.txt");
-#endif
+    FlString invalid_path = invalid_os_path();
     FlString content = FL_S("Should fail");
 
-    i64 result = file_write_os(invalid_path, (const u8*)content.data, (i64)content.length);
+    i64 result = write_text(invalid_path, content);
     ASSERT_LT(result, (i64)content.length);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, directory_remove_nonexistent) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString nonexistent_dir = create_test_dir_path(arena, "nonexistent_dir_12345");
 
@@ -372,49 +424,41 @@ UTEST(os_api, directory_remove_nonexistent) {
 }
 
 UTEST(os_api, get_disk_space_temp_directory) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString temp_dir = get_temp_directory_os(arena);
     DiskSpaceInfo info = get_disk_space_os(temp_dir);
 
-    ASSERT_TRUE(info.is_valid);
-
-    ASSERT_GT(info.bytes_total, 0ULL);
+    expect_disk_space_valid(utest_result, info);
     ASSERT_GT(info.bytes_free, 0ULL);
     // bytes_available excludes blocks reserved for root/quota, so it never exceeds bytes_free.
-    ASSERT_LE(info.bytes_available, info.bytes_free);
-
-    ASSERT_LE(info.bytes_free, info.bytes_total);
-    ASSERT_LE(info.bytes_available, info.bytes_total);
+    expect_disk_space_bounds(utest_result, info);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, get_disk_space_current_directory) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString current_dir = get_current_directory_os(arena);
     DiskSpaceInfo info = get_disk_space_os(current_dir);
 
-    ASSERT_TRUE(info.is_valid);
-    ASSERT_GT(info.bytes_total, 0ULL);
+    expect_disk_space_valid(utest_result, info);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(os_api, get_disk_space_file_path) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "disk_space_file_test");
     FlString content = FL_S("Test content for disk space check");
 
-    i64 bytes_written = file_write_os(file_path, (const u8*)content.data, (i64)content.length);
-    ASSERT_EQ(bytes_written, (i64)content.length);
+    expect_write_text(utest_result, file_path, content);
 
     // A file path reports the filesystem containing it.
     DiskSpaceInfo info = get_disk_space_os(file_path);
-    ASSERT_TRUE(info.is_valid);
-    ASSERT_GT(info.bytes_total, 0ULL);
+    expect_disk_space_valid(utest_result, info);
 
     file_delete_os(file_path);
 
@@ -422,7 +466,7 @@ UTEST(os_api, get_disk_space_file_path) {
 }
 
 UTEST(os_api, get_disk_space_nonexistent_file_with_valid_parent) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
     FlString nonexistent_file;
 
     // A nonexistent path resolves by walking up to the first parent that exists.
@@ -437,8 +481,7 @@ UTEST(os_api, get_disk_space_nonexistent_file_with_valid_parent) {
 #endif
     DiskSpaceInfo info = get_disk_space_os(nonexistent_file);
 
-    ASSERT_TRUE(info.is_valid);
-    ASSERT_GT(info.bytes_total, 0ULL);
+    expect_disk_space_valid(utest_result, info);
 
     fl_arena_destroy(arena);
 }
@@ -447,14 +490,11 @@ UTEST(os_api, get_disk_space_empty_path) {
     FlString empty_path = FL_S("");
     DiskSpaceInfo info = get_disk_space_os(empty_path);
 
-    ASSERT_FALSE(info.is_valid);
-    ASSERT_EQ(info.bytes_total, 0ULL);
-    ASSERT_EQ(info.bytes_free, 0ULL);
-    ASSERT_EQ(info.bytes_available, 0ULL);
+    expect_disk_space_empty(utest_result, info);
 }
 
 UTEST(os_api, get_disk_space_consistency) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString temp_dir = get_temp_directory_os(arena);
 
@@ -482,7 +522,7 @@ UTEST(os_api, get_disk_space_consistency) {
 }
 
 UTEST(os_api, file_open_write_basic) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "open_write_basic");
     FlString test_content = FL_S("Hello, file handle test!");
@@ -495,7 +535,7 @@ UTEST(os_api, file_open_write_basic) {
 
     file_close_handle_os(fd);
 
-    ASSERT_TRUE(file_exists_os(file_path));
+    expect_file(utest_result, file_path, true);
     ASSERT_EQ(file_get_size_os(file_path), (i64)test_content.length);
 
     file_delete_os(file_path);
@@ -504,22 +544,16 @@ UTEST(os_api, file_open_write_basic) {
 }
 
 UTEST(os_api, file_open_write_truncate) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "open_write_truncate");
     FlString content1 = FL_S("First content that is quite long");
     FlString content2 = FL_S("Short");
 
-    i64 fd1 = file_open_write_os(file_path, false);
-    ASSERT_GE(fd1, 0);
-    file_write_to_handle_os(fd1, (const u8*)content1.data, (i64)content1.length);
-    file_close_handle_os(fd1);
+    expect_handle_write(utest_result, file_path, content1, false);
     ASSERT_EQ(file_get_size_os(file_path), (i64)content1.length);
 
-    i64 fd2 = file_open_write_os(file_path, false);
-    ASSERT_GE(fd2, 0);
-    file_write_to_handle_os(fd2, (const u8*)content2.data, (i64)content2.length);
-    file_close_handle_os(fd2);
+    expect_handle_write(utest_result, file_path, content2, false);
 
     ASSERT_EQ(file_get_size_os(file_path), (i64)content2.length);
 
@@ -529,21 +563,14 @@ UTEST(os_api, file_open_write_truncate) {
 }
 
 UTEST(os_api, file_open_write_append) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "open_write_append");
     FlString content1 = FL_S("First part");
     FlString content2 = FL_S(" - Second part");
 
-    i64 fd1 = file_open_write_os(file_path, false);
-    ASSERT_GE(fd1, 0);
-    file_write_to_handle_os(fd1, (const u8*)content1.data, (i64)content1.length);
-    file_close_handle_os(fd1);
-
-    i64 fd2 = file_open_write_os(file_path, true);
-    ASSERT_GE(fd2, 0);
-    file_write_to_handle_os(fd2, (const u8*)content2.data, (i64)content2.length);
-    file_close_handle_os(fd2);
+    expect_handle_write(utest_result, file_path, content1, false);
+    expect_handle_write(utest_result, file_path, content2, true);
 
     i64 expected_size = (i64)(content1.length + content2.length);
     ASSERT_EQ(file_get_size_os(file_path), expected_size);
@@ -554,28 +581,24 @@ UTEST(os_api, file_open_write_append) {
 }
 
 UTEST(os_api, file_open_write_multiple_writes) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString file_path = create_test_file_path(arena, "open_write_multi");
 
     i64 fd = file_open_write_os(file_path, false);
     ASSERT_GE(fd, 0);
 
-    FlString part1 = FL_S("Line 1\n");
-    FlString part2 = FL_S("Line 2\n");
-    FlString part3 = FL_S("Line 3\n");
+    const FlString parts[] = { FL_S("Line 1\n"), FL_S("Line 2\n"), FL_S("Line 3\n") };
+    i64 expected_size = 0;
 
-    i64 written1 = file_write_to_handle_os(fd, (const u8*)part1.data, (i64)part1.length);
-    i64 written2 = file_write_to_handle_os(fd, (const u8*)part2.data, (i64)part2.length);
-    i64 written3 = file_write_to_handle_os(fd, (const u8*)part3.data, (i64)part3.length);
-
-    ASSERT_EQ(written1, (i64)part1.length);
-    ASSERT_EQ(written2, (i64)part2.length);
-    ASSERT_EQ(written3, (i64)part3.length);
+    for (u32 i = 0; i < 3; i++) {
+        i64 written = file_write_to_handle_os(fd, (const u8*)parts[i].data, (i64)parts[i].length);
+        ASSERT_EQ(written, (i64)parts[i].length);
+        expected_size += (i64)parts[i].length;
+    }
 
     file_close_handle_os(fd);
 
-    i64 expected_size = (i64)(part1.length + part2.length + part3.length);
     ASSERT_EQ(file_get_size_os(file_path), expected_size);
 
     file_delete_os(file_path);
@@ -601,31 +624,26 @@ UTEST(os_api, file_write_to_handle_zero_size) {
 }
 
 UTEST(os_api, file_open_write_invalid_path) {
-#ifdef _WIN32
-    FlString invalid_path = FL_S("Z:\\non\\existent\\directory\\file.txt");
-#else
-    FlString invalid_path = FL_S("/non/existent/directory/file.txt");
-#endif
+    FlString invalid_path = invalid_os_path();
     i64 fd = file_open_write_os(invalid_path, false);
     ASSERT_LT(fd, 0);
 }
 
 UTEST(os_api, file_rename_basic) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString old_path = create_test_file_path(arena, "rename_old");
     FlString new_path = create_test_file_path(arena, "rename_new");
     FlString content = FL_S("File content for rename test");
 
-    i64 bytes = file_write_os(old_path, (const u8*)content.data, (i64)content.length);
-    ASSERT_EQ(bytes, (i64)content.length);
-    ASSERT_TRUE(file_exists_os(old_path));
-    ASSERT_FALSE(file_exists_os(new_path));
+    expect_write_text(utest_result, old_path, content);
+    expect_file(utest_result, old_path, true);
+    expect_file(utest_result, new_path, false);
 
     ASSERT_TRUE(file_rename_os(old_path, new_path));
 
-    ASSERT_FALSE(file_exists_os(old_path));
-    ASSERT_TRUE(file_exists_os(new_path));
+    expect_file(utest_result, old_path, false);
+    expect_file(utest_result, new_path, true);
 
     ASSERT_EQ(file_get_size_os(new_path), (i64)content.length);
 
@@ -635,23 +653,23 @@ UTEST(os_api, file_rename_basic) {
 }
 
 UTEST(os_api, file_rename_overwrite) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString source_path = create_test_file_path(arena, "rename_src");
     FlString dest_path = create_test_file_path(arena, "rename_dst");
     FlString source_content = FL_S("Source file content");
     FlString dest_content = FL_S("Destination file content - longer");
 
-    file_write_os(source_path, (const u8*)source_content.data, (i64)source_content.length);
-    file_write_os(dest_path, (const u8*)dest_content.data, (i64)dest_content.length);
+    write_text(source_path, source_content);
+    write_text(dest_path, dest_content);
 
-    ASSERT_TRUE(file_exists_os(source_path));
-    ASSERT_TRUE(file_exists_os(dest_path));
+    expect_file(utest_result, source_path, true);
+    expect_file(utest_result, dest_path, true);
 
     ASSERT_TRUE(file_rename_os(source_path, dest_path));
 
-    ASSERT_FALSE(file_exists_os(source_path));
-    ASSERT_TRUE(file_exists_os(dest_path));
+    expect_file(utest_result, source_path, false);
+    expect_file(utest_result, dest_path, true);
     ASSERT_EQ(file_get_size_os(dest_path), (i64)source_content.length);
 
     file_delete_os(dest_path);
@@ -660,7 +678,7 @@ UTEST(os_api, file_rename_overwrite) {
 }
 
 UTEST(os_api, file_rename_nonexistent_source) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString nonexistent = create_test_file_path(arena, "rename_nonexistent_12345");
     FlString dest = create_test_file_path(arena, "rename_dest");
@@ -671,22 +689,18 @@ UTEST(os_api, file_rename_nonexistent_source) {
 }
 
 UTEST(os_api, file_rename_to_invalid_path) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString source_path = create_test_file_path(arena, "rename_valid_src");
-#ifdef _WIN32
-    FlString invalid_dest = FL_S("Z:\\non\\existent\\directory\\file.txt");
-#else
-    FlString invalid_dest = FL_S("/non/existent/directory/file.txt");
-#endif
+    FlString invalid_dest = invalid_os_path();
     FlString content = FL_S("Test content");
 
-    file_write_os(source_path, (const u8*)content.data, (i64)content.length);
-    ASSERT_TRUE(file_exists_os(source_path));
+    write_text(source_path, content);
+    expect_file(utest_result, source_path, true);
 
     ASSERT_FALSE(file_rename_os(source_path, invalid_dest));
 
-    ASSERT_TRUE(file_exists_os(source_path));
+    expect_file(utest_result, source_path, true);
 
     file_delete_os(source_path);
 
@@ -694,7 +708,7 @@ UTEST(os_api, file_rename_to_invalid_path) {
 }
 
 UTEST(os_api, file_rename_same_directory) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString temp_dir = get_temp_directory_os(arena);
     FlString old_name = create_test_name(arena, "rename_same_old");
@@ -703,13 +717,13 @@ UTEST(os_api, file_rename_same_directory) {
     FlString new_path = file_build_path_os(arena, temp_dir, new_name);
     FlString content = FL_S("Same directory rename test");
 
-    file_write_os(old_path, (const u8*)content.data, (i64)content.length);
-    ASSERT_TRUE(file_exists_os(old_path));
+    write_text(old_path, content);
+    expect_file(utest_result, old_path, true);
 
     ASSERT_TRUE(file_rename_os(old_path, new_path));
 
-    ASSERT_FALSE(file_exists_os(old_path));
-    ASSERT_TRUE(file_exists_os(new_path));
+    expect_file(utest_result, old_path, false);
+    expect_file(utest_result, new_path, true);
 
     file_delete_os(new_path);
 
@@ -717,8 +731,12 @@ UTEST(os_api, file_rename_same_directory) {
 }
 
 #if !defined(_WIN32)
+static void make_symlink(int* utest_result, FlArena* scratch, FlString target, FlString link_path) {
+    ASSERT_EQ(symlink(fl_string_to_cstr(scratch, target), fl_string_to_cstr(scratch, link_path)), 0);
+}
+
 UTEST(os_api, directory_recursive_remove_does_not_follow_symlinks) {
-    FlArena* arena = arena_new(.reserved_size = MB(64));
+    FlArena* arena = test_arena();
 
     FlString outside_dir = create_test_dir_path(arena, "symlink_outside");
     FlString outside_file = file_build_path_os(arena, outside_dir, FL_S("keep.txt"));
@@ -727,14 +745,14 @@ UTEST(os_api, directory_recursive_remove_does_not_follow_symlinks) {
     FlString content = FL_S("outside content");
 
     ASSERT_TRUE(file_create_directory_os(outside_dir));
-    ASSERT_EQ(file_write_os(outside_file, (const u8*)content.data, (i64)content.length), (i64)content.length);
+    expect_write_text(utest_result, outside_file, content);
     ASSERT_TRUE(file_create_directory_os(base_dir));
 
     arena_scratch_auto(temp);
-    ASSERT_EQ(symlink(fl_string_to_cstr(temp.arena, outside_dir), fl_string_to_cstr(temp.arena, link_path)), 0);
+    make_symlink(utest_result, temp.arena, outside_dir, link_path);
 
     FlString file_link_path = file_build_path_os(arena, base_dir, FL_S("file_link"));
-    ASSERT_EQ(symlink(fl_string_to_cstr(temp.arena, outside_file), fl_string_to_cstr(temp.arena, file_link_path)), 0);
+    make_symlink(utest_result, temp.arena, outside_file, file_link_path);
     FileStat file_link_stat = file_stat_os(file_link_path);
     ASSERT_TRUE(file_link_stat.is_symlink);
     ASSERT_TRUE(file_link_stat.is_regular_file);
@@ -750,9 +768,9 @@ UTEST(os_api, directory_recursive_remove_does_not_follow_symlinks) {
 
     ASSERT_TRUE(file_remove_directory_recursive_os(base_dir));
 
-    ASSERT_FALSE(file_directory_exists_os(base_dir));
-    ASSERT_TRUE(file_directory_exists_os(outside_dir));
-    ASSERT_TRUE(file_exists_os(outside_file));
+    expect_dir(utest_result, base_dir, false);
+    expect_dir(utest_result, outside_dir, true);
+    expect_file(utest_result, outside_file, true);
 
     ASSERT_TRUE(file_remove_directory_recursive_os(outside_dir));
     fl_arena_destroy(arena);
