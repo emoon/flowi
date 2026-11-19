@@ -76,29 +76,32 @@ struct FlAppGpu {
     EGLContext egl_ctx;
 };
 
-// EGL surfaceless GL 4.3 core context with no window and no native display (CI's llvmpipe). Returns false (leaving
-// *dpy/*ctx at EGL_NO_*) on any failure.
-static bool create_surfaceless_gl43(EGLDisplay* out_dpy, EGLContext* out_ctx) {
-    *out_dpy = EGL_NO_DISPLAY;
-    *out_ctx = EGL_NO_CONTEXT;
-
+static EGLDisplay open_surfaceless_display(void) {
     const char* client_exts = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
     if (client_exts == nullptr || strstr(client_exts, "EGL_MESA_platform_surfaceless") == nullptr) {
         log_error("fl_app gpu: EGL_MESA_platform_surfaceless not available");
-        return false;
+        return EGL_NO_DISPLAY;
     }
 
     PFNEGLGETPLATFORMDISPLAYEXTPROC get_platform_display
         = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
     if (get_platform_display == nullptr) {
         log_error("fl_app gpu: eglGetPlatformDisplayEXT not exported by the EGL driver");
-        return false;
+        return EGL_NO_DISPLAY;
     }
+
     EGLDisplay dpy = get_platform_display(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, nullptr);
     if (dpy == EGL_NO_DISPLAY || !eglInitialize(dpy, nullptr, nullptr)) {
         log_error("fl_app gpu: no surfaceless EGL display");
-        return false;
+        return EGL_NO_DISPLAY;
     }
+
+    return dpy;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static EGLContext make_gl43_core_current(EGLDisplay dpy) {
     eglBindAPI(EGL_OPENGL_API);
 
     static const EGLint config_attrs[] = { EGL_SURFACE_TYPE, 0, EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT, EGL_NONE };
@@ -114,6 +117,27 @@ static bool create_surfaceless_gl43(EGLDisplay* out_dpy, EGLContext* out_ctx) {
     if (context == EGL_NO_CONTEXT || !eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, context)) {
         log_error("fl_app gpu: failed to create/current a GL 4.3 core context");
         eglTerminate(dpy);
+        return EGL_NO_CONTEXT;
+    }
+
+    return context;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// EGL surfaceless GL 4.3 core context with no window and no native display (CI's llvmpipe). Returns false (leaving
+// *dpy/*ctx at EGL_NO_*) on any failure.
+static bool create_surfaceless_gl43(EGLDisplay* out_dpy, EGLContext* out_ctx) {
+    *out_dpy = EGL_NO_DISPLAY;
+    *out_ctx = EGL_NO_CONTEXT;
+
+    EGLDisplay dpy = open_surfaceless_display();
+    if (dpy == EGL_NO_DISPLAY) {
+        return false;
+    }
+
+    EGLContext context = make_gl43_core_current(dpy);
+    if (context == EGL_NO_CONTEXT) {
         return false;
     }
 

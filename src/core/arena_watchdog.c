@@ -107,20 +107,14 @@ static bool check_monotonic_growth(const WatchdogEntry* entry, u32 threshold, u6
     return total_growth >= min_bytes;
 }
 
-static void sample_arena_callback(FlArena* arena, void* user_data) {
-    (void)user_data;
+static WatchdogEntry* find_or_add_entry(FlArena* arena) {
+    WatchdogEntry* entry = find_entry(arena, arena->creation_timestamp_us);
+    return entry != nullptr ? entry : add_entry(arena);
+}
 
-    u64 pos = atomic_load_explicit(&arena->pos, memory_order_relaxed);
-    u64 creation_ts = arena->creation_timestamp_us;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    WatchdogEntry* entry = find_entry(arena, creation_ts);
-    if (entry == nullptr) {
-        entry = add_entry(arena);
-        if (entry == nullptr) {
-            return;
-        }
-    }
-
+static void record_sample(WatchdogEntry* entry, u64 pos) {
     entry->samples[entry->sample_index] = pos;
     entry->sample_index = (entry->sample_index + 1) % WATCHDOG_RING_SIZE;
     if (entry->sample_count < WATCHDOG_RING_SIZE) {
@@ -128,22 +122,42 @@ static void sample_arena_callback(FlArena* arena, void* user_data) {
     }
 
     entry->seen = true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void alert_on_new_growth(WatchdogEntry* entry) {
+    u64 latest_pos = entry->samples[(entry->sample_index + WATCHDOG_RING_SIZE - 1) % WATCHDOG_RING_SIZE];
+    if (latest_pos == entry->last_alert_pos) {
+        return;
+    }
+
+    u32 start_offset = (entry->sample_index + WATCHDOG_RING_SIZE - s_watchdog.growth_threshold) % WATCHDOG_RING_SIZE;
+    u64 growth = latest_pos - entry->samples[start_offset];
+
+    log_warning("arena_watchdog: sustained growth detected in arena \"%s:%d\" "
+                "(+%llu bytes over %u samples, current pos: %llu)",
+                entry->file, entry->line, growth, s_watchdog.growth_threshold, latest_pos);
+
+    entry->last_alert_pos = latest_pos;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void sample_arena_callback(FlArena* arena, void* user_data) {
+    (void)user_data;
+
+    u64 pos = atomic_load_explicit(&arena->pos, memory_order_relaxed);
+
+    WatchdogEntry* entry = find_or_add_entry(arena);
+    if (entry == nullptr) {
+        return;
+    }
+
+    record_sample(entry, pos);
 
     if (check_monotonic_growth(entry, s_watchdog.growth_threshold, s_watchdog.min_growth_bytes)) {
-        u64 latest_pos = entry->samples[(entry->sample_index + WATCHDOG_RING_SIZE - 1) % WATCHDOG_RING_SIZE];
-
-        if (latest_pos != entry->last_alert_pos) {
-            u32 start_offset
-                = (entry->sample_index + WATCHDOG_RING_SIZE - s_watchdog.growth_threshold) % WATCHDOG_RING_SIZE;
-            u64 first_sample = entry->samples[start_offset];
-            u64 growth = latest_pos - first_sample;
-
-            log_warning("arena_watchdog: sustained growth detected in arena \"%s:%d\" "
-                        "(+%llu bytes over %u samples, current pos: %llu)",
-                        entry->file, entry->line, growth, s_watchdog.growth_threshold, latest_pos);
-
-            entry->last_alert_pos = latest_pos;
-        }
+        alert_on_new_growth(entry);
     }
 }
 

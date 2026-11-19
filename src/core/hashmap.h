@@ -39,6 +39,14 @@ typedef struct HashMapBase {
 //   hashmap_insert(&my_map, 42, FL_S("value"));
 //   FlString* value = hashmap_get(&my_map, 42);
 
+typedef struct HashMapLayout {
+    u64 key_size;
+    u64 value_size;
+    u64 key_offset;
+    u64 value_offset;
+    u64 node_size;
+} HashMapLayout;
+
 #define hashmap(key_type, value_type) \
     struct {                          \
         HashMapBase base;             \
@@ -60,8 +68,8 @@ typedef struct HashMapBase {
         u64 _key_offset = offsetof(HashMapNodeBase, data);                                                         \
         u64 _value_offset = _key_offset + align_pow2(sizeof(_key_t), _Alignof(_value_t));                          \
         u64 _node_size = _value_offset + sizeof(_value_t);                                                         \
-        hashmap_init_raw(&(map)->base, arena_ptr, initial_capacity, sizeof(_key_t), sizeof(_value_t), _key_offset, \
-                         _value_offset, _node_size);                                                               \
+        const HashMapLayout _layout = { sizeof(_key_t), sizeof(_value_t), _key_offset, _value_offset, _node_size }; \
+        hashmap_init_raw(&(map)->base, arena_ptr, initial_capacity, &_layout);                                     \
         (map)->_key_type = nullptr;                                                                                \
         (map)->_value_type = nullptr;                                                                              \
     } while (0)
@@ -303,8 +311,7 @@ bool hashmap_remove_string_raw(HashMapBase* self, const struct FlString* key);
 
 // Raw interface (used by macros)
 
-void hashmap_init_raw(HashMapBase* self, struct FlArena* arena, u64 capacity, u64 key_size, u64 value_size,
-                      u64 key_offset, u64 value_offset, u64 node_size);
+void hashmap_init_raw(HashMapBase* self, struct FlArena* arena, u64 capacity, const HashMapLayout* layout);
 HashMapNodeBase* hashmap_insert_raw(HashMapBase* self, u64 hash, const void* key, const void* value);
 HashMapNodeBase* hashmap_get_raw(HashMapBase* self, u64 hash, const void* key);
 bool hashmap_remove_raw(HashMapBase* self, u64 hash, const void* key);

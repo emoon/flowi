@@ -131,6 +131,70 @@ typedef struct {
     bool first_arena_in_thread;
 } ArenaDumpData;
 
+static FlString format_size_text(FlArena* arena, u64 bytes) {
+    if (bytes >= GB(1)) {
+        return fl_sprintf_arena(arena, "%.2f GB", bytes / (double)GB(1));
+    }
+    if (bytes >= MB(1)) {
+        return fl_sprintf_arena(arena, "%.2f MB", bytes / (double)MB(1));
+    }
+    if (bytes >= KB(1)) {
+        return fl_sprintf_arena(arena, "%.2f KB", bytes / (double)KB(1));
+    }
+    return fl_sprintf_arena(arena, "%llu bytes", bytes);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlString format_age_text(FlArena* arena, i64 age_us) {
+    if (age_us < 0) {
+        return FL_S("0.0s");
+    }
+
+    double age_seconds = age_us / 1000000.0;
+    if (age_seconds >= 3600.0) {
+        return fl_sprintf_arena(arena, "%.1fh", age_seconds / 3600.0);
+    }
+    if (age_seconds >= 60.0) {
+        return fl_sprintf_arena(arena, "%.1fm", age_seconds / 60.0);
+    }
+    return fl_sprintf_arena(arena, "%.1fs", age_seconds);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef struct {
+    const char* label;
+    u64 used;
+    u64 capacity;
+} UsageLine;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void append_usage_line(FlStringBuilder* sb, FlArena* output_arena, UsageLine line) {
+    arena_scratch_auto_conflict(temp, output_arena);
+    double percent = line.capacity > 0 ? (line.used * 100.0) / line.capacity : 0.0;
+    FlString size_str = format_size_text(temp.arena, line.used);
+
+    if (line.used >= KB(1)) {
+        sb_append_line(sb, output_arena, "%s%S (%llu bytes) [%.1f%%]\n", line.label, size_str, line.used, percent);
+    } else {
+        sb_append_line(sb, output_arena, "%s%S [%.1f%%]\n", line.label, size_str, percent);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void append_arena_age_line(FlStringBuilder* sb, FlArena* output_arena, const FlArena* arena) {
+    arena_scratch_auto_conflict(temp, output_arena);
+    i64 age_us = get_current_time_us_os() - (i64)arena->creation_timestamp_us;
+    FlString age_str = format_age_text(temp.arena, age_us);
+
+    sb_append_line(sb, output_arena, "    Age:       %S\n\n", age_str);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static void dump_arena_callback(FlArena* arena, void* user_data) {
     ArenaDumpData* data = (ArenaDumpData*)user_data;
 
@@ -148,74 +212,12 @@ static void dump_arena_callback(FlArena* arena, void* user_data) {
 
     sb_append_size(data->sb, data->output_arena, "    Capacity:  ", arena->reserved_size);
 
-    {
-        arena_scratch_auto_conflict(temp, data->output_arena);
-        double percent = arena->reserved_size > 0 ? (arena->pos * 100.0) / arena->reserved_size : 0.0;
+    append_usage_line(data->sb, data->output_arena, (UsageLine) { "    Current:   ", arena->pos, arena->reserved_size });
 
-        FlString size_str;
-        if (arena->pos >= GB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f GB", arena->pos / (double)GB(1));
-        } else if (arena->pos >= MB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f MB", arena->pos / (double)MB(1));
-        } else if (arena->pos >= KB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f KB", arena->pos / (double)KB(1));
-        } else {
-            size_str = fl_sprintf_arena(temp.arena, "%llu bytes", arena->pos);
-        }
+    u64 peak_offset = atomic_load_explicit(&arena->peak_offset, memory_order_relaxed);
+    append_usage_line(data->sb, data->output_arena, (UsageLine) { "    Peak:      ", peak_offset, arena->reserved_size });
 
-        if (arena->pos >= KB(1)) {
-            sb_append_line(data->sb, data->output_arena, "    Current:   %S (%llu bytes) [%.1f%%]\n", size_str,
-                           arena->pos, percent);
-        } else {
-            sb_append_line(data->sb, data->output_arena, "    Current:   %S [%.1f%%]\n", size_str, percent);
-        }
-    }
-
-    {
-        arena_scratch_auto_conflict(temp, data->output_arena);
-        u64 peak_offset = atomic_load_explicit(&arena->peak_offset, memory_order_relaxed);
-        double percent = arena->reserved_size > 0 ? (peak_offset * 100.0) / arena->reserved_size : 0.0;
-
-        FlString size_str;
-        if (peak_offset >= GB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f GB", peak_offset / (double)GB(1));
-        } else if (peak_offset >= MB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f MB", peak_offset / (double)MB(1));
-        } else if (peak_offset >= KB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f KB", peak_offset / (double)KB(1));
-        } else {
-            size_str = fl_sprintf_arena(temp.arena, "%llu bytes", peak_offset);
-        }
-
-        if (peak_offset >= KB(1)) {
-            sb_append_line(data->sb, data->output_arena, "    Peak:      %S (%llu bytes) [%.1f%%]\n", size_str,
-                           peak_offset, percent);
-        } else {
-            sb_append_line(data->sb, data->output_arena, "    Peak:      %S [%.1f%%]\n", size_str, percent);
-        }
-    }
-
-    {
-        arena_scratch_auto_conflict(temp, data->output_arena);
-        i64 current_time_us = get_current_time_us_os();
-        i64 age_us = current_time_us - (i64)arena->creation_timestamp_us;
-
-        FlString age_str;
-        if (age_us < 0) {
-            age_str = FL_S("0.0s");
-        } else {
-            double age_seconds = age_us / 1000000.0;
-            if (age_seconds >= 3600.0) {
-                age_str = fl_sprintf_arena(temp.arena, "%.1fh", age_seconds / 3600.0);
-            } else if (age_seconds >= 60.0) {
-                age_str = fl_sprintf_arena(temp.arena, "%.1fm", age_seconds / 60.0);
-            } else {
-                age_str = fl_sprintf_arena(temp.arena, "%.1fs", age_seconds);
-            }
-        }
-
-        sb_append_line(data->sb, data->output_arena, "    Age:       %S\n\n", age_str);
-    }
+    append_arena_age_line(data->sb, data->output_arena, arena);
 }
 
 FlString fl_memory_tracker_dump_string(FlArena* arena) {
@@ -261,32 +263,23 @@ FlString fl_memory_tracker_dump_string(FlArena* arena) {
     sb_append_number(&sb, arena, "Total live arenas: ", stats.live_arena_count);
     sb_append_size(&sb, arena, "Total arena capacity: ", stats.total_arena_capacity);
 
-    {
-        arena_scratch_auto_conflict(temp, arena);
-        double percent
-            = stats.total_arena_capacity > 0 ? (stats.total_arena_used * 100.0) / stats.total_arena_capacity : 0.0;
-
-        FlString size_str;
-        if (stats.total_arena_used >= GB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f GB", stats.total_arena_used / (double)GB(1));
-        } else if (stats.total_arena_used >= MB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f MB", stats.total_arena_used / (double)MB(1));
-        } else if (stats.total_arena_used >= KB(1)) {
-            size_str = fl_sprintf_arena(temp.arena, "%.2f KB", stats.total_arena_used / (double)KB(1));
-        } else {
-            size_str = fl_sprintf_arena(temp.arena, "%llu bytes", stats.total_arena_used);
-        }
-
-        if (stats.total_arena_used >= KB(1)) {
-            sb_append_line(&sb, arena, "Total arena used: %S (%llu bytes) [%.1f%%]\n", size_str, stats.total_arena_used,
-                           percent);
-        } else {
-            sb_append_line(&sb, arena, "Total arena used: %S [%.1f%%]\n", size_str, percent);
-        }
-    }
+    append_usage_line(&sb, arena, (UsageLine) { "Total arena used: ", stats.total_arena_used, stats.total_arena_capacity });
 
     return fl_sb_to_string(sb);
 }
+
+static bool write_snapshot_file(FlString filepath, FlString content, const char* what) {
+    i64 bytes_written = file_write_os(filepath, (const u8*)content.data, (i64)content.length);
+
+    if (bytes_written < 0) {
+        log_error("Failed to write %s to file: %S", what, filepath);
+        return false;
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_memory_tracker_dump_to_file(FlString filepath) {
     FL_VALIDATE_RET(!string_is_empty(filepath), false);
@@ -294,14 +287,7 @@ bool fl_memory_tracker_dump_to_file(FlString filepath) {
     arena_scratch_auto(temp);
     FlString content = fl_memory_tracker_dump_string(temp.arena);
 
-    i64 bytes_written = file_write_os(filepath, (const u8*)content.data, (i64)content.length);
-
-    if (bytes_written < 0) {
-        log_error("Failed to write memory snapshot to file: %S", filepath);
-        return false;
-    }
-
-    return true;
+    return write_snapshot_file(filepath, content, "memory snapshot");
 }
 
 typedef struct {
@@ -410,12 +396,5 @@ bool fl_memory_tracker_export_json_to_file(FlString filepath) {
     arena_scratch_auto(temp);
     FlString content = fl_memory_tracker_export_json_string(temp.arena);
 
-    i64 bytes_written = file_write_os(filepath, (const u8*)content.data, (i64)content.length);
-
-    if (bytes_written < 0) {
-        log_error("Failed to write JSON snapshot to file: %S", filepath);
-        return false;
-    }
-
-    return true;
+    return write_snapshot_file(filepath, content, "JSON snapshot");
 }

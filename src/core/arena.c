@@ -231,81 +231,84 @@ u64 fl_arena_count_elements(const FlArena* self, const void* start_ptr, u64 elem
 
 // Thread-safe allocation (CAS on pos). This is the default.
 
+static void arena_fatal(const FlArena* self, const char* reason) {
+    log_fatal("%s: %s:%d", reason, self->allocation_site_file, self->allocation_site_line);
+    fl_log_flush();
+    exit(1);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void arena_check_size_overflow(const FlArena* self, u64 aligned_pos, u64 size) {
+    // A size large enough to wrap aligned_pos + size would produce a small new_pos that slips
+    // past the reserved_size check and hand back an overlapping pointer.
+    if (FL_UNLIKELY(size > UINT64_MAX - aligned_pos)) {
+        arena_fatal(self, "Out of reserved memory in arena (allocation size overflow)");
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void* arena_publish_alloc(FlArena* self, u64 aligned_pos, u64 new_pos, u64 size) {
+    void* return_ptr = (char*)self->ptr + aligned_pos;
+
+    u64 current_peak = atomic_load_explicit(&self->peak_offset, memory_order_relaxed);
+    while (new_pos > current_peak) {
+        if (atomic_compare_exchange_weak_explicit(&self->peak_offset, &current_peak, new_pos, memory_order_relaxed,
+                                                  memory_order_relaxed)) {
+            break;
+        }
+    }
+
+    // Might have been poisoned by fl_arena_rewind
+    asan_unpoison_memory_region(return_ptr, size);
+
+    return return_ptr;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void arena_commit_up_to(FlArena* self, u64 new_pos) {
+    while (true) {
+        u64 current_committed = atomic_load(&self->committed_size);
+        if (new_pos <= current_committed) {
+            return;
+        }
+
+        u64 required_committed = align_pow2(new_pos, self->page_size);
+        if (FL_UNLIKELY(required_committed > self->reserved_size)) {
+            arena_fatal(self, "Out of reserved memory in arena");
+        }
+
+        u64 commit_size = required_committed - current_committed;
+        if (commit_size == 0) {
+            return;
+        }
+
+        ArenaError result = commit_memory_os((char*)self->ptr + current_committed, commit_size);
+        if (FL_UNLIKELY(result != ARENA_SUCCESS)) {
+            arena_fatal(self, "Unable to commit memory arena");
+        }
+
+        atomic_compare_exchange_strong(&self->committed_size, &current_committed, required_committed);
+        // If CAS fails, another thread may have committed more, so loop again
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void* fl_arena_alloc_raw(FlArena* self, u64 size, u64 alignment) {
     while (true) {
         u64 current_pos = atomic_load(&self->pos);
         const u64 aligned_pos = align_pow2(current_pos, alignment);
 
-        // A size large enough to wrap aligned_pos + size would produce a small new_pos that slips
-        // past the required_committed > reserved_size check below and hand back an overlapping pointer.
-        if (FL_UNLIKELY(size > UINT64_MAX - aligned_pos)) {
-            log_fatal("Out of reserved memory in arena (allocation size overflow): %s:%d", self->allocation_site_file,
-                      self->allocation_site_line);
-            fl_log_flush();
-            exit(1);
-        }
+        arena_check_size_overflow(self, aligned_pos, size);
 
         const u64 new_pos = aligned_pos + size;
 
         if (atomic_compare_exchange_weak(&self->pos, &current_pos, new_pos)) {
-            while (true) {
-                u64 current_committed = atomic_load(&self->committed_size);
-                if (new_pos <= current_committed) {
-                    void* return_ptr = (char*)self->ptr + aligned_pos;
-
-                    u64 current_peak = atomic_load_explicit(&self->peak_offset, memory_order_relaxed);
-                    while (new_pos > current_peak) {
-                        if (atomic_compare_exchange_weak_explicit(&self->peak_offset, &current_peak, new_pos,
-                                                                  memory_order_relaxed, memory_order_relaxed)) {
-                            break;
-                        }
-                    }
-
-                    // Might have been poisoned by fl_arena_rewind
-                    asan_unpoison_memory_region(return_ptr, size);
-
-                    return return_ptr;
-                }
-
-                u64 required_committed = align_pow2(new_pos, self->page_size);
-                if (FL_UNLIKELY(required_committed > self->reserved_size)) {
-                    log_fatal("Out of reserved memory in arena: %s:%d", self->allocation_site_file,
-                              self->allocation_site_line);
-                    fl_log_flush();
-                    exit(1);
-                }
-
-                u64 commit_size = required_committed - current_committed;
-                if (commit_size == 0) {
-                    break; // No need to commit, recheck current_committed
-                }
-
-                ArenaError result = commit_memory_os((char*)self->ptr + current_committed, commit_size);
-                if (FL_UNLIKELY(result != ARENA_SUCCESS)) {
-                    log_fatal("Unable to commit memory arena: %s:%d", self->allocation_site_file,
-                              self->allocation_site_line);
-                    fl_log_flush();
-                    exit(1);
-                }
-
-                atomic_compare_exchange_strong(&self->committed_size, &current_committed, required_committed);
-                // If CAS fails, another thread may have committed more, so loop again
-            }
-
-            void* return_ptr = (char*)self->ptr + aligned_pos;
-
-            u64 current_peak = atomic_load_explicit(&self->peak_offset, memory_order_relaxed);
-            while (new_pos > current_peak) {
-                if (atomic_compare_exchange_weak_explicit(&self->peak_offset, &current_peak, new_pos,
-                                                          memory_order_relaxed, memory_order_relaxed)) {
-                    break;
-                }
-            }
-
-            // Might have been poisoned by fl_arena_rewind
-            asan_unpoison_memory_region(return_ptr, size);
-
-            return return_ptr;
+            arena_commit_up_to(self, new_pos);
+            return arena_publish_alloc(self, aligned_pos, new_pos, size);
         }
         // The CAS failed because another thread moved pos, so retry.
     }
@@ -323,13 +326,7 @@ void* fl_arena_alloc_raw_st(FlArena* self, u64 size, u64 alignment) {
     u64 current_pos = atomic_load_explicit(&self->pos, memory_order_relaxed);
     const u64 aligned_pos = align_pow2(current_pos, alignment);
 
-    // Same overflow guard as the CAS path.
-    if (FL_UNLIKELY(size > UINT64_MAX - aligned_pos)) {
-        log_fatal("Out of reserved memory in arena (allocation size overflow): %s:%d", self->allocation_site_file,
-                  self->allocation_site_line);
-        fl_log_flush();
-        exit(1);
-    }
+    arena_check_size_overflow(self, aligned_pos, size);
 
     const u64 new_pos = aligned_pos + size;
 
