@@ -1072,6 +1072,14 @@ a Row Source, so the List's selection and keyboard code is the same for all of t
 have no labels (type-ahead is then off) or no ids.
 _Avoid_: reading the id slice directly inside the List.
 
+**Row Geometry**:
+Where the rows of a [[#List]] are: the height of a row, the gap between two rows, and how many rows
+there are. It answers which row is at a height in the content, where a row starts, which rows a band
+covers and where a drop lands. One part of flowi makes it each frame, and the selection, marquee,
+drag and scrolling code all ask it, so they agree on where every row is, including rows that are not
+drawn.
+_Avoid_: working out a row's position from the row height and gap anywhere else.
+
 **Virtual Source**:
 A [[#Row Source]] that holds no per-row data, only a count. A row is identified by its row number,
 so the [[#Item Id]] the List sees is the row number plus one. The virtual [[#Tree]] uses it: the app

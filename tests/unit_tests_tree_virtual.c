@@ -279,7 +279,7 @@ UTEST(tree_virtual, only_rows_with_children_get_an_arrow) {
     }
     const bool expect_arrow[] = { true, false, false, false, true, true, true };
     for_count(row, sizeof_array(expect_arrow)) {
-        const FlLayoutId arrow_id = { .name = tree.name, .id = TREE_ARROW_ID(row) };
+        const FlLayoutId arrow_id = list_layout_id(tree.name, LIST_ID_TREE_ARROW(row));
         const Clay_ElementData arrow
             = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(arrow_id) });
         ASSERT_EQ_MSG(expect_arrow[row], arrow.found, "root rows have an arrow slot, child rows do not");
@@ -343,7 +343,7 @@ UTEST(tree_virtual, jumping_far_every_frame_keeps_working) {
 
     for_count(i, 200) {
         vtree_dense_frame(ctx, tree);
-        list_uniform_nudge_scroll(ctx->list_uniform_ctx, tree.name, 4000.0f, 8.0f, VTREE_BIG_COUNT);
+        list_uniform_nudge_scroll(ctx->list_uniform_ctx, tree.name, 4000.0f);
     }
     const f64 offset = list_uniform_scroll_offset(ctx->list_uniform_ctx, tree.name);
     ASSERT_TRUE_MSG(offset > 700000.0, "the tree scrolled through fresh rows on every frame");

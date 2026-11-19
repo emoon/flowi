@@ -17,7 +17,7 @@ static FlListRange huge_frame(FlUiCtx* ctx, FlLayoutId list_id, u32 total) {
 }
 
 static FlElementState huge_row_state(FlLayoutId list_id, u32 row) {
-    const FlLayoutId id = { .name = list_id.name, .id = (i32)(row + 1) };
+    const FlLayoutId id = list_row_layout_id(list_id.name, row);
     return ui_get_element_state_by_id(ui_layout_id_to_clay_id(id));
 }
 
@@ -25,14 +25,13 @@ static void huge_expect_exact_rows(int* utest_result, FlUiCtx* ctx, FlLayoutId l
     const f64 stride = 26.0;
     huge_frame(ctx, list_id, total);
     huge_frame(ctx, list_id, total);
-    list_uniform_nudge_scroll(ctx->list_uniform_ctx, list_id.name, 1.0e12f, (f32)stride, total);
-    list_uniform_nudge_scroll(ctx->list_uniform_ctx, list_id.name, -7.0f, (f32)stride, total);
+    list_uniform_nudge_scroll(ctx->list_uniform_ctx, list_id.name, 1.0e12f);
+    list_uniform_nudge_scroll(ctx->list_uniform_ctx, list_id.name, -7.0f);
     FlListRange range = huge_frame(ctx, list_id, total);
     range = huge_frame(ctx, list_id, total);
 
     const f64 offset = list_uniform_scroll_offset(ctx->list_uniform_ctx, list_id.name);
-    const FlElementState container
-        = ui_get_element_state_by_id(ui_layout_id_to_clay_id((FlLayoutId) { .name = list_id.name, .id = 0 }));
+    const FlElementState container = ui_get_element_state(list_container_layout_id(list_id.name));
     ASSERT_TRUE_MSG(container.found, "the list container was laid out");
     ASSERT_EQ_MSG(total, range.end, "scrolled to the end, the window reaches the last row");
 
@@ -206,7 +205,7 @@ UTEST(list_scroll, scrollbar_drag_scrolls_without_selecting) {
 }
 
 static f32 list_row_y(FlLayoutId list, u32 row) {
-    const FlLayoutId row_id = { .name = list.name, .id = (i32)row + 1 };
+    const FlLayoutId row_id = list_row_layout_id(list.name, row);
     const Clay_ElementData box = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(row_id) });
     const Clay_ElementData view = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(list) });
     return box.boundingBox.y - view.boundingBox.y;
@@ -351,7 +350,7 @@ UTEST(list_scroll, scroll_to_zero_leaves_the_scroll_position_alone) {
     const f32 stride = 32.0f;
 
     uniform_frames(ctx, id, 0, 2);
-    list_uniform_nudge_scroll(ctx->list_uniform_ctx, id, 10.0f * stride, stride, UNIFORM_ROWS);
+    list_uniform_nudge_scroll(ctx->list_uniform_ctx, id, 10.0f * stride);
     uniform_frames(ctx, id, 0, 60);
     ASSERT_TRUE_MSG(uniform_offset(ctx, id) == (f64)(10.0f * stride),
                     "zeroed options do not scroll back to the first row");

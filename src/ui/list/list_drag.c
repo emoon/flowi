@@ -10,37 +10,14 @@
 
 #include <math.h>
 
-// Overlay seeds, derived from the list name so they never collide with rows or the marquee.
-#define LIST_DRAG_GHOST_FLOAT_SEED 0x44475348 // 'DGSH'
-#define LIST_DRAG_GHOST_FILL_SEED 0x44475300  // 'DGS\0'
-#define LIST_DRAG_LINE_FLOAT_SEED 0x444c4e45  // 'DLNE'
-#define LIST_DRAG_LINE_FILL_SEED 0x444c4e00   // 'DLN\0'
-#define LIST_DRAG_GHOST_ALPHA 200             // ghost fill opacity (rows show through faintly)
-#define LIST_DRAG_LINE_THICKNESS 2.0f         // insertion line height (logical px)
+#define LIST_DRAG_GHOST_ALPHA 200     // ghost fill opacity (rows show through faintly)
+#define LIST_DRAG_LINE_THICKNESS 2.0f // insertion line height (logical px)
 
 // The drop a drag resolves to: the dragged ids land next to target_id.
 typedef struct DropTarget {
     u64 id;
     FlDropRelationship rel;
 } DropTarget;
-
-// Candidate insertion index in [0, count] for a reorder drag: the dragged item(s) land before row ins. The
-// cursor's row and which half it falls in decide it (top half -> before that row, bottom half -> after). It is
-// arithmetic on the uniform stride, so an off-screen target resolves exactly like an on-screen one.
-static u32 insertion_index(f64 cur_content_y, f64 stride, f32 row_height, u32 count) {
-    if (count == 0 || stride <= 0.0f) {
-        return 0;
-    }
-    i64 row = (i64)floor(cur_content_y / stride);
-    if (row < 0) {
-        row = 0;
-    }
-    if (row > (i64)count - 1) {
-        row = (i64)count - 1;
-    }
-    f64 row_mid = (f64)row * stride + (f64)row_height * 0.5;
-    return (cur_content_y < row_mid) ? (u32)row : (u32)row + 1; // in [0, count]
-}
 
 // The row an insertion index lands next to: before the first row for index 0, else after the row above it.
 static DropTarget drop_target_for(const FlListContext* self, u32 ins) {
@@ -78,13 +55,12 @@ static const u64* collect_from_ids(FlListContext* self, u64 press_id, u32* out_c
 // Draw the insertion line: a thin floating bar spanning the viewport width at the candidate drop boundary (the
 // centre of the gap before row ins), clamped to the viewport.
 static void draw_insertion(FlListContext* self, const ListViewport* vp, f64 scroll, u32 ins) {
-    f64 line_content_y
-        = (f64)ins * (f64)list_row_stride(self) - (f64)self->current_gap_px * 0.5; // middle of the preceding gap
+    f64 line_content_y = list_geometry_insertion_y(self->geometry, ins);
     f32 screen_y = clamp(vp->top + (f32)(line_content_y - scroll), vp->top, vp->bottom);
 
     list_draw_overlay(self, &(ListOverlay) {
-                                .float_seed = LIST_DRAG_LINE_FLOAT_SEED,
-                                .fill_seed = LIST_DRAG_LINE_FILL_SEED,
+                                .float_seed = LIST_ID_DRAG_LINE_FLOAT,
+                                .fill_seed = LIST_ID_DRAG_LINE_FILL,
                                 .z_index = UI_Z_OVERLAY + 1,
                                 .x = vp->left,
                                 .y = screen_y - LIST_DRAG_LINE_THICKNESS * 0.5f,
@@ -96,7 +72,7 @@ static void draw_insertion(FlListContext* self, const ListViewport* vp, f64 scro
 
 // Draw the drag ghost: a translucent, row-height, viewport-width fill centred on the cursor vertically.
 static void draw_ghost(FlListContext* self, const ListViewport* vp) {
-    f32 height = self->current_row_px;
+    f32 height = self->geometry.row_px;
     f32 top = self->ui_ctx->input_state.mouse.y - height * 0.5f;
 
     const FlThemeColors* theme = fl_theme_colors();
@@ -104,8 +80,8 @@ static void draw_ghost(FlListContext* self, const ListViewport* vp) {
     fill.a = LIST_DRAG_GHOST_ALPHA;
 
     list_draw_overlay(self, &(ListOverlay) {
-                                .float_seed = LIST_DRAG_GHOST_FLOAT_SEED,
-                                .fill_seed = LIST_DRAG_GHOST_FILL_SEED,
+                                .float_seed = LIST_ID_DRAG_GHOST_FLOAT,
+                                .fill_seed = LIST_ID_DRAG_GHOST_FILL,
                                 .z_index = UI_Z_OVERLAY + 2,
                                 .x = vp->left,
                                 .y = top,
@@ -154,7 +130,7 @@ void list_drag_update(FlListContext* self, ListState* st) {
     // while edge auto-scroll advances scroll underneath it.
     f64 scroll = list_scroll_offset(self);
     f64 cur_content_y = list_clamped_content_y(self, &vp, scroll);
-    u32 ins = insertion_index(cur_content_y, list_row_stride(self), self->current_row_px, self->rows.count);
+    u32 ins = list_geometry_insertion_index(self->geometry, cur_content_y);
     DropTarget drop = drop_target_for(self, ins);
 
     u32 from_count = 0;
