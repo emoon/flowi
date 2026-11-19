@@ -49,6 +49,18 @@ static bool watchdog_lists(FlArena* scratch, FlString report, const char* status
     return strstr(fl_string_to_cstr(scratch, report), expected) != nullptr;
 }
 
+static void alloc_and_sample(FlArena* arena, u64 bytes, int rounds) {
+    for (int i = 0; i < rounds; i++) {
+        arena_alloc_array(arena, u8, bytes);
+        watchdog_force_sample();
+    }
+}
+
+static bool report_lists_status(FlArena* scratch, const char* status, int line) {
+    FlString report = arena_watchdog_report(scratch);
+    return watchdog_lists(scratch, report, status, line);
+}
+
 UTEST(arena_watchdog, init_destroy) {
     // Configuring the watchdog must not crash.
     WATCHDOG_SCOPE(WATCHDOG_DEFAULT_MIN_GROWTH_BYTES);
@@ -86,10 +98,7 @@ UTEST(arena_watchdog, detect_monotonic_growth) {
     const int arena_line = __LINE__ + 1;
     FlArena* arena = arena_new(.reserved_size = MB(1));
 
-    for (int i = 0; i < 5; i++) {
-        arena_alloc_array(arena, u8, KB(1));
-        watchdog_force_sample();
-    }
+    alloc_and_sample(arena, KB(1), 5);
 
     arena_scratch_auto(temp);
     FlString report = arena_watchdog_report(temp.arena);
@@ -106,10 +115,7 @@ UTEST(arena_watchdog, rewind_resets_detection) {
     const int arena_line = __LINE__ + 1;
     FlArena* arena = arena_new(.reserved_size = MB(1));
 
-    for (int i = 0; i < 3; i++) {
-        arena_alloc_array(arena, u8, KB(1));
-        watchdog_force_sample();
-    }
+    alloc_and_sample(arena, KB(1), 3);
 
     fl_arena_rewind(arena);
 
@@ -179,10 +185,7 @@ UTEST(arena_watchdog, disabled_does_nothing) {
     const int arena_line = __LINE__ + 1;
     FlArena* arena = arena_new(.reserved_size = MB(1));
 
-    for (int i = 0; i < 5; i++) {
-        arena_alloc_array(arena, u8, KB(1));
-        watchdog_force_sample();
-    }
+    alloc_and_sample(arena, KB(1), 5);
 
     arena_scratch_auto(temp);
     FlString report = arena_watchdog_report(temp.arena);
@@ -206,14 +209,10 @@ UTEST(arena_watchdog, below_min_growth_not_flagged) {
     const int arena_line = __LINE__ + 1;
     FlArena* arena = arena_new(.reserved_size = MB(2));
 
-    for (int i = 0; i < 5; i++) {
-        arena_alloc_array(arena, u8, 64);
-        watchdog_force_sample();
-    }
+    alloc_and_sample(arena, 64, 5);
 
     arena_scratch_auto(temp);
-    FlString report = arena_watchdog_report(temp.arena);
-    ASSERT_FALSE(watchdog_lists(temp.arena, report, "GROWING", arena_line));
+    ASSERT_FALSE(report_lists_status(temp.arena, "GROWING", arena_line));
 
     fl_arena_destroy(arena);
 }

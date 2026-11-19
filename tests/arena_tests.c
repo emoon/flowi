@@ -429,6 +429,15 @@ static void* thread_alloc_test(void* arg) {
     return nullptr;
 }
 
+static bool markers_match(const u8* bytes, const size_t* markers, u8 pattern) {
+    for (int m = 0; m < 3; m++) {
+        if (bytes[markers[m]] != pattern) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void* thread_large_alloc_test(void* arg) {
     ThreadTestData* data = (ThreadTestData*)arg;
     FlArenaMt* arena_mt = data->arena_mt;
@@ -443,12 +452,12 @@ static void* thread_large_alloc_test(void* arg) {
 
         u8* bytes = (u8*)ptr;
         u8 pattern = (u8)(data->thread_id + i);
-        bytes[0] = pattern;
-        bytes[large_allocation_size / 2] = pattern;
-        bytes[large_allocation_size - 1] = pattern;
+        const size_t markers[3] = { 0, large_allocation_size / 2, large_allocation_size - 1 };
+        for (int m = 0; m < 3; m++) {
+            bytes[markers[m]] = pattern;
+        }
 
-        if (bytes[0] != pattern || bytes[large_allocation_size / 2] != pattern
-            || bytes[large_allocation_size - 1] != pattern) {
+        if (!markers_match(bytes, markers, pattern)) {
             atomic_fetch_add(&data->errors, 1);
         }
     }
@@ -456,11 +465,9 @@ static void* thread_large_alloc_test(void* arg) {
     return nullptr;
 }
 
-UTEST(arena, thread_safe_allocation) {
+static void run_thread_test_data(int* utest_result, void* (*thread_fn)(void*), int num_threads, int num_allocations,
+                                int* total_errors) {
     FlArenaMt* arena_mt = arena_mt_new();
-
-    const int num_threads = 8;
-    const int allocations_per_thread = 100;
 
     // MSVC has no VLAs, so this is heap allocated.
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
@@ -471,66 +478,40 @@ UTEST(arena, thread_safe_allocation) {
     for (int i = 0; i < num_threads; i++) {
         thread_data[i].arena_mt = arena_mt;
         thread_data[i].thread_id = i;
-        thread_data[i].num_allocations = allocations_per_thread;
+        thread_data[i].num_allocations = num_allocations;
         atomic_store(&thread_data[i].errors, 0);
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], thread_alloc_test, &thread_data[i]);
+        os_thread_create(&threads[i], thread_fn, &thread_data[i]);
     }
 
     for (int i = 0; i < num_threads; i++) {
         os_thread_join(&threads[i]);
     }
 
-    int total_errors = 0;
+    *total_errors = 0;
     for (int i = 0; i < num_threads; i++) {
-        total_errors += atomic_load(&thread_data[i].errors);
+        *total_errors += atomic_load(&thread_data[i].errors);
     }
-
-    ASSERT_EQ(total_errors, 0);
 
     free(threads);
     free(thread_data);
     arena_mt_destroy(arena_mt);
 }
 
-UTEST(arena, arena_mt_growth) {
-    FlArenaMt* arena_mt = arena_mt_new();
-
-    const int num_threads = 4;
-
-    // MSVC has no VLAs, so this is heap allocated.
-    Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
-    ASSERT_NE(threads, nullptr);
-    ThreadTestData* thread_data = (ThreadTestData*)malloc(num_threads * sizeof(ThreadTestData));
-    ASSERT_NE(thread_data, nullptr);
-
-    for (int i = 0; i < num_threads; i++) {
-        thread_data[i].arena_mt = arena_mt;
-        thread_data[i].thread_id = i;
-        thread_data[i].num_allocations = 5;
-        atomic_store(&thread_data[i].errors, 0);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], thread_large_alloc_test, &thread_data[i]);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        os_thread_join(&threads[i]);
-    }
-
-    int total_errors = 0;
-    for (int i = 0; i < num_threads; i++) {
-        total_errors += atomic_load(&thread_data[i].errors);
-    }
+UTEST(arena, thread_safe_allocation) {
+    int total_errors = -1;
+    run_thread_test_data(utest_result, thread_alloc_test, 8, 100, &total_errors);
 
     ASSERT_EQ(total_errors, 0);
+}
 
-    free(threads);
-    free(thread_data);
-    arena_mt_destroy(arena_mt);
+UTEST(arena, arena_mt_growth) {
+    int total_errors = -1;
+    run_thread_test_data(utest_result, thread_large_alloc_test, 4, 5, &total_errors);
+
+    ASSERT_EQ(total_errors, 0);
 }
 
 // High contention on the lock-free allocation path
@@ -605,19 +586,23 @@ static void* rapid_small_alloc_test(void* arg) {
     return nullptr;
 }
 
+static size_t mixed_allocation_size(int i) {
+    switch (i % 3) {
+        case 0:
+            return 8 + (i % 64);
+        case 1:
+            return 1024 + (i % 2048);
+        default:
+            return KB(64) + (i % KB(32));
+    }
+}
+
 static void* mixed_size_contention_test(void* arg) {
     HighContentionTestData* data = (HighContentionTestData*)arg;
     FlArenaMt* arena_mt = data->arena_mt;
 
     for (int i = 0; i < data->num_allocations; i++) {
-        size_t size;
-        if (i % 3 == 0) {
-            size = 8 + (i % 64);
-        } else if (i % 3 == 1) {
-            size = 1024 + (i % 2048);
-        } else {
-            size = KB(64) + (i % KB(32));
-        }
+        size_t size = mixed_allocation_size(i);
 
         void* ptr = arena_mt_alloc_raw(arena_mt, size, 16);
         if (!ptr) {
@@ -646,11 +631,32 @@ static void* mixed_size_contention_test(void* arg) {
     return nullptr;
 }
 
-UTEST(arena, high_contention_lock_free) {
-    FlArenaMt* arena_mt = arena_mt_new();
+typedef struct ContentionConfig {
+    void* (*thread_fn)(void*);
+    int num_threads;
+    int allocations_per_thread;
+    int allocation_size;
+} ContentionConfig;
 
-    const int num_threads = 32;
-    const int allocations_per_thread = 1000;
+typedef struct ContentionTotals {
+    int errors;
+    int allocations;
+    int completions;
+} ContentionTotals;
+
+static ContentionTotals contention_totals(const HighContentionTestData* thread_data, int num_threads) {
+    ContentionTotals totals = { 0 };
+    for (int i = 0; i < num_threads; i++) {
+        totals.errors += atomic_load(&thread_data[i].errors);
+        totals.allocations += atomic_load(&thread_data[i].allocation_count);
+        totals.completions += atomic_load(&thread_data[i].completion_count);
+    }
+    return totals;
+}
+
+static void run_contention(int* utest_result, const ContentionConfig* config, ContentionTotals* totals) {
+    FlArenaMt* arena_mt = arena_mt_new();
+    const int num_threads = config->num_threads;
 
     // MSVC has no VLAs, so this is heap allocated.
     Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
@@ -662,177 +668,66 @@ UTEST(arena, high_contention_lock_free) {
     for (int i = 0; i < num_threads; i++) {
         thread_data[i].arena_mt = arena_mt;
         thread_data[i].thread_id = i;
-        thread_data[i].num_allocations = allocations_per_thread;
-        thread_data[i].allocation_size = 256;
+        thread_data[i].num_allocations = config->allocations_per_thread;
+        thread_data[i].allocation_size = config->allocation_size;
         atomic_store(&thread_data[i].errors, 0);
         atomic_store(&thread_data[i].allocation_count, 0);
         atomic_store(&thread_data[i].completion_count, 0);
     }
 
     for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], high_contention_alloc_test, &thread_data[i]);
+        os_thread_create(&threads[i], config->thread_fn, &thread_data[i]);
     }
 
     for (int i = 0; i < num_threads; i++) {
         os_thread_join(&threads[i]);
     }
 
-    int total_errors = 0;
-    int total_allocations = 0;
-    int total_completions = 0;
-
-    for (int i = 0; i < num_threads; i++) {
-        total_errors += atomic_load(&thread_data[i].errors);
-        total_allocations += atomic_load(&thread_data[i].allocation_count);
-        total_completions += atomic_load(&thread_data[i].completion_count);
-    }
-
-    ASSERT_EQ(total_errors, 0);
-    ASSERT_EQ(total_completions, num_threads);
-    ASSERT_GE(total_allocations, num_threads * allocations_per_thread * 0.95); // Allow for some variance
+    *totals = contention_totals(thread_data, num_threads);
 
     free(threads);
     free(thread_data);
     arena_mt_destroy(arena_mt);
+}
+
+UTEST(arena, high_contention_lock_free) {
+    const ContentionConfig config = { high_contention_alloc_test, 32, 1000, 256 };
+    ContentionTotals totals = { -1, -1, -1 };
+    run_contention(utest_result, &config, &totals);
+
+    ASSERT_EQ(totals.errors, 0);
+    ASSERT_EQ(totals.completions, config.num_threads);
+    ASSERT_GE(totals.allocations, config.num_threads * config.allocations_per_thread * 0.95); // Allow for some variance
 }
 
 UTEST(arena, rapid_small_allocations) {
-    FlArenaMt* arena_mt = arena_mt_new();
+    const ContentionConfig config = { rapid_small_alloc_test, 16, 5000, 0 };
+    ContentionTotals totals = { -1, -1, -1 };
+    run_contention(utest_result, &config, &totals);
 
-    const int num_threads = 16;
-    const int allocations_per_thread = 5000;
-
-    // MSVC has no VLAs, so this is heap allocated.
-    Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
-    ASSERT_NE(threads, nullptr);
-    HighContentionTestData* thread_data
-        = (HighContentionTestData*)calloc((size_t)num_threads, sizeof(HighContentionTestData));
-    ASSERT_NE(thread_data, nullptr);
-
-    for (int i = 0; i < num_threads; i++) {
-        thread_data[i].arena_mt = arena_mt;
-        thread_data[i].thread_id = i;
-        thread_data[i].num_allocations = allocations_per_thread;
-        atomic_store(&thread_data[i].errors, 0);
-        atomic_store(&thread_data[i].allocation_count, 0);
-        atomic_store(&thread_data[i].completion_count, 0);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], rapid_small_alloc_test, &thread_data[i]);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        os_thread_join(&threads[i]);
-    }
-
-    int total_errors = 0;
-    int total_allocations = 0;
-
-    for (int i = 0; i < num_threads; i++) {
-        total_errors += atomic_load(&thread_data[i].errors);
-        total_allocations += atomic_load(&thread_data[i].allocation_count);
-    }
-
-    ASSERT_EQ(total_errors, 0);
-    ASSERT_EQ(total_allocations, num_threads * allocations_per_thread);
-
-    free(threads);
-    free(thread_data);
-    arena_mt_destroy(arena_mt);
+    ASSERT_EQ(totals.errors, 0);
+    ASSERT_EQ(totals.allocations, config.num_threads * config.allocations_per_thread);
 }
 
 UTEST(arena, mixed_size_high_contention) {
-    FlArenaMt* arena_mt = arena_mt_new();
+    const ContentionConfig config = { mixed_size_contention_test, 24, 500, 0 };
+    ContentionTotals totals = { -1, -1, -1 };
+    run_contention(utest_result, &config, &totals);
 
-    const int num_threads = 24;
-    const int allocations_per_thread = 500;
-
-    // MSVC has no VLAs, so this is heap allocated.
-    Thread* threads = (Thread*)malloc(num_threads * sizeof(Thread));
-    ASSERT_NE(threads, nullptr);
-    HighContentionTestData* thread_data
-        = (HighContentionTestData*)calloc((size_t)num_threads, sizeof(HighContentionTestData));
-    ASSERT_NE(thread_data, nullptr);
-
-    for (int i = 0; i < num_threads; i++) {
-        thread_data[i].arena_mt = arena_mt;
-        thread_data[i].thread_id = i;
-        thread_data[i].num_allocations = allocations_per_thread;
-        atomic_store(&thread_data[i].errors, 0);
-        atomic_store(&thread_data[i].allocation_count, 0);
-        atomic_store(&thread_data[i].completion_count, 0);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        os_thread_create(&threads[i], mixed_size_contention_test, &thread_data[i]);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        os_thread_join(&threads[i]);
-    }
-
-    int total_errors = 0;
-    int total_allocations = 0;
-
-    for (int i = 0; i < num_threads; i++) {
-        total_errors += atomic_load(&thread_data[i].errors);
-        total_allocations += atomic_load(&thread_data[i].allocation_count);
-    }
-
-    ASSERT_EQ(total_errors, 0);
-    ASSERT_EQ(total_allocations, num_threads * allocations_per_thread);
-
-    arena_mt_destroy(arena_mt);
-
-    free(thread_data);
-    free(threads);
+    ASSERT_EQ(totals.errors, 0);
+    ASSERT_EQ(totals.allocations, config.num_threads * config.allocations_per_thread);
 }
 
 UTEST(arena, stress_lock_free_rounds) {
     const int num_rounds = 50;
-    const int threads_per_round = 16;
-    const int allocs_per_thread = 100;
 
     for (int round = 0; round < num_rounds; round++) {
-        FlArenaMt* arena_mt = arena_mt_new();
+        const ContentionConfig config = { high_contention_alloc_test, 16, 100, 128 + (round % 256) };
+        ContentionTotals totals = { -1, -1, -1 };
+        run_contention(utest_result, &config, &totals);
 
-        // MSVC has no VLAs, so this is heap allocated.
-        Thread* threads = (Thread*)malloc(threads_per_round * sizeof(Thread));
-        ASSERT_NE(threads, nullptr);
-        HighContentionTestData* thread_data
-            = (HighContentionTestData*)malloc(threads_per_round * sizeof(HighContentionTestData));
-        ASSERT_NE(thread_data, nullptr);
-
-        for (int i = 0; i < threads_per_round; i++) {
-            thread_data[i].arena_mt = arena_mt;
-            thread_data[i].thread_id = i;
-            thread_data[i].num_allocations = allocs_per_thread;
-            thread_data[i].allocation_size = 128 + (round % 256);
-            atomic_store(&thread_data[i].errors, 0);
-            atomic_store(&thread_data[i].allocation_count, 0);
-            atomic_store(&thread_data[i].completion_count, 0);
+        if (totals.errors != 0) {
+            ASSERT_EQ(totals.errors, 0);
         }
-
-        for (int i = 0; i < threads_per_round; i++) {
-            os_thread_create(&threads[i], high_contention_alloc_test, &thread_data[i]);
-        }
-
-        for (int i = 0; i < threads_per_round; i++) {
-            os_thread_join(&threads[i]);
-        }
-
-        int round_errors = 0;
-        for (int i = 0; i < threads_per_round; i++) {
-            round_errors += atomic_load(&thread_data[i].errors);
-        }
-
-        if (round_errors > 0) {
-            ASSERT_EQ(round_errors, 0);
-        }
-
-        free(threads);
-        free(thread_data);
-        arena_mt_destroy(arena_mt);
     }
 }

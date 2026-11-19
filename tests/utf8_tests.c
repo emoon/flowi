@@ -2,6 +2,48 @@
 #include <core/utf8.h>
 #include <string.h>
 
+static FlString non_ascii_string(const char* bytes, size_t length) {
+    return (FlString) { .data = bytes, .length = length, .is_ascii = 0 };
+}
+
+static void expect_decode(int* utest_result, const char* bytes, size_t length, u32 want) {
+    FlString str = non_ascii_string(bytes, length);
+
+    u32 cp;
+    utf8_decode_safe(str.data, str.data + str.length, &cp);
+    ASSERT_EQ(cp, want);
+}
+
+static void expect_decode_invalid(int* utest_result, const char* bytes, size_t length) {
+    expect_decode(utest_result, bytes, length, UTF8_REPLACEMENT_CHAR);
+}
+
+static void expect_not_valid(int* utest_result, const char* bytes, size_t length) {
+    FlString str = non_ascii_string(bytes, length);
+    ASSERT_FALSE(utf8_is_valid(str));
+}
+
+static void expect_iter_codepoints(int* utest_result, Utf8Iter* it, const u32* want, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        ASSERT_EQ(utf8_iter_next(it), want[i]);
+    }
+}
+
+static void expect_encoded(int* utest_result, u32 codepoint, const u8* want, u32 want_length) {
+    char buf[4];
+
+    u32 len = utf8_encode(buf, codepoint);
+    ASSERT_EQ(len, want_length);
+    for (u32 i = 0; i < want_length; i++) {
+        ASSERT_EQ((u8)buf[i], want[i]);
+    }
+}
+
+typedef struct SequenceLengthCase {
+    u8 lead;
+    u32 length;
+} SequenceLengthCase;
+
 UTEST(utf8, decode_ascii_single) {
     FlString str = FL_S("A");
     u32 cp;
@@ -47,12 +89,9 @@ UTEST(utf8, decode_2byte_latin_extended) {
     const char* cafe = "Caf\xC3\xA9";
     FlString str = { .data = cafe, .length = 5, .is_ascii = 0 };
 
+    const u32 want[] = { 'C', 'a', 'f', 0x00E9 }; // é last
     Utf8Iter it = utf8_iter(str);
-
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'C');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'a');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'f');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)0x00E9); // é
+    expect_iter_codepoints(utest_result, &it, want, sizeof_array(want));
     ASSERT_TRUE(utf8_iter_done(&it));
 }
 
@@ -63,13 +102,9 @@ UTEST(utf8, decode_2byte_german) {
     u64 count = utf8_codepoint_count(str);
     ASSERT_EQ(count, (u64)6); // M ü l l e r
 
+    const u32 want[] = { 'M', 0x00FC, 'l', 'l', 'e', 'r' }; // ü second
     Utf8Iter it = utf8_iter(str);
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'M');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)0x00FC); // ü
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'l');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'l');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'e');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'r');
+    expect_iter_codepoints(utest_result, &it, want, sizeof_array(want));
 }
 
 UTEST(utf8, decode_2byte_swedish) {
@@ -80,281 +115,135 @@ UTEST(utf8, decode_2byte_swedish) {
     u64 count = utf8_codepoint_count(str);
     ASSERT_EQ(count, (u64)3);
 
+    const u32 want[] = { 0x00E5, 0x00E4, 0x00F6 }; // å ä ö
     Utf8Iter it = utf8_iter(str);
-    ASSERT_EQ(utf8_iter_next(&it), (u32)0x00E5); // å
-    ASSERT_EQ(utf8_iter_next(&it), (u32)0x00E4); // ä
-    ASSERT_EQ(utf8_iter_next(&it), (u32)0x00F6); // ö
+    expect_iter_codepoints(utest_result, &it, want, sizeof_array(want));
 }
 
 UTEST(utf8, decode_2byte_boundary) {
-    char buf[4];
-
-    // U+0080
-    buf[0] = '\xC2';
-    buf[1] = '\x80';
-    FlString str1 = { .data = buf, .length = 2, .is_ascii = 0 };
-    u32 cp;
-    utf8_decode_safe(str1.data, str1.data + str1.length, &cp);
-    ASSERT_EQ(cp, (u32)0x0080);
-
-    // U+07FF
-    buf[0] = '\xDF';
-    buf[1] = '\xBF';
-    FlString str2 = { .data = buf, .length = 2, .is_ascii = 0 };
-    utf8_decode_safe(str2.data, str2.data + str2.length, &cp);
-    ASSERT_EQ(cp, (u32)0x07FF);
+    expect_decode(utest_result, "\xC2\x80", 2, 0x0080); // U+0080
+    expect_decode(utest_result, "\xDF\xBF", 2, 0x07FF); // U+07FF
 }
 
 UTEST(utf8, decode_3byte_cjk) {
     // CJK character: 中 = U+4E2D = E4 B8 AD
-    const char* chinese = "\xE4\xB8\xAD";
-    FlString str = { .data = chinese, .length = 3, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, (u32)0x4E2D);
+    expect_decode(utest_result, "\xE4\xB8\xAD", 3, 0x4E2D);
 }
 
 UTEST(utf8, decode_3byte_mixed) {
     // Mixed ASCII and CJK: "Hi中文"
     const char* mixed = "Hi\xE4\xB8\xAD\xE6\x96\x87";
-    FlString str = { .data = mixed, .length = 8, .is_ascii = 0 };
+    FlString str = non_ascii_string(mixed, 8);
 
     u64 count = utf8_codepoint_count(str);
     ASSERT_EQ(count, (u64)4); // H i 中 文
 
+    const u32 want[] = { 'H', 'i', 0x4E2D, 0x6587 }; // 中 文 last
     Utf8Iter it = utf8_iter(str);
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'H');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)'i');
-    ASSERT_EQ(utf8_iter_next(&it), (u32)0x4E2D); // 中
-    ASSERT_EQ(utf8_iter_next(&it), (u32)0x6587); // 文
+    expect_iter_codepoints(utest_result, &it, want, sizeof_array(want));
 }
 
 UTEST(utf8, decode_3byte_euro) {
     // Euro sign: € = U+20AC = E2 82 AC
-    const char* euro = "\xE2\x82\xAC";
-    FlString str = { .data = euro, .length = 3, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, (u32)0x20AC);
+    expect_decode(utest_result, "\xE2\x82\xAC", 3, 0x20AC);
 }
 
 UTEST(utf8, decode_3byte_boundary) {
-    char buf[4];
-
-    // U+0800
-    buf[0] = '\xE0';
-    buf[1] = '\xA0';
-    buf[2] = '\x80';
-    FlString str1 = { .data = buf, .length = 3, .is_ascii = 0 };
-    u32 cp;
-    utf8_decode_safe(str1.data, str1.data + str1.length, &cp);
-    ASSERT_EQ(cp, (u32)0x0800);
-
-    // U+FFFF
-    buf[0] = '\xEF';
-    buf[1] = '\xBF';
-    buf[2] = '\xBF';
-    FlString str2 = { .data = buf, .length = 3, .is_ascii = 0 };
-    utf8_decode_safe(str2.data, str2.data + str2.length, &cp);
-    ASSERT_EQ(cp, (u32)0xFFFF);
+    expect_decode(utest_result, "\xE0\xA0\x80", 3, 0x0800); // U+0800
+    expect_decode(utest_result, "\xEF\xBF\xBF", 3, 0xFFFF); // U+FFFF
 }
 
 UTEST(utf8, decode_4byte_emoji) {
     // Grinning face emoji: 😀 = U+1F600 = F0 9F 98 80
-    const char* emoji = "\xF0\x9F\x98\x80";
-    FlString str = { .data = emoji, .length = 4, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, (u32)0x1F600);
+    expect_decode(utest_result, "\xF0\x9F\x98\x80", 4, 0x1F600);
 }
 
 UTEST(utf8, decode_4byte_musical) {
     // Musical symbol G clef: 𝄞 = U+1D11E = F0 9D 84 9E
-    const char* clef = "\xF0\x9D\x84\x9E";
-    FlString str = { .data = clef, .length = 4, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, (u32)0x1D11E);
+    expect_decode(utest_result, "\xF0\x9D\x84\x9E", 4, 0x1D11E);
 }
 
 UTEST(utf8, decode_4byte_boundary) {
-    char buf[4];
-
-    // U+10000
-    buf[0] = '\xF0';
-    buf[1] = '\x90';
-    buf[2] = '\x80';
-    buf[3] = '\x80';
-    FlString str1 = { .data = buf, .length = 4, .is_ascii = 0 };
-    u32 cp;
-    utf8_decode_safe(str1.data, str1.data + str1.length, &cp);
-    ASSERT_EQ(cp, (u32)0x10000);
-
-    // U+10FFFF
-    buf[0] = '\xF4';
-    buf[1] = '\x8F';
-    buf[2] = '\xBF';
-    buf[3] = '\xBF';
-    FlString str2 = { .data = buf, .length = 4, .is_ascii = 0 };
-    utf8_decode_safe(str2.data, str2.data + str2.length, &cp);
-    ASSERT_EQ(cp, (u32)0x10FFFF);
+    expect_decode(utest_result, "\xF0\x90\x80\x80", 4, 0x10000);  // U+10000
+    expect_decode(utest_result, "\xF4\x8F\xBF\xBF", 4, 0x10FFFF); // U+10FFFF
 }
 
 UTEST(utf8, decode_invalid_continuation_only) {
     // Continuation byte without lead byte (0x80-0xBF)
-    char buf[1] = { '\x80' };
-    FlString str = { .data = buf, .length = 1, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\x80", 1);
 }
 
 UTEST(utf8, decode_invalid_truncated_2byte) {
-    char buf[1] = { '\xC2' }; // Lead byte for 2-byte, no continuation
-    FlString str = { .data = buf, .length = 1, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    // Lead byte for 2-byte, no continuation
+    expect_decode_invalid(utest_result, "\xC2", 1);
 }
 
 UTEST(utf8, decode_invalid_truncated_3byte) {
-    char buf[2] = { '\xE4', '\xB8' }; // Start of 中, missing last byte
-    FlString str = { .data = buf, .length = 2, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    // Start of 中, missing last byte
+    expect_decode_invalid(utest_result, "\xE4\xB8", 2);
 }
 
 UTEST(utf8, decode_invalid_truncated_4byte) {
-    char buf[3] = { '\xF0', '\x9F', '\x98' }; // Start of emoji, missing last byte
-    FlString str = { .data = buf, .length = 3, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    // Start of emoji, missing last byte
+    expect_decode_invalid(utest_result, "\xF0\x9F\x98", 3);
 }
 
 UTEST(utf8, decode_invalid_bad_continuation) {
-    char buf[2] = { '\xC2', '\x00' }; // Second byte should be 80-BF
-    FlString str = { .data = buf, .length = 2, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    // Second byte should be 80-BF
+    const char bytes[2] = { '\xC2', '\x00' };
+    expect_decode_invalid(utest_result, bytes, 2);
 }
 
 UTEST(utf8, decode_invalid_fe_ff) {
     // 0xFE and 0xFF are never valid UTF-8 bytes
-    char buf[1];
-
-    buf[0] = '\xFE';
-    FlString str1 = { .data = buf, .length = 1, .is_ascii = 0 };
-    u32 cp;
-    utf8_decode_safe(str1.data, str1.data + str1.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
-
-    buf[0] = '\xFF';
-    FlString str2 = { .data = buf, .length = 1, .is_ascii = 0 };
-    utf8_decode_safe(str2.data, str2.data + str2.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xFE", 1);
+    expect_decode_invalid(utest_result, "\xFF", 1);
 }
 
 UTEST(utf8, decode_overlong_2byte) {
     // Overlong encoding of NUL (U+0000): C0 80 instead of 00
-    char buf[2] = { '\xC0', '\x80' };
-    FlString str = { .data = buf, .length = 2, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xC0\x80", 2);
 }
 
 UTEST(utf8, decode_overlong_2byte_slash) {
     // Overlong encoding of '/' (U+002F): C0 AF instead of 2F
     // A decoder that accepts it lets a path traversal slip past a check for '/'.
-    char buf[2] = { '\xC0', '\xAF' };
-    FlString str = { .data = buf, .length = 2, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xC0\xAF", 2);
 }
 
 UTEST(utf8, decode_overlong_3byte) {
     // Overlong encoding of U+007F: E0 81 BF instead of 7F
-    char buf[3] = { '\xE0', '\x81', '\xBF' };
-    FlString str = { .data = buf, .length = 3, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xE0\x81\xBF", 3);
 }
 
 UTEST(utf8, decode_overlong_4byte) {
     // Overlong encoding of U+0041 ('A'): F0 80 81 81 instead of 41
-    char buf[4] = { '\xF0', '\x80', '\x81', '\x81' };
-    FlString str = { .data = buf, .length = 4, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xF0\x80\x81\x81", 4);
 }
 
 UTEST(utf8, decode_surrogate_high) {
     // High surrogate U+D800 = ED A0 80 (invalid in UTF-8)
-    char buf[3] = { '\xED', '\xA0', '\x80' };
-    FlString str = { .data = buf, .length = 3, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xED\xA0\x80", 3);
 }
 
 UTEST(utf8, decode_surrogate_low) {
     // Low surrogate U+DC00 = ED B0 80 (invalid in UTF-8)
-    char buf[3] = { '\xED', '\xB0', '\x80' };
-    FlString str = { .data = buf, .length = 3, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xED\xB0\x80", 3);
 }
 
 UTEST(utf8, decode_surrogate_max_high) {
     // Maximum high surrogate U+DBFF = ED AF BF
-    char buf[3] = { '\xED', '\xAF', '\xBF' };
-    FlString str = { .data = buf, .length = 3, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xED\xAF\xBF", 3);
 }
 
 UTEST(utf8, decode_surrogate_max_low) {
     // Maximum low surrogate U+DFFF = ED BF BF
-    char buf[3] = { '\xED', '\xBF', '\xBF' };
-    FlString str = { .data = buf, .length = 3, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xED\xBF\xBF", 3);
 }
 
 UTEST(utf8, decode_out_of_range) {
     // U+110000 is beyond Unicode maximum (F4 90 80 80)
-    char buf[4] = { '\xF4', '\x90', '\x80', '\x80' };
-    FlString str = { .data = buf, .length = 4, .is_ascii = 0 };
-
-    u32 cp;
-    utf8_decode_safe(str.data, str.data + str.length, &cp);
-    ASSERT_EQ(cp, UTF8_REPLACEMENT_CHAR);
+    expect_decode_invalid(utest_result, "\xF4\x90\x80\x80", 4);
 }
 
 UTEST(utf8, iter_empty) {
@@ -406,82 +295,38 @@ UTEST(utf8, codepoint_count_multibyte) {
 }
 
 UTEST(utf8, encode_ascii) {
-    char buf[4];
-
-    u32 len = utf8_encode(buf, 'A');
-    ASSERT_EQ(len, (u32)1);
-    ASSERT_EQ((u8)buf[0], (u8)'A');
-
-    len = utf8_encode(buf, 0x7F);
-    ASSERT_EQ(len, (u32)1);
-    ASSERT_EQ((u8)buf[0], (u8)0x7F);
+    expect_encoded(utest_result, 'A', (const u8[]) { 'A' }, 1);
+    expect_encoded(utest_result, 0x7F, (const u8[]) { 0x7F }, 1);
 }
 
 UTEST(utf8, encode_2byte) {
-    char buf[4];
-
     // U+00E9 (é) = C3 A9
-    u32 len = utf8_encode(buf, 0x00E9);
-    ASSERT_EQ(len, (u32)2);
-    ASSERT_EQ((u8)buf[0], (u8)0xC3);
-    ASSERT_EQ((u8)buf[1], (u8)0xA9);
+    expect_encoded(utest_result, 0x00E9, (const u8[]) { 0xC3, 0xA9 }, 2);
 
     // U+07FF (last 2-byte) = DF BF
-    len = utf8_encode(buf, 0x07FF);
-    ASSERT_EQ(len, (u32)2);
-    ASSERT_EQ((u8)buf[0], (u8)0xDF);
-    ASSERT_EQ((u8)buf[1], (u8)0xBF);
+    expect_encoded(utest_result, 0x07FF, (const u8[]) { 0xDF, 0xBF }, 2);
 }
 
 UTEST(utf8, encode_3byte) {
-    char buf[4];
-
     // U+4E2D (中) = E4 B8 AD
-    u32 len = utf8_encode(buf, 0x4E2D);
-    ASSERT_EQ(len, (u32)3);
-    ASSERT_EQ((u8)buf[0], (u8)0xE4);
-    ASSERT_EQ((u8)buf[1], (u8)0xB8);
-    ASSERT_EQ((u8)buf[2], (u8)0xAD);
+    expect_encoded(utest_result, 0x4E2D, (const u8[]) { 0xE4, 0xB8, 0xAD }, 3);
 
     // U+20AC (€) = E2 82 AC
-    len = utf8_encode(buf, 0x20AC);
-    ASSERT_EQ(len, (u32)3);
-    ASSERT_EQ((u8)buf[0], (u8)0xE2);
-    ASSERT_EQ((u8)buf[1], (u8)0x82);
-    ASSERT_EQ((u8)buf[2], (u8)0xAC);
+    expect_encoded(utest_result, 0x20AC, (const u8[]) { 0xE2, 0x82, 0xAC }, 3);
 }
 
 UTEST(utf8, encode_4byte) {
-    char buf[4];
-
     // U+1F600 (😀) = F0 9F 98 80
-    u32 len = utf8_encode(buf, 0x1F600);
-    ASSERT_EQ(len, (u32)4);
-    ASSERT_EQ((u8)buf[0], (u8)0xF0);
-    ASSERT_EQ((u8)buf[1], (u8)0x9F);
-    ASSERT_EQ((u8)buf[2], (u8)0x98);
-    ASSERT_EQ((u8)buf[3], (u8)0x80);
+    expect_encoded(utest_result, 0x1F600, (const u8[]) { 0xF0, 0x9F, 0x98, 0x80 }, 4);
 
     // U+10FFFF (max valid) = F4 8F BF BF
-    len = utf8_encode(buf, 0x10FFFF);
-    ASSERT_EQ(len, (u32)4);
-    ASSERT_EQ((u8)buf[0], (u8)0xF4);
-    ASSERT_EQ((u8)buf[1], (u8)0x8F);
-    ASSERT_EQ((u8)buf[2], (u8)0xBF);
-    ASSERT_EQ((u8)buf[3], (u8)0xBF);
+    expect_encoded(utest_result, 0x10FFFF, (const u8[]) { 0xF4, 0x8F, 0xBF, 0xBF }, 4);
 }
 
 UTEST(utf8, encode_invalid) {
-    char buf[4];
-
-    u32 len = utf8_encode(buf, 0xD800);
-    ASSERT_EQ(len, (u32)0);
-
-    len = utf8_encode(buf, 0xDFFF);
-    ASSERT_EQ(len, (u32)0);
-
-    len = utf8_encode(buf, 0x110000);
-    ASSERT_EQ(len, (u32)0);
+    expect_encoded(utest_result, 0xD800, nullptr, 0);
+    expect_encoded(utest_result, 0xDFFF, nullptr, 0);
+    expect_encoded(utest_result, 0x110000, nullptr, 0);
 }
 
 UTEST(utf8, encode_decode_roundtrip) {
@@ -529,19 +374,14 @@ UTEST(utf8, is_valid_utf8) {
 }
 
 UTEST(utf8, is_valid_invalid) {
-    char buf1[2] = { '\xC2', '\x00' }; // Bad continuation
-    FlString str1 = { .data = buf1, .length = 2, .is_ascii = 0 };
-    ASSERT_FALSE(utf8_is_valid(str1));
+    // Bad continuation
+    expect_not_valid(utest_result, (const char[2]) { '\xC2', '\x00' }, 2);
 
     // Overlong
-    char buf2[2] = { '\xC0', '\x80' };
-    FlString str2 = { .data = buf2, .length = 2, .is_ascii = 0 };
-    ASSERT_FALSE(utf8_is_valid(str2));
+    expect_not_valid(utest_result, (const char[2]) { '\xC0', '\x80' }, 2);
 
     // Surrogate
-    char buf3[3] = { '\xED', '\xA0', '\x80' };
-    FlString str3 = { .data = buf3, .length = 3, .is_ascii = 0 };
-    ASSERT_FALSE(utf8_is_valid(str3));
+    expect_not_valid(utest_result, (const char[3]) { '\xED', '\xA0', '\x80' }, 3);
 }
 
 UTEST(utf8, is_valid_empty) {
@@ -550,33 +390,26 @@ UTEST(utf8, is_valid_empty) {
 }
 
 UTEST(utf8, sequence_length) {
-    ASSERT_EQ(utf8_sequence_length(0x00), (u32)1);
-    ASSERT_EQ(utf8_sequence_length(0x7F), (u32)1);
+    const SequenceLengthCase cases[] = {
+        { 0x00, 1 }, { 0x7F, 1 }, { 0xC2, 2 }, { 0xDF, 2 }, { 0xE0, 3 }, { 0xEF, 3 }, { 0xF0, 4 },
+        { 0xF4, 4 },
+        // Continuation, overlong leads, out of range
+        { 0x80, 0 }, { 0xC0, 0 }, { 0xC1, 0 }, { 0xF5, 0 }, { 0xFE, 0 }, { 0xFF, 0 },
+    };
 
-    ASSERT_EQ(utf8_sequence_length(0xC2), (u32)2);
-    ASSERT_EQ(utf8_sequence_length(0xDF), (u32)2);
-
-    ASSERT_EQ(utf8_sequence_length(0xE0), (u32)3);
-    ASSERT_EQ(utf8_sequence_length(0xEF), (u32)3);
-
-    ASSERT_EQ(utf8_sequence_length(0xF0), (u32)4);
-    ASSERT_EQ(utf8_sequence_length(0xF4), (u32)4);
-
-    ASSERT_EQ(utf8_sequence_length(0x80), (u32)0); // Continuation
-    ASSERT_EQ(utf8_sequence_length(0xC0), (u32)0); // Overlong lead
-    ASSERT_EQ(utf8_sequence_length(0xC1), (u32)0); // Overlong lead
-    ASSERT_EQ(utf8_sequence_length(0xF5), (u32)0); // Out of range
-    ASSERT_EQ(utf8_sequence_length(0xFE), (u32)0);
-    ASSERT_EQ(utf8_sequence_length(0xFF), (u32)0);
+    for (u32 i = 0; i < sizeof_array(cases); i++) {
+        ASSERT_EQ(utf8_sequence_length(cases[i].lead), cases[i].length);
+    }
 }
 
 UTEST(utf8, is_continuation) {
-    ASSERT_TRUE(utf8_is_continuation(0x80));
-    ASSERT_TRUE(utf8_is_continuation(0x9F));
-    ASSERT_TRUE(utf8_is_continuation(0xBF));
+    const u8 continuations[] = { 0x80, 0x9F, 0xBF };
+    const u8 non_continuations[] = { 0x00, 0x7F, 0xC0, 0xFF };
 
-    ASSERT_FALSE(utf8_is_continuation(0x00));
-    ASSERT_FALSE(utf8_is_continuation(0x7F));
-    ASSERT_FALSE(utf8_is_continuation(0xC0));
-    ASSERT_FALSE(utf8_is_continuation(0xFF));
+    for (u32 i = 0; i < sizeof_array(continuations); i++) {
+        ASSERT_TRUE(utf8_is_continuation(continuations[i]));
+    }
+    for (u32 i = 0; i < sizeof_array(non_continuations); i++) {
+        ASSERT_FALSE(utf8_is_continuation(non_continuations[i]));
+    }
 }
