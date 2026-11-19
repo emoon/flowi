@@ -205,6 +205,29 @@ fn worker_submitted_dependent_waits_for_its_prerequisite() {
     );
 }
 
+/// Submits a dependent on `dependency` from a worker job and returns how many times it ran once
+/// waited on.
+fn worker_submitted_dependent_run_count(dependency: JobHandle) -> usize {
+    let ran = Arc::new(AtomicUsize::new(0));
+    let (tx, rx) = mpsc::channel();
+    let count = Arc::clone(&ran);
+    let submitter = Jobs::add(move |_| {
+        let child = Jobs::add_after(
+            move |_| {
+                count.fetch_add(1, Ordering::AcqRel);
+            },
+            dependency,
+        );
+        let _ = tx.send(child);
+    });
+    Jobs::wait(submitter);
+    Jobs::wait(
+        rx.recv()
+            .expect("the submitting job published its child handle"),
+    );
+    ran.load(Ordering::Acquire)
+}
+
 /// A settled dependency leaves nothing to order, so its dependent runs either way. Which way is not
 /// asserted: waiting on the dependency frees its slot, so whether the add below sees an expired
 /// handle (runs inline) or a settled one (schedules) turns on who claimed that slot.
@@ -215,26 +238,8 @@ fn worker_submitted_dependent_on_a_settled_dependency_runs() {
     let settled = Jobs::add(|_| {});
     Jobs::wait(settled);
 
-    let ran = Arc::new(AtomicUsize::new(0));
-    let (tx, rx) = mpsc::channel();
-    let count = Arc::clone(&ran);
-    let submitter = Jobs::add(move |_| {
-        let child = Jobs::add_after(
-            move |_| {
-                count.fetch_add(1, Ordering::AcqRel);
-            },
-            settled,
-        );
-        let _ = tx.send(child);
-    });
-    Jobs::wait(submitter);
-    Jobs::wait(
-        rx.recv()
-            .expect("the submitting job published its child handle"),
-    );
-
     assert_eq!(
-        ran.load(Ordering::Acquire),
+        worker_submitted_dependent_run_count(settled),
         1,
         "a settled dependency must not strand its dependent"
     );
@@ -333,26 +338,8 @@ fn worker_submitted_dependent_on_an_unusable_handle_still_runs() {
     foundation();
 
     for dependency in [JobHandle::INVALID, JobHandle(u64::MAX - 1)] {
-        let ran = Arc::new(AtomicUsize::new(0));
-        let (tx, rx) = mpsc::channel();
-        let count = Arc::clone(&ran);
-        let submitter = Jobs::add(move |_| {
-            let child = Jobs::add_after(
-                move |_| {
-                    count.fetch_add(1, Ordering::AcqRel);
-                },
-                dependency,
-            );
-            let _ = tx.send(child);
-        });
-        Jobs::wait(submitter);
-        Jobs::wait(
-            rx.recv()
-                .expect("the submitting job published its child handle"),
-        );
-
         assert_eq!(
-            ran.load(Ordering::Acquire),
+            worker_submitted_dependent_run_count(dependency),
             1,
             "an unusable dependency must not strand the job"
         );

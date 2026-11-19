@@ -1,6 +1,9 @@
 //! The outer fixed container is the single top-level element, so it is placed at the top-left (0, 0); it holds
 //! two fixed children laid left-to-right.
 
+mod common;
+
+use common::{Readback, CLEAR};
 use flowi::{
     Application, BorderWidthConfig, Color, CornerRadius, LayoutAlignmentX, LayoutAlignmentY,
     LayoutBorder, LayoutChildAlignment, LayoutClip, LayoutConfig, LayoutDirection, LayoutPadding,
@@ -8,8 +11,6 @@ use flowi::{
     LayoutSizingType, StrokeStyle, Vec2,
 };
 
-// Default clear color (theme surface.base).
-const CLEAR: [u8; 3] = [14, 14, 16];
 // Both far from CLEAR and from each other so every region is unambiguous.
 const OUTER: [u8; 3] = [220, 40, 40];
 const CHILD: [u8; 3] = [40, 200, 90];
@@ -120,63 +121,32 @@ fn layout_padding_gap_color_render() {
         "first tick should keep running"
     );
 
-    let pv = app.read_pixels().expect("render backend readback");
-    assert_eq!(pv.channels, 3, "software backend reads back RGB24");
-    assert_eq!(pv.pixels.len(), 64 * 64 * 3, "tightly-packed RGB24");
-
-    let w = pv.width as usize;
-    let px = |x: usize, y: usize| {
-        let i = (y * w + x) * 3;
-        [pv.pixels[i], pv.pixels[i + 1], pv.pixels[i + 2]]
-    };
-    let near = |p: [u8; 3], q: [u8; 3]| {
-        let d = |a: u8, b: u8| (a as i32 - b as i32).abs();
-        d(p[0], q[0]) <= 8 && d(p[1], q[1]) <= 8 && d(p[2], q[2]) <= 8
-    };
+    let shot = Readback::capture(&mut app);
+    assert_eq!(shot.byte_len(), 64 * 64 * 3, "tightly-packed RGB24");
 
     // Child A occupies reference rect [PAD, PAD+CW) x [PAD, PAD+CH); child B starts CW+GAP further right.
     let ax = PAD as usize; // 8
     let bx = (PAD as f32 + CW + GAP as f32) as usize; // 8+12+6 = 26
     let cy = (PAD as f32 + CH / 2.0) as usize; // vertical middle of the children, 20
-
-    assert!(
-        near(px(ax + 6, cy), CHILD),
-        "child A interior should be the child fill, got {:?}",
-        px(ax + 6, cy)
-    );
-    assert!(
-        near(px(bx + 6, cy), CHILD),
-        "child B interior should be the child fill, got {:?}",
-        px(bx + 6, cy)
-    );
-
-    assert!(
-        near(px(0, 0), OUTER),
-        "top-left corner should be the outer (padding) fill, got {:?}",
-        px(0, 0)
-    );
-    assert!(
-        near(px(2, cy), OUTER),
-        "left padding band should be the outer fill, got {:?}",
-        px(2, cy)
-    );
-
     // The gap band is x in [PAD+CW, PAD+CW+GAP).
     let gap_mid = (PAD as f32 + CW + GAP as f32 / 2.0) as usize; // 8+12+3 = 23
-    assert!(
-        near(px(gap_mid, cy), OUTER),
-        "gap between children should show the outer fill, got {:?}",
-        px(gap_mid, cy)
-    );
 
-    assert!(
-        near(px(OW as usize + 1, 0), CLEAR),
-        "right of the container should be clear, got {:?}",
-        px(OW as usize + 1, 0)
-    );
-    assert!(
-        near(px(0, OH as usize + 1), CLEAR),
-        "below the container should be clear, got {:?}",
-        px(0, OH as usize + 1)
-    );
+    let regions = [
+        ((ax + 6, cy), CHILD, "child A interior should be the child fill"),
+        ((bx + 6, cy), CHILD, "child B interior should be the child fill"),
+        ((0, 0), OUTER, "top-left corner should be the outer (padding) fill"),
+        ((2, cy), OUTER, "left padding band should be the outer fill"),
+        ((gap_mid, cy), OUTER, "gap between children should show the outer fill"),
+        ((OW as usize + 1, 0), CLEAR, "right of the container should be clear"),
+        ((0, OH as usize + 1), CLEAR, "below the container should be clear"),
+    ];
+    for ((x, y), expected, what) in regions {
+        let p = shot.px(x, y);
+        assert!(near(p, expected), "{what}, got {p:?}");
+    }
+}
+
+fn near(p: [u8; 3], q: [u8; 3]) -> bool {
+    let d = |a: u8, b: u8| (a as i32 - b as i32).abs();
+    d(p[0], q[0]) <= 8 && d(p[1], q[1]) <= 8 && d(p[2], q[2]) <= 8
 }
