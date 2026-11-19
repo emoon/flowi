@@ -122,15 +122,131 @@ typedef struct ReadAllData {
     const char* error_fmt;
 } ReadAllData;
 
-// Closes the opened file, drops the buffer, and reports the failure. Caller holds the mount's driver_lock.
-static ReadAllData read_all_failed(VfsOp* op, u8* buffer, VfsOpStatus status, const char* error_fmt) {
-    if (buffer) {
-        mi_free(buffer);
-    }
+static void close_op_file(VfsOp* op) {
     VfsPluginEntry* driver = op->file_driver;
     driver->plugin->close(driver->plugin_instance, op->plugin_file_handle);
     op->plugin_file_handle = nullptr;
+}
+
+// Closes the opened file and reports the failure. Caller holds the mount's driver_lock.
+static ReadAllData read_all_failed(VfsOp* op, VfsOpStatus status, const char* error_fmt) {
+    close_op_file(op);
     return (ReadAllData) { .status = status, .error_fmt = error_fmt };
+}
+
+// A read-all that failed part way: drops the buffer and reports the failure. The file is closed by the caller.
+static ReadAllData read_failure(u8* buffer, VfsOpStatus status, const char* error_fmt) {
+    if (buffer) {
+        mi_free(buffer);
+    }
+    return (ReadAllData) { .status = status, .error_fmt = error_fmt };
+}
+
+// The open file a read-all reads from.
+typedef struct {
+    const FlVfsPlugin* plugin;
+    void* instance;
+    void* handle;
+} ReadSource;
+
+static FlVfsReadResult read_source(const ReadSource* source, u8* buffer, i64 size) {
+    return source->plugin->read(source->instance, source->handle, (FlString) { 0 }, buffer, size);
+}
+
+static ReadAllData read_sized(const ReadSource* source, u8* buffer, i64 size) {
+    FlVfsReadResult read_result = read_source(source, buffer, size);
+    if (read_result.bytes_read < 0) {
+        return read_failure(buffer, VFS_ERROR_READ, "Read failed: %S");
+    }
+
+    return (ReadAllData) { .data = buffer, .size = read_result.bytes_read, .status = VFS_STATE_SUCCESS };
+}
+
+typedef struct {
+    u8* buffer;
+    i64 capacity;
+    i64 total;
+} GrowBuffer;
+
+// False, with the buffer untouched, when it cannot grow.
+static bool grow_buffer(GrowBuffer* grow) {
+    i64 capacity = grow->capacity * 2;
+    if (capacity > VFS_MAX_READ_SIZE) {
+        capacity = VFS_MAX_READ_SIZE;
+    }
+
+    u8* new_buffer = mi_realloc(grow->buffer, capacity);
+    if (!new_buffer) {
+        return false;
+    }
+
+    grow->buffer = new_buffer;
+    grow->capacity = capacity;
+    return true;
+}
+
+// Reads chunks until EOF or the cap. A result without error_fmt is not a failure.
+static ReadAllData read_chunks(const ReadSource* source, GrowBuffer* grow, bool* reached_eof) {
+    while (grow->total < VFS_MAX_READ_SIZE) {
+        if (grow->total >= grow->capacity && !grow_buffer(grow)) {
+            return (ReadAllData) { .status = VFS_ERROR_READ, .error_fmt = "Out of memory: %S" };
+        }
+
+        FlVfsReadResult read_result = read_source(source, grow->buffer + grow->total, grow->capacity - grow->total);
+        if (read_result.bytes_read < 0) {
+            return (ReadAllData) { .status = VFS_ERROR_READ, .error_fmt = "Read failed: %S" };
+        }
+
+        if (read_result.bytes_read == 0) {
+            *reached_eof = true;
+            break;
+        }
+
+        grow->total += read_result.bytes_read;
+    }
+
+    return (ReadAllData) { 0 };
+}
+
+// The loop stopped at the cap. Probe one byte to tell an exactly-cap-sized file from a larger one.
+static ReadAllData probe_past_cap(const ReadSource* source) {
+    u8 probe;
+    FlVfsReadResult probe_result = read_source(source, &probe, 1);
+
+    if (probe_result.bytes_read < 0) {
+        return (ReadAllData) { .status = VFS_ERROR_READ, .error_fmt = "Read failed: %S" };
+    }
+
+    if (probe_result.bytes_read > 0) {
+        return (ReadAllData) { .status = VFS_ERROR_FILE_TOO_LARGE, .error_fmt = "File exceeds max read size: %S" };
+    }
+
+    return (ReadAllData) { 0 };
+}
+
+// The size is 0 or unknown (e.g. gzip raw compression): reads in chunks until EOF. Takes over initial_buffer.
+static ReadAllData read_until_eof(const ReadSource* source, u8* initial_buffer) {
+    mi_free(initial_buffer);
+
+    GrowBuffer grow = { .capacity = 64 * 1024 };
+    grow.buffer = mi_malloc(grow.capacity);
+
+    if (!grow.buffer) {
+        return read_failure(nullptr, VFS_ERROR_READ, "Out of memory: %S");
+    }
+
+    bool reached_eof = false;
+    ReadAllData failure = read_chunks(source, &grow, &reached_eof);
+
+    if (!failure.error_fmt && !reached_eof) {
+        failure = probe_past_cap(source);
+    }
+
+    if (failure.error_fmt) {
+        return read_failure(grow.buffer, failure.status, failure.error_fmt);
+    }
+
+    return (ReadAllData) { .data = grow.buffer, .size = grow.total, .status = VFS_STATE_SUCCESS };
 }
 
 // Opens the file, reads all of it and closes it, under the mount's driver_lock. The caller's callback runs after
@@ -144,93 +260,30 @@ static ReadAllData read_all_from_driver(VfsOp* op, FlArena* scratch) {
         return (ReadAllData) { .status = open_status, .error_fmt = "Failed to read '%S': file not found" };
     }
 
-    VfsPluginEntry* driver = op->file_driver;
-    const FlVfsPlugin* plugin = driver->plugin;
-    void* file_handle = op->plugin_file_handle;
-    void* instance = driver->plugin_instance;
+    const ReadSource source = { .plugin = op->file_driver->plugin,
+                                .instance = op->file_driver->plugin_instance,
+                                .handle = op->plugin_file_handle };
 
-    FlVfsSizeResult size_result = plugin->get_size(instance, file_handle, (FlString) { 0 });
+    FlVfsSizeResult size_result = source.plugin->get_size(source.instance, source.handle, (FlString) { 0 });
     if (size_result.size < 0) {
-        return read_all_failed(op, nullptr, VFS_ERROR_READ, "Failed to get size: %S");
+        return read_all_failed(op, VFS_ERROR_READ, "Failed to get size: %S");
     }
 
     // An over-cap file is a read error, not a truncated success.
     if (size_result.size > VFS_MAX_READ_SIZE) {
-        return read_all_failed(op, nullptr, VFS_ERROR_FILE_TOO_LARGE, "File exceeds max read size: %S");
+        return read_all_failed(op, VFS_ERROR_FILE_TOO_LARGE, "File exceeds max read size: %S");
     }
 
     u8* buffer = mi_malloc(size_result.size > 0 ? size_result.size : 1);
     if (!buffer) {
-        return read_all_failed(op, nullptr, VFS_ERROR_READ, "Out of memory: %S");
+        return read_all_failed(op, VFS_ERROR_READ, "Out of memory: %S");
     }
 
-    i64 total_read = 0;
+    ReadAllData read
+        = size_result.size > 0 ? read_sized(&source, buffer, size_result.size) : read_until_eof(&source, buffer);
 
-    if (size_result.size > 0) {
-        FlVfsReadResult read_result = plugin->read(instance, file_handle, (FlString) { 0 }, buffer, size_result.size);
-        if (read_result.bytes_read < 0) {
-            return read_all_failed(op, buffer, VFS_ERROR_READ, "Read failed: %S");
-        }
-        total_read = read_result.bytes_read;
-    } else {
-        // The size is 0 or unknown (e.g. gzip raw compression): read in chunks until EOF.
-        mi_free(buffer);
-
-        i64 capacity = 64 * 1024;
-        buffer = mi_malloc(capacity);
-
-        if (!buffer) {
-            return read_all_failed(op, nullptr, VFS_ERROR_READ, "Out of memory: %S");
-        }
-
-        bool reached_eof = false;
-
-        while (total_read < VFS_MAX_READ_SIZE) {
-            i64 chunk_size = capacity - total_read;
-            if (chunk_size <= 0) {
-                capacity *= 2;
-                if (capacity > VFS_MAX_READ_SIZE) {
-                    capacity = VFS_MAX_READ_SIZE;
-                }
-                u8* new_buffer = mi_realloc(buffer, capacity);
-                if (!new_buffer) {
-                    return read_all_failed(op, buffer, VFS_ERROR_READ, "Out of memory: %S");
-                }
-                buffer = new_buffer;
-                chunk_size = capacity - total_read;
-            }
-
-            FlVfsReadResult read_result
-                = plugin->read(instance, file_handle, (FlString) { 0 }, buffer + total_read, chunk_size);
-            if (read_result.bytes_read < 0) {
-                return read_all_failed(op, buffer, VFS_ERROR_READ, "Read failed: %S");
-            }
-
-            if (read_result.bytes_read == 0) {
-                reached_eof = true;
-                break;
-            }
-
-            total_read += read_result.bytes_read;
-        }
-
-        if (!reached_eof) {
-            // The loop stopped at the cap. Probe one byte to tell an exactly-cap-sized file from a larger one.
-            u8 probe;
-            FlVfsReadResult probe_result = plugin->read(instance, file_handle, (FlString) { 0 }, &probe, 1);
-            if (probe_result.bytes_read < 0) {
-                return read_all_failed(op, buffer, VFS_ERROR_READ, "Read failed: %S");
-            }
-            if (probe_result.bytes_read > 0) {
-                return read_all_failed(op, buffer, VFS_ERROR_FILE_TOO_LARGE, "File exceeds max read size: %S");
-            }
-        }
-    }
-
-    plugin->close(instance, file_handle);
-    op->plugin_file_handle = nullptr;
-
-    return (ReadAllData) { .data = buffer, .size = total_read, .status = VFS_STATE_SUCCESS };
+    close_op_file(op);
+    return read;
 }
 
 static void vfs_op_read_all(VfsOp* op, FlArena* scratch) {
@@ -320,19 +373,15 @@ static int list_entry_compare(const void* a, const void* b) {
     return fl_string_compare_natural(left->name, right->name);
 }
 
-// Failure path for directory listing. Destroys list_arena when non-null.
+// Failure path for directory listing.
 
-static void vfs_list_fail(VfsOp* op, FlArena* list_arena, VfsOpStatus status, const char* fmt, FlString path) {
+static void vfs_list_fail(VfsOp* op, VfsOpStatus status, const char* fmt) {
     atomic_store_explicit(&op->error_status, status, memory_order_release);
 
     FlVfsFileList* error_result = mi_alloc_zero(FlVfsFileList);
     error_result->success = false;
-    error_result->error_message = vfs_op_format_error(op, fmt, path);
+    error_result->error_message = vfs_op_format_error(op, fmt, op->path);
     atomic_store_explicit(&op->result_data, error_result, memory_order_release);
-
-    if (list_arena) {
-        fl_arena_destroy(list_arena);
-    }
 }
 
 void vfs_op_list(VfsState* self, VfsOp* op, FlArena* scratch) {
@@ -344,7 +393,7 @@ void vfs_op_list(VfsState* self, VfsOp* op, FlArena* scratch) {
 
     if (!fl_vfs_mount_is_ready(mount)) {
         logc_error(VFS_ID, "No correct plugin set up for VFS mount list");
-        vfs_list_fail(op, nullptr, VFS_ERROR_MOUNT, "Failed to list '%S': Mount not ready", path);
+        vfs_list_fail(op, VFS_ERROR_MOUNT, "Failed to list '%S': Mount not ready");
         return;
     }
 
@@ -374,7 +423,8 @@ void vfs_op_list(VfsState* self, VfsOp* op, FlArena* scratch) {
     }
 
     if (!listed) {
-        vfs_list_fail(op, list_arena, VFS_ERROR_DRIVER, "Failed to list '%S': Plugin does not support listing", path);
+        vfs_list_fail(op, VFS_ERROR_DRIVER, "Failed to list '%S': Plugin does not support listing");
+        fl_arena_destroy(list_arena);
         return;
     }
 

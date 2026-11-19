@@ -110,6 +110,72 @@ void ui_progress_bar_impl(float fraction, FlProgressConfig cfg) {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlColor link_color_with_focus(const ItemState* item, FlColor base) {
+    if (!item || item->state.focused_t <= 0.0f) {
+        return base;
+    }
+    FlColor white = { 255, 255, 255, 255 };
+    return ui_color_lerp(base, white, item->state.focused_t);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlColor link_background_color(const ItemState* item, FlColor base) {
+    FlColor bg_color = UI_HIT_TEST_FILL(2);
+    if (!item || item->state.focused_t <= 0.0f) {
+        return bg_color;
+    }
+    FlColor focus_bg = { (u8)(base.r / 4), (u8)(base.g / 4), (u8)(base.b / 4), 220 };
+    return ui_color_lerp(bg_color, focus_bg, item->state.focused_t);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlColor link_border_color(const ItemState* item, FlColor base) {
+    FlColor border_color = { 0, 0, 0, 0 };
+    if (!item || item->state.focused_t <= 0.0f) {
+        return border_color;
+    }
+    return ui_color_lerp(border_color, base, item->state.focused_t);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool link_is_hovered_unfocused(const ItemState* item) {
+    if (!item) {
+        return false;
+    }
+    return item->state.hot_t > 0.0f && item->state.focused_t < 0.5f;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Brighten on hover, but not while focused (the focused text is already white).
+static FlColor link_color_with_hover(const ItemState* item, FlColor link_color) {
+    if (!link_is_hovered_unfocused(item)) {
+        return link_color;
+    }
+    FlColor hover_color = { (u8)min(link_color.r + 40, 255), (u8)min(link_color.g + 40, 255),
+                            (u8)min(link_color.b + 40, 255), link_color.a };
+    return ui_color_lerp(link_color, hover_color, item->state.hot_t);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The underline fades in with hover/focus and is invisible at rest.
+static FlColor link_underline_color(const ItemState* item, FlColor link_color) {
+    FlColor underline_color = link_color;
+    if (!item) {
+        underline_color.a = 0;
+        return underline_color;
+    }
+    float interact_t = max(item->state.focused_t, item->state.hot_t);
+    underline_color.a = (u8)(link_color.a * interact_t);
+    return underline_color;
+}
+
 FlSignal ui_link_impl(FlString text, FlLinkConfig cfg) {
     FlUiCtx* self = g_ui_ctx;
 
@@ -121,40 +187,17 @@ FlSignal ui_link_impl(FlString text, FlLinkConfig cfg) {
     const FlThemeColors* theme = &w.theme;
 
     FlColor base_link_color = cfg.widget.text_color.a > 0 ? cfg.widget.text_color : theme->interactive.base;
-    FlColor link_color = base_link_color;
-
-    FlColor bg_color = UI_HIT_TEST_FILL(2);
-    FlColor border_color = { 0, 0, 0, 0 };
-
-    if (item && item->state.focused_t > 0.0f) {
-        FlColor focus_bg
-            = { (u8)(base_link_color.r / 4), (u8)(base_link_color.g / 4), (u8)(base_link_color.b / 4), 220 };
-        bg_color = ui_color_lerp(bg_color, focus_bg, item->state.focused_t);
-        border_color = ui_color_lerp(border_color, base_link_color, item->state.focused_t);
-        FlColor white = { 255, 255, 255, 255 };
-        link_color = ui_color_lerp(base_link_color, white, item->state.focused_t);
-    }
-
-    // Brighten on hover, but not while focused (the focused text is already white).
-    if (item && item->state.hot_t > 0.0f && item->state.focused_t < 0.5f) {
-        FlColor hover_color = { (u8)min(link_color.r + 40, 255), (u8)min(link_color.g + 40, 255),
-                                (u8)min(link_color.b + 40, 255), link_color.a };
-        link_color = ui_color_lerp(link_color, hover_color, item->state.hot_t);
-    }
+    FlColor link_color = link_color_with_focus(item, base_link_color);
+    FlColor bg_color = link_background_color(item, base_link_color);
+    FlColor border_color = link_border_color(item, base_link_color);
+    link_color = link_color_with_hover(item, link_color);
 
     u16 font_size
         = cfg.font_size > 0 ? cfg.font_size : font_cache_get_size(self->shared->font_cache, self->active_font);
 
     float underline_height = font_size >= 28 ? 2.0f : 1.0f;
 
-    // The underline fades in with hover/focus and is invisible at rest.
-    FlColor underline_color = link_color;
-    if (item) {
-        float interact_t = max(item->state.focused_t, item->state.hot_t);
-        underline_color.a = (u8)(link_color.a * interact_t);
-    } else {
-        underline_color.a = 0;
-    }
+    FlColor underline_color = link_underline_color(item, link_color);
 
     float padding = 4.0f;
 

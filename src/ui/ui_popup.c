@@ -1,8 +1,67 @@
 #include "ui_popup.h"
 #include <core/math.h>
+#include <math.h>
 #include "external/clay/clay.h"
 #include "input_actions.h"
 #include "ui_private.h"
+
+static bool popup_overflows(float pos, float size, float screen) {
+    return size > 0.0f && screen > 0.0f && pos + size > screen;
+}
+
+// Slide a popup back so its far edge sits on-screen, never pushing the near edge past 0.
+static float popup_clamp_axis(float pos, float size, float screen) {
+    if (!popup_overflows(pos, size, screen)) {
+        return pos;
+    }
+    return fmaxf(screen - size, 0.0f);
+}
+
+static bool popup_flips_up(float py, float h, float sh) {
+    return h > 0.0f && py + h > sh && py - h >= 0.0f;
+}
+
+// Point anchoring: position the popup at an absolute screen coordinate (root-attached + offset), with
+// off-screen avoidance computed here. Sizing is FIT, so the popup's measured box is only known one frame
+// late: the previous frame's box drives flip/clamp. On the very first frame the size is unknown and the
+// popup opens downward from the point; it corrects on the next frame.
+static Clay_FloatingElementConfig popup_point_floating(const FlUiCtx* ctx, const FlPopupConfig* config,
+                                                       Clay_ElementId popup_element_id,
+                                                       Clay_PointerCaptureMode capture) {
+    Clay_ElementData prev = Clay_GetElementData(popup_element_id);
+    float w = prev.found ? prev.boundingBox.width : 0.0f;
+    float h = prev.found ? prev.boundingBox.height : 0.0f;
+
+    float px = popup_clamp_axis(config->point.x + config->offset.x, w, ctx->layout_width);
+    float py = config->point.y + config->offset.y;
+
+    // Vertical flip-on-overflow: if opening downward would overflow the bottom edge and there is room above,
+    // anchor the popup's bottom-left to the point so it opens upward instead. Otherwise clamp downward.
+    Clay_FloatingAttachPointType elem_y = CLAY_ATTACH_POINT_LEFT_TOP;
+    if (popup_flips_up(py, h, ctx->layout_height)) {
+        elem_y = CLAY_ATTACH_POINT_LEFT_BOTTOM; // bottom-left of popup sits at the point, so it opens upward
+    } else {
+        py = popup_clamp_axis(py, h, ctx->layout_height);
+    }
+
+    return (Clay_FloatingElementConfig) { .attachTo = CLAY_ATTACH_TO_ROOT,
+                                          .attachPoints = { .element = elem_y, .parent = CLAY_ATTACH_POINT_LEFT_TOP },
+                                          .offset = { .x = px, .y = py },
+                                          .zIndex = config->z_index,
+                                          .pointerCaptureMode = capture };
+}
+
+static Clay_FloatingElementConfig popup_anchored_floating(const FlPopupConfig* config, u32 anchor_widget_id,
+                                                          Clay_PointerCaptureMode capture) {
+    return (Clay_FloatingElementConfig) {
+        .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
+        .parentId = anchor_widget_id,
+        .attachPoints = { .element = CLAY_ATTACH_POINT_LEFT_TOP, .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM },
+        .offset = { .x = config->offset.x, .y = config->offset.y },
+        .zIndex = config->z_index,
+        .pointerCaptureMode = capture,
+    };
+}
 
 void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
     FlUiCtx* ctx = g_ui_ctx;
@@ -35,56 +94,9 @@ void ui_popup_begin(FlLayoutId anchor_id, FlPopupConfig config) {
     Clay_ElementDeclaration decl = { .layout = { .sizing = { .width = { .type = CLAY__SIZING_TYPE_FIT },
                                                              .height = { .type = CLAY__SIZING_TYPE_FIT } } } };
 
-    if (config.anchor == FlPopupAnchor_Point) {
-        // Point anchoring: position the popup at an absolute screen coordinate (root-attached + offset), with
-        // off-screen avoidance computed here. Sizing is FIT, so the popup's measured box is only known one frame
-        // late: the previous frame's box drives flip/clamp. On the very first frame the size is unknown and the
-        // popup opens downward from the point; it corrects on the next frame.
-        Clay_ElementData prev = Clay_GetElementData(popup_element_id);
-        float w = prev.found ? prev.boundingBox.width : 0.0f;
-        float h = prev.found ? prev.boundingBox.height : 0.0f;
-        float sw = ctx->layout_width;
-        float sh = ctx->layout_height;
-
-        float px = config.point.x + config.offset.x;
-        float py = config.point.y + config.offset.y;
-
-        // Horizontal clamp: keep the right edge on-screen, never pushing the left edge past 0.
-        if (w > 0.0f && sw > 0.0f && px + w > sw) {
-            px = sw - w;
-            if (px < 0.0f) {
-                px = 0.0f;
-            }
-        }
-
-        // Vertical flip-on-overflow: if opening downward would overflow the bottom edge and there is room above,
-        // anchor the popup's bottom-left to the point so it opens upward instead. Otherwise clamp downward.
-        Clay_FloatingAttachPointType elem_y = CLAY_ATTACH_POINT_LEFT_TOP;
-        if (h > 0.0f && py + h > sh && py - h >= 0.0f) {
-            elem_y = CLAY_ATTACH_POINT_LEFT_BOTTOM; // bottom-left of popup sits at the point, so it opens upward
-        } else if (h > 0.0f && sh > 0.0f && py + h > sh) {
-            py = sh - h;
-            if (py < 0.0f) {
-                py = 0.0f;
-            }
-        }
-
-        decl.floating = (Clay_FloatingElementConfig) { .attachTo = CLAY_ATTACH_TO_ROOT,
-                                                       .attachPoints
-                                                       = { .element = elem_y, .parent = CLAY_ATTACH_POINT_LEFT_TOP },
-                                                       .offset = { .x = px, .y = py },
-                                                       .zIndex = config.z_index,
-                                                       .pointerCaptureMode = capture };
-    } else {
-        decl.floating = (Clay_FloatingElementConfig) {
-            .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
-            .parentId = anchor_widget_id,
-            .attachPoints = { .element = CLAY_ATTACH_POINT_LEFT_TOP, .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM },
-            .offset = { .x = config.offset.x, .y = config.offset.y },
-            .zIndex = config.z_index,
-            .pointerCaptureMode = capture,
-        };
-    }
+    decl.floating = config.anchor == FlPopupAnchor_Point
+                        ? popup_point_floating(ctx, &config, popup_element_id, capture)
+                        : popup_anchored_floating(&config, anchor_widget_id, capture);
 
     Clay__ConfigureOpenElement(decl);
 }
@@ -100,35 +112,27 @@ void ui_popup_end(void) {
 
 // Auto-close, called from ui_update_begin after ui_input_update captures mouse state.
 
-void ui_popup_check_auto_close(FlUiCtx* ctx) {
-    if (ctx->popup_focus_scope_id == 0) {
-        return;
+static bool popup_click_inside(const FlUiCtx* ctx) {
+    if (ctx->hot_id == 0) {
+        return false;
     }
+    const ItemState* hot_item = hashmap_get(&ctx->shared->item_state, ctx->hot_id);
+    return hot_item != nullptr && hot_item->popup_scope_id == ctx->popup_focus_scope_id;
+}
 
-    if (!ctx->popup_auto_close) {
+// Click outside, skipped on the frame the popup opened (the click that opened it shouldn't close it).
+static bool popup_outside_click(const FlUiCtx* ctx) {
+    return ctx->mouse_pressed_this_frame && ctx->frame_counter > ctx->popup_open_frame && !popup_click_inside(ctx);
+}
+
+void ui_popup_check_auto_close(FlUiCtx* ctx) {
+    if (ctx->popup_focus_scope_id == 0 || !ctx->popup_auto_close) {
         return;
     }
 
     // ESC key, Gamepad B button.
-    if (ui_action_pressed(ctx, FlAction_Cancel)) {
+    if (ui_action_pressed(ctx, FlAction_Cancel) || popup_outside_click(ctx)) {
         ui_popup_close_internal(ctx);
-        return;
-    }
-
-    // Click outside, skipped on the frame the popup opened (the click that opened it shouldn't close it).
-    if (ctx->mouse_pressed_this_frame && ctx->frame_counter > ctx->popup_open_frame) {
-        bool clicked_inside_popup = false;
-
-        if (ctx->hot_id != 0) {
-            ItemState* hot_item = hashmap_get(&ctx->shared->item_state, ctx->hot_id);
-            if (hot_item != nullptr && hot_item->popup_scope_id == ctx->popup_focus_scope_id) {
-                clicked_inside_popup = true;
-            }
-        }
-
-        if (!clicked_inside_popup) {
-            ui_popup_close_internal(ctx);
-        }
     }
 }
 

@@ -15,37 +15,43 @@
 
 // Scissor/None commands are layout plumbing, not user-facing elements.
 static bool inspector_is_element(UiRenderCommandType type) {
-    switch (type) {
-        case UiRenderCmd_Rectangle:
-        case UiRenderCmd_Border:
-        case UiRenderCmd_Text:
-        case UiRenderCmd_Image:
-        case UiRenderCmd_Custom:
-            return true;
-        default:
-            return false;
-    }
+    static const bool element[] = {
+        [UiRenderCmd_Rectangle] = true,
+        [UiRenderCmd_Border] = true,
+        [UiRenderCmd_Text] = true,
+        [UiRenderCmd_Image] = true,
+        [UiRenderCmd_Custom] = true,
+    };
+    return (unsigned)type < sizeof(element) / sizeof(element[0]) && element[type];
 }
 
 static const char* inspector_type_name(UiRenderCommandType type) {
-    switch (type) {
-        case UiRenderCmd_Rectangle:
-            return "rectangle";
-        case UiRenderCmd_Border:
-            return "border";
-        case UiRenderCmd_Text:
-            return "text";
-        case UiRenderCmd_Image:
-            return "image";
-        case UiRenderCmd_ScissorStart:
-            return "scissor_start";
-        case UiRenderCmd_ScissorEnd:
-            return "scissor_end";
-        case UiRenderCmd_Custom:
-            return "custom";
-        default:
-            return "none";
+    static const char* const names[] = {
+        [UiRenderCmd_None] = "none",
+        [UiRenderCmd_Rectangle] = "rectangle",
+        [UiRenderCmd_Border] = "border",
+        [UiRenderCmd_Text] = "text",
+        [UiRenderCmd_Image] = "image",
+        [UiRenderCmd_ScissorStart] = "scissor_start",
+        [UiRenderCmd_ScissorEnd] = "scissor_end",
+        [UiRenderCmd_Custom] = "custom",
+    };
+    if ((unsigned)type >= sizeof(names) / sizeof(names[0])) {
+        return "none";
     }
+    return names[type];
+}
+
+// Fetch command i and report whether it is a user-facing element.
+static bool inspector_get_element(int32_t i, UiRenderCommand* cmd) {
+    return ui_get_render_command(i, cmd) && inspector_is_element(cmd->type);
+}
+
+static const char* inspector_json_escape(unsigned char c) {
+    static const char from[] = "\"\\\n\r\t";
+    static const char* const to[] = {"\\\"", "\\\\", "\\n", "\\r", "\\t"};
+    const char* hit = c != '\0' ? strchr(from, c) : nullptr;
+    return hit ? to[hit - from] : nullptr;
 }
 
 // snprintf-style append into a caller buffer: writes into buf + off when it fits, otherwise
@@ -72,29 +78,13 @@ static int32_t inspector_append_json_string(char* buf, int32_t buf_size, int32_t
     off = inspector_appendf(buf, buf_size, off, "\"");
     for (u64 i = 0; i < s.length; ++i) {
         unsigned char c = (unsigned char)s.data[i];
-        switch (c) {
-            case '"':
-                off = inspector_appendf(buf, buf_size, off, "\\\"");
-                break;
-            case '\\':
-                off = inspector_appendf(buf, buf_size, off, "\\\\");
-                break;
-            case '\n':
-                off = inspector_appendf(buf, buf_size, off, "\\n");
-                break;
-            case '\r':
-                off = inspector_appendf(buf, buf_size, off, "\\r");
-                break;
-            case '\t':
-                off = inspector_appendf(buf, buf_size, off, "\\t");
-                break;
-            default:
-                if (c < 0x20) {
-                    off = inspector_appendf(buf, buf_size, off, "\\u%04x", (unsigned)c);
-                } else {
-                    off = inspector_appendf(buf, buf_size, off, "%c", (char)c);
-                }
-                break;
+        const char* esc = inspector_json_escape(c);
+        if (esc) {
+            off = inspector_appendf(buf, buf_size, off, "%s", esc);
+        } else if (c < 0x20) {
+            off = inspector_appendf(buf, buf_size, off, "\\u%04x", (unsigned)c);
+        } else {
+            off = inspector_appendf(buf, buf_size, off, "%c", (char)c);
         }
     }
     return inspector_appendf(buf, buf_size, off, "\"");
@@ -240,19 +230,26 @@ bool fl_inspector_hit_test_id(uint32_t element_id, FlInspectorHit* out) {
     return false;
 }
 
+static bool inspector_name_equals(FlString a, FlString b) {
+    return a.data != nullptr && a.length == b.length && memcmp(a.data, b.data, (size_t)b.length) == 0;
+}
+
+static bool inspector_name_is_empty(FlString name) {
+    return name.data == nullptr || name.length == 0;
+}
+
 bool fl_inspector_hit_test_name(FlString name, FlInspectorHit* out) {
-    if (!out || name.data == nullptr || name.length == 0) {
+    if (!out || inspector_name_is_empty(name)) {
         return false;
     }
 
     const int32_t count = ui_get_render_command_count();
     for (int32_t i = 0; i < count; ++i) {
         UiRenderCommand cmd;
-        if (!ui_get_render_command(i, &cmd) || !inspector_is_element(cmd.type)) {
+        if (!inspector_get_element(i, &cmd)) {
             continue;
         }
-        if (cmd.name.data != nullptr && cmd.name.length == name.length
-            && memcmp(cmd.name.data, name.data, (size_t)name.length) == 0) {
+        if (inspector_name_equals(cmd.name, name)) {
             inspector_fill_hit(out, &cmd);
             return true;
         }

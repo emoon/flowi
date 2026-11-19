@@ -249,23 +249,25 @@ void window_backend_headless_inject_wheel(FlWindowBackend* backend, FlWindow* wi
 
 // The modifier bit a key carries, or zero for a key that is not a modifier.
 
+typedef struct ModifierKey {
+    FlKey key;
+    u32 bit;
+} ModifierKey;
+
+static const ModifierKey k_modifier_keys[] = {
+    { FlKey_Left_Shift, FlKeyModifier_Shift },     { FlKey_Right_Shift, FlKeyModifier_Shift },
+    { FlKey_Left_Control, FlKeyModifier_Control }, { FlKey_Right_Control, FlKeyModifier_Control },
+    { FlKey_Left_Alt, FlKeyModifier_Alt },         { FlKey_Right_Alt, FlKeyModifier_Alt },
+    { FlKey_Left_Super, FlKeyModifier_Super },     { FlKey_Right_Super, FlKeyModifier_Super },
+};
+
 static u32 headless_modifier_bit(FlKey key) {
-    switch (key) {
-        case FlKey_Left_Shift:
-        case FlKey_Right_Shift:
-            return FlKeyModifier_Shift;
-        case FlKey_Left_Control:
-        case FlKey_Right_Control:
-            return FlKeyModifier_Control;
-        case FlKey_Left_Alt:
-        case FlKey_Right_Alt:
-            return FlKeyModifier_Alt;
-        case FlKey_Left_Super:
-        case FlKey_Right_Super:
-            return FlKeyModifier_Super;
-        default:
-            return 0;
+    for (u32 i = 0; i < sizeof(k_modifier_keys) / sizeof(k_modifier_keys[0]); i++) {
+        if (k_modifier_keys[i].key == key) {
+            return k_modifier_keys[i].bit;
+        }
     }
+    return 0;
 }
 
 void window_backend_headless_inject_key(FlWindowBackend* backend, FlWindow* window, FlKey key, bool down) {
@@ -363,8 +365,18 @@ void window_backend_headless_set_content_scale(FlWindow* window, float scale) {
     window->content_scale = scale;
 }
 
+static bool is_queued_text(const FlWindow* window, u32 index) {
+    if (window == nullptr) {
+        return false;
+    }
+    if (index >= window->event_count) {
+        return false;
+    }
+    return window->events[index].type == QueuedEvent_Text;
+}
+
 FlString window_backend_headless_queued_text(FlWindow* window, u32 index) {
-    if (window == nullptr || index >= window->event_count || window->events[index].type != QueuedEvent_Text) {
+    if (!is_queued_text(window, index)) {
         return (FlString) { 0 };
     }
     return window->events[index].text.text;

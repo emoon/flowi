@@ -137,6 +137,31 @@ static FlVfsReadResult unlzx_read_next(UnlzxHandle* handle, uint8_t* buffer, int
     return (FlVfsReadResult) { .bytes_read = (int64_t)bytes_read, .error = { .vfs_status = FlVfsStatus_Success } };
 }
 
+// Extracts the whole named entry into buffer
+
+static FlVfsReadResult unlzx_read_named(UnlzxHandle* handle, FlString target_path, uint8_t* buffer, int64_t size) {
+    arena_scratch_auto(temp);
+    const char* target_cstr = fl_string_to_cstr(temp.arena, target_path);
+
+    const UnlzxEntry* entry = unlzx_find_entry(handle->archive, target_cstr);
+    if (!entry) {
+        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_FileNotFound } };
+    }
+
+    if ((uint64_t)size < entry->unpack_size) {
+        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_GenericError } };
+    }
+
+    UnlzxError err = unlzx_extract_entry(handle->archive, entry, buffer, (size_t)size);
+    if (err != UNLZX_OK) {
+        logc_error(VFS_ID, "UnLZX extraction failed: %d", err);
+        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_ArchiveError } };
+    }
+
+    return (FlVfsReadResult) { .bytes_read = (int64_t)entry->unpack_size,
+                               .error = { .vfs_status = FlVfsStatus_Success } };
+}
+
 static FlVfsReadResult unlzx_read(void* driver_instance, void* handle_ptr, FlString path, uint8_t* buffer,
                                   int64_t size) {
     (void)driver_instance;
@@ -166,26 +191,7 @@ static FlVfsReadResult unlzx_read(void* driver_instance, void* handle_ptr, FlStr
         return unlzx_read_next(handle, buffer, size);
     }
 
-    arena_scratch_auto(temp);
-    const char* target_cstr = fl_string_to_cstr(temp.arena, target_path);
-
-    const UnlzxEntry* entry = unlzx_find_entry(handle->archive, target_cstr);
-    if (!entry) {
-        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_FileNotFound } };
-    }
-
-    if ((uint64_t)size < entry->unpack_size) {
-        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_GenericError } };
-    }
-
-    UnlzxError err = unlzx_extract_entry(handle->archive, entry, buffer, (size_t)size);
-    if (err != UNLZX_OK) {
-        logc_error(VFS_ID, "UnLZX extraction failed: %d", err);
-        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_ArchiveError } };
-    }
-
-    return (FlVfsReadResult) { .bytes_read = (int64_t)entry->unpack_size,
-                               .error = { .vfs_status = FlVfsStatus_Success } };
+    return unlzx_read_named(handle, target_path, buffer, size);
 }
 
 static FlVfsSizeResult unlzx_get_size(void* driver_instance, void* handle_ptr, FlString path) {

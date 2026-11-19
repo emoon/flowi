@@ -14,6 +14,14 @@ static void close_plugin_handle(const FlVfsPlugin* plugin, void* instance, void*
     plugin->close(instance, handle);
 }
 
+static void close_driver_handle(DriverHandle driver) {
+    close_plugin_handle(driver.plugin_entry->plugin, driver.plugin_entry->plugin_instance, driver.handle);
+}
+
+static bool driver_handle_is_directory(DriverHandle driver) {
+    return driver.plugin_entry->plugin->is_directory(driver.plugin_entry->plugin_instance, driver.handle);
+}
+
 // Plugin utilities
 
 FlString vfs_path_range(const PathComponents* components, int start, u32 end, FlArena* arena) {
@@ -29,38 +37,66 @@ typedef struct {
     int error;
 } MemoryArchive;
 
-static TryLoadData try_open_file(VfsPluginEntry* plugin_entry, void* parent_handle, const int range_start,
-                                 const int range_end, const PathComponents* components, FlArena* scratch) {
+// Opens try_path below parent; a null handle when the plugin does not take it.
+static void* open_candidate(DriverHandle parent, FlString try_path) {
+    const FlVfsPlugin* plugin = parent.plugin_entry->plugin;
 
-    if (!plugin_entry || components->segments.count == 0) {
+    logc_trace(VFS_ID, "%S: trying to open %S", plugin->plugin_name, try_path);
+
+    if (!plugin->can_open(try_path)) {
+        logc_trace(VFS_ID, "%S: trying to open %S (failed)", plugin->plugin_name, try_path);
+        return nullptr;
+    }
+
+    logc_trace(VFS_ID, "Trying to open %S", try_path);
+
+    return plugin->open(parent.plugin_entry->plugin_instance, parent.handle, try_path, 0, (FlVfsMountOptions) { 0 })
+        .handle;
+}
+
+// Describes a file just opened; closes it and returns a null handle when its size is unknown.
+static TryLoadData describe_opened_file(DriverHandle opened, FlString try_path, FlArena* scratch) {
+    const FlVfsPlugin* plugin = opened.plugin_entry->plugin;
+    FlVfsSizeResult size_result
+        = plugin->get_size(opened.plugin_entry->plugin_instance, opened.handle, (FlString) { 0 });
+
+    if (size_result.size < 0) {
+        close_driver_handle(opened);
+        return (TryLoadData) { 0 };
+    }
+
+    return (TryLoadData) { .handle = opened.handle,
+                           .path_split_offset = opened.path_index,
+                           .size = size_result.size,
+                           .loaded_path = fl_string_copy(scratch, try_path) };
+}
+
+static bool opened_whole_path_directory(DriverHandle opened, int range_start) {
+    return driver_handle_is_directory(opened) && opened.path_index == range_start;
+}
+
+// Scans backwards from the end of the path for the longest range, starting at parent.path_index, that opens.
+static TryLoadData try_open_file(DriverHandle parent, const PathComponents* components, FlArena* scratch) {
+    if (!parent.plugin_entry || components->segments.count == 0) {
         return (TryLoadData) { .error = VfsResolveError_InvalidPath };
     }
 
-    const FlVfsPlugin* plugin = plugin_entry->plugin;
+    const int range_start = components->segments.count;
+    const int range_end = parent.path_index;
 
     for (int try_segments = range_start; try_segments > range_end; try_segments--) {
         const FlString try_path = vfs_path_range(components, range_end, try_segments, scratch);
+        void* handle = open_candidate(parent, try_path);
 
-        logc_trace(VFS_ID, "%S: trying to open %S", plugin->plugin_name, try_path);
-
-        if (!plugin->can_open(try_path)) {
-            logc_trace(VFS_ID, "%S: trying to open %S (failed)", plugin->plugin_name, try_path);
+        if (!handle) {
             continue;
         }
 
-        logc_trace(VFS_ID, "Trying to open %S", try_path);
-
-        void* instance = plugin_entry->plugin_instance;
-        FlVfsOpenResult open_result = plugin->open(instance, parent_handle, try_path, 0, (FlVfsMountOptions) { 0 });
-
-        if (!open_result.handle) {
-            continue;
-        }
-
-        void* handle = open_result.handle;
+        const DriverHandle opened
+            = { .plugin_entry = parent.plugin_entry, .handle = handle, .path_index = try_segments };
 
         // Only return directly if top path is a directory
-        if (plugin->is_directory(instance, handle) && try_segments == range_start) {
+        if (opened_whole_path_directory(opened, range_start)) {
             logc_debug(VFS_ID, "is dir");
             return (TryLoadData) { .handle = handle,
                                    .path_split_offset = try_segments,
@@ -68,17 +104,11 @@ static TryLoadData try_open_file(VfsPluginEntry* plugin_entry, void* parent_hand
                                    .is_directory = true };
         }
 
-        FlVfsSizeResult size_result = plugin->get_size(instance, handle, (FlString) { 0 });
+        TryLoadData data = describe_opened_file(opened, try_path, scratch);
 
-        if (size_result.size < 0) {
-            close_plugin_handle(plugin, instance, handle);
-            continue;
+        if (data.handle) {
+            return data;
         }
-
-        return (TryLoadData) { .handle = handle,
-                               .path_split_offset = try_segments,
-                               .size = size_result.size,
-                               .loaded_path = fl_string_copy(scratch, try_path) };
     }
 
     logc_trace(VFS_ID, "not found");
@@ -152,38 +182,39 @@ static bool has_memory_driver(VfsState* self) {
     return false;
 }
 
-// Reads the whole file behind handle and offers it to the memory drivers as an archive. loaded_path only names the
-// data for driver selection. The memory driver owns the buffer once it has opened it; in every other case it is freed.
-// Reads nothing, and reports no archive, when no memory driver is registered; a file over VFS_MAX_READ_SIZE is an
-// error.
-static MemoryArchive open_archive_in_memory(VfsState* self, VfsPluginEntry* entry, void* handle, FlString read_path,
-                                            FlString loaded_path, i64 size) {
+// Reads the whole file behind file->container and offers it to the memory drivers as an archive. loaded_path only
+// names the data for driver selection. The memory driver owns the buffer once it has opened it; in every other case
+// it is freed. Reads nothing, and reports no archive, when no memory driver is registered; a file over
+// VFS_MAX_READ_SIZE is an error.
+static MemoryArchive open_archive_in_memory(VfsState* self, const ArchiveFile* file, FlString loaded_path) {
     MemoryArchive archive = { 0 };
 
     if (!has_memory_driver(self)) {
         return archive;
     }
 
-    if (size > VFS_MAX_READ_SIZE) {
+    if (file->size > VFS_MAX_READ_SIZE) {
         archive.error = VfsResolveError_FileTooLarge;
         return archive;
     }
 
-    u8* buffer = mi_malloc(size);
+    u8* buffer = mi_malloc(file->size);
     if (!buffer) {
         archive.error = VfsResolveError_OutOfMemory;
         return archive;
     }
 
-    FlVfsReadResult read_result = entry->plugin->read(entry->plugin_instance, handle, read_path, buffer, size);
+    const VfsPluginEntry* entry = file->container.plugin_entry;
+    FlVfsReadResult read_result
+        = entry->plugin->read(entry->plugin_instance, file->container.handle, file->path, buffer, file->size);
 
-    if (read_result.bytes_read != size) {
+    if (read_result.bytes_read != file->size) {
         mi_free(buffer);
         archive.error = VfsResolveError_InvalidFileSize;
         return archive;
     }
 
-    archive.opened = vfs_resolve_find_memory_driver(self, loaded_path, buffer, size);
+    archive.opened = vfs_resolve_find_memory_driver(self, loaded_path, buffer, file->size);
 
     if (!archive.opened.handle) {
         mi_free(buffer);
@@ -192,93 +223,120 @@ static MemoryArchive open_archive_in_memory(VfsState* self, VfsPluginEntry* entr
     return archive;
 }
 
+// Turns "no memory driver took it" into an error.
+static MemoryArchive require_archive(MemoryArchive archive) {
+    if (archive.error == VfsResolveError_None && !archive.opened.handle) {
+        archive.error = VfsResolveError_NotMountable;
+    }
+
+    return archive;
+}
+
 // Path resolution
 
-FinalDriver vfs_resolve_from_root(VfsState* self, VfsPluginEntry* root_entry, void* root_handle,
-                                  PathComponents* components, int path_start, FlArena* scratch) {
-    VfsPluginEntry* current_entry = root_entry;
-    const FlVfsPlugin* current_plugin = root_entry->plugin;
-    void* current_instance = current_entry->plugin_instance;
-    void* current_handle = root_handle;
-    int current_pos = path_start;
-    const int total_segments = components->segments.count;
+// The root handle consumed every segment and is a file: opens it as an archive. Consumes the root handle.
+static MemoryArchive open_root_file_as_archive(VfsState* self, DriverHandle root, const PathComponents* components,
+                                               FlArena* scratch) {
+    const VfsPluginEntry* entry = root.plugin_entry;
+    FlVfsSizeResult size_result = entry->plugin->get_size(entry->plugin_instance, root.handle, (FlString) { 0 });
 
-    // The root handle consumed every segment: when it is a file, open it as an archive.
-    if (current_pos >= total_segments && !current_plugin->is_directory(current_instance, current_handle)) {
-        FlVfsSizeResult size_result = current_plugin->get_size(current_instance, current_handle, (FlString) { 0 });
-        if (size_result.size < 0) {
-            close_plugin_handle(current_plugin, current_instance, current_handle);
-            return (FinalDriver) { .error = VfsResolveError_InvalidFileSize };
-        }
-
-        FlString loaded_path = path_reconstruct_from_segments(components, 0, total_segments, scratch);
-        MemoryArchive archive = open_archive_in_memory(self, current_entry, current_handle, (FlString) { 0 },
-                                                       loaded_path, size_result.size);
-
-        close_plugin_handle(current_plugin, current_instance, current_handle);
-
-        if (archive.error != VfsResolveError_None) {
-            return (FinalDriver) { .error = archive.error };
-        }
-
-        if (!archive.opened.handle) {
-            // No memory driver took it
-            return (FinalDriver) { .error = VfsResolveError_NotMountable };
-        }
-
-        current_entry = archive.opened.plugin_entry;
-        current_plugin = current_entry->plugin;
-        current_instance = current_entry->plugin_instance;
-        current_handle = archive.opened.handle;
+    if (size_result.size < 0) {
+        close_driver_handle(root);
+        return (MemoryArchive) { .error = VfsResolveError_InvalidFileSize };
     }
 
-    while (current_pos < total_segments) {
-        // Scans backwards from the end for the longest path that opens
-        TryLoadData data
-            = try_open_file(current_entry, current_handle, total_segments, current_pos, components, scratch);
+    const ArchiveFile file = { .container = root, .size = size_result.size };
+    FlString loaded_path = path_reconstruct_from_segments(components, 0, components->segments.count, scratch);
+    MemoryArchive archive = open_archive_in_memory(self, &file, loaded_path);
 
-        if (data.error != VfsResolveError_None) {
-            close_plugin_handle(current_plugin, current_instance, current_handle);
-            return (FinalDriver) { .error = data.error };
-        }
+    close_driver_handle(root);
+    return require_archive(archive);
+}
 
-        if (data.is_directory) {
-            // A directory that consumed the whole remaining path is the final layer.
-            close_plugin_handle(current_plugin, current_instance, current_handle);
-            return (
-                FinalDriver) { .plugin_entry = current_entry, .handle = data.handle, .error = VfsResolveError_None };
-        }
+// Opens the file found by try_open_file as an archive. Consumes data.handle and the container.
+static MemoryArchive open_found_file_as_archive(VfsState* self, DriverHandle container, const TryLoadData* data) {
+    const ArchiveFile file
+        = { .container = { .plugin_entry = container.plugin_entry, .handle = data->handle }, .size = data->size };
+    MemoryArchive archive = open_archive_in_memory(self, &file, data->loaded_path);
 
-        // A file: open it as an archive with the memory drivers
-        MemoryArchive archive
-            = open_archive_in_memory(self, current_entry, data.handle, (FlString) { 0 }, data.loaded_path, data.size);
+    close_driver_handle(file.container);
+    close_driver_handle(container);
+    return require_archive(archive);
+}
 
-        close_plugin_handle(current_plugin, current_instance, data.handle);
-        close_plugin_handle(current_plugin, current_instance, current_handle);
+static FinalDriver final_driver(DriverHandle driver) {
+    return (
+        FinalDriver) { .plugin_entry = driver.plugin_entry, .handle = driver.handle, .error = VfsResolveError_None };
+}
 
-        if (archive.error != VfsResolveError_None) {
-            return (FinalDriver) { .error = archive.error };
-        }
+typedef struct {
+    DriverHandle layer;
+    int error;
+    bool is_final;
+} Descent;
 
-        if (!archive.opened.handle) {
-            // No memory driver took it
-            return (FinalDriver) { .error = VfsResolveError_NotMountable };
-        }
+// Opens the next layer below current, consuming current. A directory that took the whole remaining path is final.
+static Descent descend_one_layer(VfsState* self, DriverHandle current, const PathComponents* components,
+                                 FlArena* scratch) {
+    TryLoadData data = try_open_file(current, components, scratch);
 
-        current_entry = archive.opened.plugin_entry;
-        current_plugin = current_entry->plugin;
-        current_instance = current_entry->plugin_instance;
-        current_handle = archive.opened.handle;
-        current_pos = data.path_split_offset;
+    if (data.error != VfsResolveError_None) {
+        close_driver_handle(current);
+        return (Descent) { .error = data.error };
     }
 
-    // The final layer must be a directory or archive
-    if (!current_plugin->is_directory(current_instance, current_handle)) {
-        close_plugin_handle(current_plugin, current_instance, current_handle);
+    if (data.is_directory) {
+        close_driver_handle(current);
+        return (Descent) { .layer = { .plugin_entry = current.plugin_entry, .handle = data.handle }, .is_final = true };
+    }
+
+    MemoryArchive archive = open_found_file_as_archive(self, current, &data);
+    archive.opened.path_index = data.path_split_offset;
+    return (Descent) { .layer = archive.opened, .error = archive.error };
+}
+
+static Descent descend_root_file(VfsState* self, DriverHandle root, const PathComponents* components,
+                                 FlArena* scratch) {
+    MemoryArchive archive = open_root_file_as_archive(self, root, components, scratch);
+    archive.opened.path_index = root.path_index;
+    return (Descent) { .layer = archive.opened, .error = archive.error };
+}
+
+// The final layer must be a directory or archive.
+static FinalDriver final_from_descent(Descent step) {
+    if (step.error != VfsResolveError_None) {
+        return (FinalDriver) { .error = step.error };
+    }
+
+    if (!step.is_final && !driver_handle_is_directory(step.layer)) {
+        close_driver_handle(step.layer);
         return (FinalDriver) { .error = VfsResolveError_NotMountable };
     }
 
-    return (FinalDriver) { .plugin_entry = current_entry, .handle = current_handle, .error = VfsResolveError_None };
+    return final_driver(step.layer);
+}
+
+static bool descent_continues(const Descent* step, int total_segments) {
+    if (step->error != VfsResolveError_None || step->is_final) {
+        return false;
+    }
+
+    return step->layer.path_index < total_segments;
+}
+
+FinalDriver vfs_resolve_from_root(VfsState* self, DriverHandle root, PathComponents* components, FlArena* scratch) {
+    const int total_segments = components->segments.count;
+    Descent step = { .layer = root };
+
+    if (root.path_index >= total_segments && !driver_handle_is_directory(root)) {
+        step = descend_root_file(self, root, components, scratch);
+    }
+
+    while (descent_continues(&step, total_segments)) {
+        step = descend_one_layer(self, step.layer, components, scratch);
+    }
+
+    return final_from_descent(step);
 }
 
 FinalDriver vfs_resolve_mount_path(VfsState* self, FlString path, FlArena* scratch) {
@@ -292,8 +350,7 @@ FinalDriver vfs_resolve_mount_path(VfsState* self, FlString path, FlArena* scrat
         return (FinalDriver) { .error = VfsResolveError_NoDriver };
     }
 
-    return vfs_resolve_from_root(self, root_plugin.plugin_entry, root_plugin.handle, &components,
-                                 root_plugin.path_index, scratch);
+    return vfs_resolve_from_root(self, root_plugin, &components, scratch);
 }
 
 // Archives below a mount's root
@@ -313,42 +370,57 @@ bool vfs_name_is_archive(VfsState* self, FlString name) {
     return false;
 }
 
+// Opens a file on disk in place with one archive driver, if it accepts the file.
+static DriverHandle open_archive_with(VfsPluginEntry* entry, FlString file_path) {
+    const FlVfsPlugin* plugin = entry->plugin;
+
+    if (!plugin->can_open(file_path)) {
+        return (DriverHandle) { 0 };
+    }
+
+    FlVfsOpenResult open_result
+        = plugin->open(entry->plugin_instance, nullptr, file_path, 0, (FlVfsMountOptions) { 0 });
+
+    if (!open_result.handle) {
+        return (DriverHandle) { 0 };
+    }
+
+    if (!plugin->is_directory(entry->plugin_instance, open_result.handle)) {
+        close_plugin_handle(plugin, entry->plugin_instance, open_result.handle);
+        return (DriverHandle) { 0 };
+    }
+
+    return (DriverHandle) { .plugin_entry = entry, .handle = open_result.handle };
+}
+
 // Opens a file on disk in place with the first archive driver that accepts it.
 static DriverHandle open_archive_file(VfsState* self, FlString file_path) {
     for (VfsPluginEntry* entry = self->plugin_first; entry != nullptr; entry = entry->next) {
-        const FlVfsPlugin* plugin = entry->plugin;
-
-        if (entry == self->builtin_fallback || !plugin->can_open(file_path)) {
+        if (entry == self->builtin_fallback) {
             continue;
         }
 
-        FlVfsOpenResult open_result
-            = plugin->open(entry->plugin_instance, nullptr, file_path, 0, (FlVfsMountOptions) { 0 });
-        if (!open_result.handle) {
-            continue;
-        }
+        DriverHandle opened = open_archive_with(entry, file_path);
 
-        if (!plugin->is_directory(entry->plugin_instance, open_result.handle)) {
-            close_plugin_handle(plugin, entry->plugin_instance, open_result.handle);
-            continue;
+        if (opened.handle) {
+            return opened;
         }
-
-        return (DriverHandle) { .plugin_entry = entry, .handle = open_result.handle };
     }
 
     return (DriverHandle) { 0 };
 }
 
-DriverHandle vfs_resolve_open_archive(VfsState* self, VfsPluginEntry* parent, void* parent_handle, FlString path,
-                                      i64 size, FlArena* scratch) {
+DriverHandle vfs_resolve_open_archive(VfsState* self, const ArchiveFile* file, FlArena* scratch) {
+    const VfsPluginEntry* parent = file->container.plugin_entry;
     const FlVfsPlugin* plugin = parent->plugin;
 
-    if (size <= 0) {
+    if (file->size <= 0) {
         return (DriverHandle) { 0 };
     }
 
     if ((plugin->get_capabilities() & FlVfsDriverCapabilities_DirectPath) && plugin->get_file_path) {
-        FlString file_path = plugin->get_file_path(parent->plugin_instance, parent_handle, path, scratch);
+        FlString file_path
+            = plugin->get_file_path(parent->plugin_instance, file->container.handle, file->path, scratch);
         DriverHandle opened = file_path.length > 0 ? open_archive_file(self, file_path) : (DriverHandle) { 0 };
 
         if (opened.handle) {
@@ -356,5 +428,5 @@ DriverHandle vfs_resolve_open_archive(VfsState* self, VfsPluginEntry* parent, vo
         }
     }
 
-    return open_archive_in_memory(self, parent, parent_handle, path, path, size).opened;
+    return open_archive_in_memory(self, file, file->path).opened;
 }
