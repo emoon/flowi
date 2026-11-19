@@ -10,7 +10,6 @@
 #include "../list_uniform.h"
 #include "../pixel_snap.h"
 #include "../ui.h"
-#include <external/clay/clay.h>
 #include <flowi/ui/cell.h>
 #include <flowi/ui/cursor.h>
 #include <flowi/ui/item_behavior.h>
@@ -21,16 +20,8 @@
 #define LIST_HEADER_RESIZE_FLOOR 8.0f // A drag never makes a column narrower than this (logical px)
 #define LIST_CELL_MIN_WIDTH 0.001f    // Width of a cell with no room left; Clay reads a fixed size of 0 as unbounded
 
-// Layout ids of the wrapper and the header pieces. Rows use {name, position + 1}, so these sit below zero.
-#define LIST_WRAPPER_ID (-1)
-#define LIST_HEADER_ID (-2)
-#define LIST_HEADER_CELL_ID(i) (-3 - 2 * (i32)(i))
-#define LIST_HEADER_HANDLE_ID(i) (-4 - 2 * (i32)(i))
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlLayoutId header_id(const FlListContext* self, i32 id) {
-    return (FlLayoutId) { .name = self->current_id.name, .id = id };
+    return list_layout_id(self->current_id.name, id);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,14 +39,14 @@ u32 list_column_at(const FlListContext* self, f32 x) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static bool mouse_in_row(const FlListContext* self, Clay_BoundingBox row) {
+static bool mouse_in_row(const FlListContext* self, FlElementState row) {
     ListViewport vp;
     if (!list_get_viewport(self, &vp)) {
         return false;
     }
     const FlUiCtx* ui = self->ui_ctx;
     f32 y = ui->input_state.mouse.y;
-    bool in_rows = y >= row.y && y < row.y + row.height;
+    bool in_rows = y >= row.pos.y && y < row.pos.y + row.size.y;
     return in_rows && list_viewport_contains(&vp, ui->input_state.mouse.x, y);
 }
 
@@ -65,15 +56,15 @@ u32 list_row_cell_under_mouse(const FlListContext* self, FlLayoutId row_id) {
     if (self->column_count == 0) {
         return 0;
     }
-    Clay_ElementData row = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(row_id) });
+    FlElementState row = ui_get_element_state(row_id);
     if (!row.found) {
         return 0;
     }
-    if (!mouse_in_row(self, row.boundingBox)) {
+    if (!mouse_in_row(self, row)) {
         return 0;
     }
     const FlUiCtx* ui = self->ui_ctx;
-    return list_column_at(self, (ui->input_state.mouse.x - row.boundingBox.x) / ui_scale_or_one(ui->ui_scale));
+    return list_column_at(self, (ui->input_state.mouse.x - row.pos.x) / ui_scale_or_one(ui->ui_scale));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -132,7 +123,7 @@ static void header_resize(FlListContext* self, ListState* st, u32 index, FlSigna
 // The grab area on the cell's right edge, with the divider line drawn inside it.
 static FlSignal header_handle(const FlListContext* self, u32 index) {
     const FlThemeColors* theme = fl_theme_colors();
-    FlLayoutId id = header_id(self, LIST_HEADER_HANDLE_ID(index));
+    FlLayoutId id = header_id(self, LIST_ID_HEADER_HANDLE(index));
     fl_layout_start(id);
     fl_layout_configure((FlLayoutConfig) {
         .sizing = { sizing_fixed(LIST_HEADER_HANDLE_WIDTH), sizing_grow() },
@@ -174,7 +165,7 @@ static void header_title(FlString title, f32 width) {
 
 static void header_cell(FlListContext* self, ListState* st, u32 index) {
     const FlColumnDef* col = &self->columns[index];
-    FlLayoutId id = header_id(self, LIST_HEADER_CELL_ID(index));
+    FlLayoutId id = header_id(self, LIST_ID_HEADER_CELL(index));
     fl_layout_start(id);
     fl_layout_configure((FlLayoutConfig) {
         .sizing = { sizing_fixed(self->column_widths[index]), sizing_grow() },
@@ -197,7 +188,7 @@ static void header_cell(FlListContext* self, ListState* st, u32 index) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void header_emit(FlListContext* self, ListState* st, f32 height) {
-    fl_layout_start(header_id(self, LIST_HEADER_ID));
+    fl_layout_start(header_id(self, LIST_ID_HEADER));
     fl_layout_configure((FlLayoutConfig) {
         .sizing = { sizing_grow(), sizing_fixed(height) },
         .color = fl_theme_colors()->surface.elevated,
@@ -240,7 +231,7 @@ void list_header_begin(FlListContext* self, ListState* st, const FlListConfig* c
     self->result_width_count = available > 0.0f ? self->column_count : 0;
     list_resolve_column_widths(self->columns, self->column_count, available, self->column_widths);
 
-    fl_layout_start(header_id(self, LIST_WRAPPER_ID));
+    fl_layout_start(header_id(self, LIST_ID_WRAPPER));
     fl_layout_configure((FlLayoutConfig) {
         .sizing = { sizing_grow(), sizing_grow() },
         .direction = LayoutDirection_TopToBottom,
@@ -287,7 +278,7 @@ void fl_cell_begin(u32 column_id) {
     width = cell_width_or_min(width);
     fl_layout_start_auto();
     fl_layout_configure((FlLayoutConfig) {
-        .sizing = { sizing_fixed(width), sizing_fixed(self->current_row_height) },
+        .sizing = { sizing_fixed(width), sizing_fixed(self->geometry.row_height) },
         .clip = { .horizontal = true },
     });
     fl_layout_start_auto();

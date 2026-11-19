@@ -126,7 +126,7 @@ FlListRange list_boxed_step(FlUiCtx* ctx, const ListModel* model, const ListBoxe
 
 void list_sel_only_hot(FlUiCtx* ctx, const ListModel* model, int hot_pos) {
     for (u32 p = 0; p < model->count; p++) {
-        const FlLayoutId row = { .name = model->list.name, .id = (i32)(p + 1) };
+        const FlLayoutId row = list_row_layout_id(model->list.name, p);
         ItemState* it = hashmap_get(&ctx->shared->item_state, ui_layout_id_to_clay_id(row));
         if (it != nullptr) {
             it->state.hot = (hot_pos >= 0 && (u32)hot_pos == p) ? 1 : 0;

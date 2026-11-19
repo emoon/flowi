@@ -317,11 +317,11 @@ UTEST(tree, rows_indent_by_depth) {
     for_count(i, 3) {
         tree_key(ctx, tree, model, (TreeInput) { 0 });
     }
-    const u32 container_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = tree.name, .id = 0 });
+    const u32 container_id = ui_layout_id_to_clay_id(list_container_layout_id(tree.name));
     const Clay_ElementData container = Clay_GetElementData((Clay_ElementId) { .id = container_id });
     ASSERT_TRUE_MSG(container.found, "the tree container was laid out");
     for_count(row, sizeof_array(s_open_rows)) {
-        const FlLayoutId arrow_id = { .name = tree.name, .id = TREE_ARROW_ID(row) };
+        const FlLayoutId arrow_id = list_layout_id(tree.name, LIST_ID_TREE_ARROW(row));
         const Clay_ElementData arrow
             = Clay_GetElementData((Clay_ElementId) { .id = ui_layout_id_to_clay_id(arrow_id) });
         ASSERT_EQ_MSG(s_open_rows[row].has_children, arrow.found, "only rows with children have an arrow slot");

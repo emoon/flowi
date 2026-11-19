@@ -4,7 +4,10 @@
 // helpers the keyboard, marquee and drag gestures all use. Nothing outside src/ui/ui_list.c, src/ui/ui_tree.c and
 // src/ui/list/ includes this.
 
+#include "../list_geometry.h"
+#include "../list_ids.h"
 #include "../list_rows.h"
+#include "../list_uniform.h"
 #include "../ui_list.h"
 #include "../type_ahead.h"
 #include "../ui_private.h"
@@ -78,14 +81,12 @@ struct FlListContext {
     hashmap(u32, ListState) list_states; // list clay id -> persisted anchor/focus
 
     // Current list being emitted (set in begin)
-    FlLayoutId current_id;  // Identifies the list container; row ids derive from its name
-    u32 current_clay_id;    // ui_layout_id_to_clay_id(current_id), the key into list_states
-    ListRows rows;          // The list's rows, borrowed for this begin->end scope
-    FlSelectionSet* set;    // Caller-owned selection storage (nullptr = opt out of auto-apply/highlight)
-    u32 emit_pos;           // Auto-tracked emission position of the next row (absolute index)
-    f32 current_row_height; // Resolved row height this frame, in logical pixels (for layout)
-    f32 current_row_px;
-    f32 current_gap_px;
+    FlLayoutId current_id;      // Identifies the list container; row ids derive from its name
+    u32 current_clay_id;        // ui_layout_id_to_clay_id(current_id), the key into list_states
+    ListRows rows;              // The list's rows, borrowed for this begin->end scope
+    FlSelectionSet* set;        // Caller-owned selection storage (nullptr = opt out of auto-apply/highlight)
+    u32 emit_pos;               // Auto-tracked emission position of the next row (absolute index)
+    ListRowGeometry geometry;   // Row Geometry of the current list, made by list_uniform in begin
     bool suppress_drag_visuals; // config.suppress_drag_visuals this frame (gates the built-in ghost/insertion line)
 
     // Policy toggles resolved at begin (default off = the scoped face's always-multi-select, always-reorderable
@@ -139,14 +140,6 @@ struct FlListContext {
     FlDropRelationship drag_rel; // result.drag_rel: Before/After (Into is never produced)
 };
 
-// The list container's viewport rect in window-space (physical) pixels.
-typedef struct ListViewport {
-    f32 top;
-    f32 left;
-    f32 right;
-    f32 bottom;
-} ListViewport;
-
 // One of the list's floating overlay rectangles. x/y/w/h are window-space (physical) pixels.
 typedef struct ListOverlay {
     i32 float_seed;
@@ -187,9 +180,6 @@ bool list_press_on_focused_widget(const FlListContext* self);
 // Content-space Y of the cursor, clamped to the viewport edges so a past-edge cursor pins at the edge and moves
 // only as fast as auto-scroll advances the scroll offset.
 f64 list_clamped_content_y(const FlListContext* self, const ListViewport* vp, f64 scroll);
-
-// Distance between the tops of two adjacent rows.
-f32 list_row_stride(const FlListContext* self);
 
 // Current scroll offset of this list's container.
 f64 list_scroll_offset(const FlListContext* self);

@@ -6,7 +6,6 @@
 #include <core/math.h>
 #include "../layout.h"
 #include "../list_uniform.h"
-#include <external/clay/clay.h>
 
 #include <math.h>
 
@@ -49,20 +48,8 @@ i32 list_index_of_id(const FlListContext* self, u64 id) {
     return list_rows_row_of(&self->rows, id);
 }
 
-// Clay owns the container rect independent of the interaction item registry, so the container need not be a
-// registered interactive item.
 bool list_get_viewport(const FlListContext* self, ListViewport* out) {
-    u32 container_clay_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = self->current_id.name, .id = 0 });
-    Clay_ElementData data = Clay_GetElementData((Clay_ElementId) { .id = container_clay_id });
-    if (!data.found) {
-        return false;
-    }
-
-    out->top = data.boundingBox.y;
-    out->left = data.boundingBox.x;
-    out->right = out->left + data.boundingBox.width;
-    out->bottom = out->top + data.boundingBox.height;
-    return true;
+    return list_uniform_viewport(self->ui_ctx->list_uniform_ctx, self->current_id.name, out);
 }
 
 bool list_viewport_contains(const ListViewport* vp, f32 x, f32 y) {
@@ -82,10 +69,6 @@ bool list_press_on_focused_widget(const FlListContext* self) {
     ListViewport vp;
     return list_get_viewport(self, &vp)
            && list_viewport_contains(&vp, ui->input_state.mouse.x, ui->input_state.mouse.y);
-}
-
-f32 list_row_stride(const FlListContext* self) {
-    return self->current_row_px + self->current_gap_px;
 }
 
 f64 list_scroll_offset(const FlListContext* self) {
@@ -124,8 +107,7 @@ void list_edge_autoscroll(FlListContext* self, const ListViewport* vp) {
     f32 mag = fminf(fabsf(overshoot), LIST_AUTOSCROLL_MAX_OVERSHOOT);
     f32 speed = (LIST_AUTOSCROLL_BASE_SPEED + mag * LIST_AUTOSCROLL_GAIN) * ui_scale_or_one(ui->ui_scale);
     f32 step = dir * speed * ui->delta_time;
-    list_uniform_nudge_scroll(ui->list_uniform_ctx, self->current_id.name, step, list_row_stride(self),
-                              self->rows.count);
+    list_uniform_nudge_scroll(ui->list_uniform_ctx, self->current_id.name, step);
 }
 
 // A floating element is authored in logical pixels, so position and size are divided by ui_scale here.

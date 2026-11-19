@@ -17,9 +17,7 @@
 
 #include <math.h>
 
-#define LIST_MARQUEE_FLOAT_SEED 0x4d515251 // 'MQRQ'
-#define LIST_MARQUEE_FILL_SEED 0x4d515200  // 'MQR\0'
-#define LIST_MARQUEE_FILL_ALPHA 64         // translucent, so the rows show through
+#define LIST_MARQUEE_FILL_ALPHA 64 // translucent, so the rows show through
 
 // A marquee band in content-space Y.
 typedef struct Band {
@@ -27,32 +25,9 @@ typedef struct Band {
     f64 hi;
 } Band;
 
-// The span of model positions a marquee band covers; empty when lo > hi.
-typedef struct RowSpan {
-    i64 lo;
-    i64 hi;
-} RowSpan;
-
-// Map the content-space band to model positions: a row at position p occupies [p*stride, p*stride + row_height];
-// it intersects [band_lo, band_hi] iff its bottom > band_lo and its top < band_hi. Solving for p gives a closed
-// form on content Y with no per-item lookup, so off-screen rows resolve identically.
-static RowSpan covered_rows(const FlListContext* self, Band band) {
-    f64 stride = list_row_stride(self);
-    i64 count = (i64)self->rows.count;
-    i64 lo = (i64)ceil((band.lo - (f64)self->current_row_px) / stride); // first row whose bottom > band_lo
-    i64 hi = (i64)ceil(band.hi / stride) - 1;                           // last row whose top < band_hi
-    if (lo < 0) {
-        lo = 0;
-    }
-    if (hi > count - 1) {
-        hi = count - 1;
-    }
-    return (RowSpan) { lo, hi };
-}
-
 // The list has rows to cover and a usable row stride.
 static bool has_model(const FlListContext* self) {
-    return list_has_rows(self) && list_row_stride(self) > 0.0f;
+    return list_has_rows(self) && list_geometry_rows_have_extent(self->geometry);
 }
 
 // Emit the selection requests for the band. Replace mode clears first; additive (ctrl/⌘) unions the covered span
@@ -62,8 +37,8 @@ static void request_coverage(FlListContext* self, const ListState* st, Band band
         return;
     }
 
-    RowSpan span = covered_rows(self, band);
-    bool covers_rows = span.lo <= span.hi;
+    ListRowSpan span = list_geometry_rows_in_band(self->geometry, band.lo, band.hi);
+    bool covers_rows = span.first <= span.last;
 
     // A band that covers no row (e.g. a thin sweep inside a single gap) still empties the selection in replace mode.
     if (!st->marquee_additive) {
@@ -72,8 +47,8 @@ static void request_coverage(FlListContext* self, const ListState* st, Band band
     if (covers_rows) {
         list_push_request(self, (FlSelectionRequest) {
                                     .kind = FlSelectionRequestKind_SetRange,
-                                    .id = list_row_id(self, (u32)span.lo),
-                                    .to_id = list_row_id(self, (u32)span.hi),
+                                    .id = list_row_id(self, (u32)span.first),
+                                    .to_id = list_row_id(self, (u32)span.last),
                                     .selected = true,
                                 });
     }
@@ -100,8 +75,8 @@ static void draw_band(FlListContext* self, const ListState* st, const ListViewpo
     fill.a = LIST_MARQUEE_FILL_ALPHA;
 
     list_draw_overlay(self, &(ListOverlay) {
-                                .float_seed = LIST_MARQUEE_FLOAT_SEED,
-                                .fill_seed = LIST_MARQUEE_FILL_SEED,
+                                .float_seed = LIST_ID_MARQUEE_FLOAT,
+                                .fill_seed = LIST_ID_MARQUEE_FILL,
                                 .z_index = UI_Z_OVERLAY,
                                 .x = x0,
                                 .y = screen_top,
@@ -120,7 +95,7 @@ static void disarm(ListState* st) {
 static bool is_empty_space_press(const FlListContext* self, const ListViewport* vp) {
     const MouseState* mouse = &self->ui_ctx->input_state.mouse;
     return self->ui_ctx->mouse_pressed_this_frame && !self->frame_row_pressed && !list_press_on_focused_widget(self)
-           && !list_uniform_scrollbar_engaged(self->ui_ctx->list_uniform_ctx)
+           && !list_uniform_scrollbar_engaged(self->ui_ctx->list_uniform_ctx, self->current_id.name)
            && list_viewport_contains(vp, mouse->x, mouse->y);
 }
 

@@ -164,8 +164,8 @@ static void draw_arrow(bool expanded, f32 width, f32 height) {
 
 static void arrow_slot(FlTreeContext* self, u32 row, bool expanded) {
     FlListContext* list = self->list;
-    f32 height = list->current_row_height;
-    FlLayoutId arrow_id = { .name = list->current_id.name, .id = TREE_ARROW_ID(row) };
+    f32 height = list->geometry.row_height;
+    FlLayoutId arrow_id = list_layout_id(list->current_id.name, LIST_ID_TREE_ARROW(row));
 
     fl_layout_start(arrow_id);
     fl_layout_configure((FlLayoutConfig) {
@@ -208,7 +208,7 @@ static void row_lead_in_column(FlTreeContext* self, u32 row, FlTreeRow r) {
     }
     fl_layout_start_auto();
     fl_layout_configure((FlLayoutConfig) {
-        .sizing = { sizing_fixed(width), sizing_fixed(list->current_row_height) },
+        .sizing = { sizing_fixed(width), sizing_fixed(list->geometry.row_height) },
         .direction = LayoutDirection_LeftToRight,
         .clip = { .horizontal = true },
     });
@@ -222,7 +222,7 @@ static FlSignal row_begin(FlTreeContext* self, u32 row, FlTreeRow r) {
     FlSignal signal = list_item_begin_impl(self->list, r.id);
     fl_layout_start_auto();
     fl_layout_configure((FlLayoutConfig) {
-        .sizing = { sizing_grow(), sizing_fixed(self->list->current_row_height) },
+        .sizing = { sizing_grow(), sizing_fixed(self->list->geometry.row_height) },
         .direction = LayoutDirection_LeftToRight,
         .child_alignment = { .y = LayoutAlignmentY_Center },
     });

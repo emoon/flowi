@@ -25,9 +25,6 @@
 #include "pixel_snap.h"
 #include "ui.h"
 
-#define LIST_ROW_DEFAULT_HEIGHT 32.0f // Fallback row height when the config leaves it unset
-#define LIST_ROW_DEFAULT_GAP 8.0f     // Fallback gap between rows
-
 // Per-row interaction the scoped face opts into by default: clicks (also gates hover), double-click and
 // right-click.
 #define LIST_ITEM_FLAGS (FlItemFlags_clickable | FlItemFlags_double_click | FlItemFlags_right_click)
@@ -81,7 +78,7 @@ static void list_resolve_drag_promotion(FlListContext* self, ListState* st) {
 // global focus + a nav-next/prev press; and global focus leaving for another widget blurs the list, so only the
 // focused region handles keys.
 static bool list_resolve_focus(FlListContext* self, ListState* st, FlLayoutId id) {
-    fl_item_behavior((FlLayoutId) { .name = id.name, .id = 0 }, FlItemFlags_focusable);
+    fl_item_behavior(list_container_layout_id(id.name), FlItemFlags_focusable);
 
     u32 global_focus = self->ui_ctx->focused_id;
     if (global_focus == self->current_clay_id) {
@@ -178,23 +175,17 @@ FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     u32 scroll_to = list_handle_keyboard(self, st, has_focus);
     list_expose_cursor(self, st, has_focus);
 
-    f32 row_height = args.config.row_height > 0.0f ? args.config.row_height : LIST_ROW_DEFAULT_HEIGHT;
-    f32 gap = args.config.gap > 0.0f ? args.config.gap : LIST_ROW_DEFAULT_GAP;
-    self->current_row_height = row_height;
-    self->current_row_px = list_uniform_row_px(self->ui_ctx, row_height);
-    self->current_gap_px = list_uniform_gap_px(self->ui_ctx, gap);
+    self->geometry = list_uniform_geometry(self->ui_ctx, args.config.row_height, args.config.gap, args.rows.count);
 
-    list_header_begin(self, st, &args.config, row_height);
+    list_header_begin(self, st, &args.config, self->geometry.row_height);
 
     // list_uniform provides the scroll engine and uniform-height layout container; the ordered-id count is the
     // virtualization total.
-    FlListUniformRange r = list_uniform_begin(self->ui_ctx->list_uniform_ctx, args.id.name, args.rows.count,
-                                              (FlListUniformOpts) {
-                                                  .height_hint = row_height,
-                                                  .gap = gap,
-                                                  .scroll_to = scroll_to,
-                                                  .scrollbar_mode = args.config.scrollbar_mode,
-                                              });
+    FlListUniformRange r = list_uniform_begin_rows(self->ui_ctx->list_uniform_ctx, args.id.name, self->geometry,
+                                                   (ListUniformScroll) {
+                                                       .scroll_to = scroll_to,
+                                                       .scrollbar_mode = args.config.scrollbar_mode,
+                                                   });
 
     // Position auto-tracking starts at the first visible row (the caller emits [start, end)).
     self->emit_pos = r.start;
@@ -206,12 +197,12 @@ FlListRange list_begin_impl(FlListContext* self, ListBeginArgs args) {
     };
 }
 
-// Open the row wrapper inside list_uniform's virtualized container (same id seed list_uniform_item_begin uses:
-// {list name, pos + 1}). The List draws the selection highlight here as the wrapper's background fill (the
-// caller's content composes over it). A transparent fill (alpha 0) emits no rectangle, so an unselected row emits
-// none. The clip makes Clay emit a render command bearing the row's id even for fill-less content, so the
-// hit-test machinery (render-command-driven) can mark the row hot and the per-row signal stays live.
-static void list_open_row_wrapper(const FlListContext* self, FlLayoutId item_id, u64 stable_id, bool selected) {
+// Open the row wrapper inside list_uniform's virtualized container and return its layout id. The List draws the
+// selection highlight here as the wrapper's background fill (the caller's content composes over it). A transparent fill
+// (alpha 0) emits no rectangle, so an unselected row emits none. The clip makes Clay emit a render command bearing the
+// row's id even for fill-less content, so the hit-test machinery (render-command-driven) can mark the row hot and the
+// per-row signal stays live.
+static FlLayoutId list_open_row_wrapper(const FlListContext* self, u64 stable_id, bool selected) {
     const FlThemeColors* theme = fl_theme_colors();
     FlColor highlight = { 0, 0, 0, 0 };
     if (selected) {
@@ -222,13 +213,12 @@ static void list_open_row_wrapper(const FlListContext* self, FlLayoutId item_id,
     bool is_cursor = self->has_kb_focus && stable_id != 0 && stable_id == self->frame_focus_cursor_id;
     FlLayoutBorder border
         = is_cursor ? fl_border(theme->border.focus, LIST_FOCUS_BORDER_WIDTH) : (FlLayoutBorder) { 0 };
-    fl_layout_start(item_id);
-    fl_layout_configure((FlLayoutConfig) {
-        .sizing = { sizing_grow(), sizing_fit() },
-        .color = highlight,
-        .border = border,
-        .clip = { .horizontal = true, .vertical = true },
-    });
+    return list_uniform_row_begin(self->ui_ctx->list_uniform_ctx, self->emit_pos,
+                                  (FlLayoutConfig) {
+                                      .color = highlight,
+                                      .border = border,
+                                      .clip = { .horizontal = true, .vertical = true },
+                                  });
 }
 
 // Arm a potential drag-reorder on the pressed row (unless reorder is disabled). It stays a click until the cursor
@@ -327,14 +317,12 @@ static void list_apply_click(FlListContext* self, u64 stable_id, bool selected) 
 }
 
 FlSignal list_item_begin_impl(FlListContext* self, u64 stable_id) {
-    FlLayoutId item_id = { .name = self->current_id.name, .id = (i32)(self->emit_pos + 1) };
-
     // Selected-ness is resolved purely by id membership in the caller's set (CONTEXT Selection Set), so a row
     // selected while off-screen highlights correctly once scrolled back into view. A nullptr set is never selected;
     // the app owns its own highlight on that path.
     bool selected = (self->set != nullptr) && selection_set_contains(self->set, stable_id);
 
-    list_open_row_wrapper(self, item_id, stable_id, selected);
+    FlLayoutId item_id = list_open_row_wrapper(self, stable_id, selected);
     self->cell_cursor = 0.0f;
     self->cell_next_index = 0;
 
@@ -497,7 +485,7 @@ FlListResult ui_list(FlLayoutId id, const FlListItem* items, u32 count, FlSelect
                                         .disable_reorder = !opts.reorderable,
                                     });
 
-    f32 row_height = self->current_row_height; // resolved (config 0 -> default) inside begin
+    f32 row_height = self->geometry.row_height; // resolved (config 0 -> default) inside begin
     for (u32 i = r.start; i < r.end; i++) {
         list_item_begin_impl(self, items[i].id);
         list_decl_row_content(&items[i], row_height);
