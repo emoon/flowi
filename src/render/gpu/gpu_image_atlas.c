@@ -24,8 +24,41 @@ const GpuImageAtlasEntry* gpu_image_atlas_find(const GpuImageAtlas* atlas, FlIma
     return find_entry((GpuImageAtlas*)atlas, handle);
 }
 
+static bool image_dims_valid(u32 w, u32 h) {
+    if (w == 0 || h == 0) {
+        return false;
+    }
+    return w <= GPU_IMAGE_ATLAS_MAX_DIM && h <= GPU_IMAGE_ATLAS_MAX_DIM;
+}
+
+// First released cell the image fits in wins; it is removed from the free list.
+
+static bool take_free_cell(GpuImageAtlas* atlas, u32 w, u32 h, GpuAtlasCell* out) {
+    for (u32 i = 0; i < atlas->free_count; i++) {
+        if (atlas->free_cells[i].w >= w && atlas->free_cells[i].h >= h) {
+            *out = atlas->free_cells[i];
+            atlas->free_cells[i] = atlas->free_cells[--atlas->free_count];
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool acquire_cell(GpuImageAtlas* atlas, u32 w, u32 h, GpuAtlasCell* cell) {
+    if (take_free_cell(atlas, w, h, cell)) {
+        return true;
+    }
+    cell->w = w;
+    cell->h = h;
+    if (!gpu_atlas_pack_insert(&atlas->pack, w, h, &cell->x, &cell->y)) {
+        log_error("gpu backend: image atlas full, %ux%u image dropped", w, h);
+        return false;
+    }
+    return true;
+}
+
 const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHandle handle, u32 w, u32 h) {
-    if (w == 0 || h == 0 || w > GPU_IMAGE_ATLAS_MAX_DIM || h > GPU_IMAGE_ATLAS_MAX_DIM) {
+    if (!image_dims_valid(w, h)) {
         return nullptr;
     }
     if (atlas->entry_count >= GPU_IMAGE_ATLAS_MAX_ENTRIES) {
@@ -37,24 +70,9 @@ const GpuImageAtlasEntry* gpu_image_atlas_place(GpuImageAtlas* atlas, FlImageHan
         return nullptr;
     }
 
-    // First released cell the image fits in wins; else extend the skyline.
     GpuAtlasCell cell;
-    bool placed = false;
-    for (u32 i = 0; i < atlas->free_count; i++) {
-        if (atlas->free_cells[i].w >= w && atlas->free_cells[i].h >= h) {
-            cell = atlas->free_cells[i];
-            atlas->free_cells[i] = atlas->free_cells[--atlas->free_count];
-            placed = true;
-            break;
-        }
-    }
-    if (!placed) {
-        cell.w = w;
-        cell.h = h;
-        if (!gpu_atlas_pack_insert(&atlas->pack, w, h, &cell.x, &cell.y)) {
-            log_error("gpu backend: image atlas full, %ux%u image dropped", w, h);
-            return nullptr;
-        }
+    if (!acquire_cell(atlas, w, h, &cell)) {
+        return nullptr;
     }
 
     GpuImageAtlasEntry* entry = &atlas->entries[atlas->entry_count++];

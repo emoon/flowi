@@ -87,32 +87,39 @@ static FT_Face make_ft_face(FT_Library library, const u8* data, i64 size, const 
     return face;
 }
 
+// Wait for all pending atlas creation jobs to complete before destroying their arenas.
+static void sw_face_wait_atlas_jobs(SwFace* face, int atlas_count) {
+    for_count(j, atlas_count) {
+        FlJobHandle handle = face->atlases[j].job_handle;
+        if (handle != 0 && handle != JOB_HANDLE_IMMEDIATE_COMPLETE) {
+            fl_jobs_wait(handle);
+        }
+    }
+}
+
+static void sw_face_destroy(SwFace* face) {
+    int atlas_count = atomic_load_explicit(&face->atlas_count, memory_order_acquire);
+    sw_face_wait_atlas_jobs(face, atlas_count);
+
+    for_count(j, atlas_count) {
+        if (face->atlases[j].arena) {
+            fl_arena_destroy(face->atlases[j].arena);
+        }
+    }
+
+    if (face->on_demand_face) {
+        FT_Done_Face(face->on_demand_face);
+    }
+    if (face->arena) {
+        fl_arena_destroy(face->arena);
+    }
+}
+
 void sw_glyph_cache_destroy(SwGlyphCache* self) {
     FL_VALIDATE(self != nullptr);
 
     for_count(i, self->face_count) {
-        SwFace* face = &self->faces[i];
-
-        // Wait for all pending atlas creation jobs to complete before destroying their arenas.
-        int atlas_count = atomic_load_explicit(&face->atlas_count, memory_order_acquire);
-        for_count(j, atlas_count) {
-            FlJobHandle handle = face->atlases[j].job_handle;
-            if (handle != 0 && handle != JOB_HANDLE_IMMEDIATE_COMPLETE) {
-                fl_jobs_wait(handle);
-            }
-        }
-        for_count(j, atlas_count) {
-            if (face->atlases[j].arena) {
-                fl_arena_destroy(face->atlases[j].arena);
-            }
-        }
-
-        if (face->on_demand_face) {
-            FT_Done_Face(face->on_demand_face);
-        }
-        if (face->arena) {
-            fl_arena_destroy(face->arena);
-        }
+        sw_face_destroy(&self->faces[i]);
     }
 
     if (self->library) {
@@ -126,17 +133,111 @@ void sw_glyph_cache_destroy(SwGlyphCache* self) {
     self->face_count = 0;
 }
 
+static FT_Int32 glyph_load_flags(FontRenderMode render_mode) {
+    return FT_LOAD_RENDER | ((render_mode == FontRenderMode_LCD) ? FT_LOAD_TARGET_LCD : FT_LOAD_TARGET_NORMAL);
+}
+
+static void glyph_set_metrics(Glyph* glyph, const FT_GlyphSlot slot) {
+    glyph->advance_x = slot->advance.x;
+    glyph->bearing_x = slot->bitmap_left * 64;
+    glyph->bearing_y = slot->bitmap_top;
+    glyph->height_metrics = slot->metrics.height;
+}
+
+// Bounds-checked copy of an LCD bitmap (3 sub-pixels per pixel) into the glyph's R/G/B planes.
+static void copy_lcd_bitmap_checked(Glyph* glyph, const FT_Bitmap* bitmap) {
+    const int width = bitmap->width;
+    const int height = bitmap->rows;
+    const size_t buffer_size = (size_t)bitmap->rows * (size_t)abs(bitmap->pitch);
+
+    for_count(y, height) {
+        for_count(x, width) {
+            int src_idx = y * bitmap->pitch + x * 3;
+            int dst_idx = y * width + x;
+            const bool in_range = src_idx + 2 < (int)buffer_size && bitmap->buffer;
+            glyph->bitmap_data_r[dst_idx] = in_range ? bitmap->buffer[src_idx + 0] : 0;
+            glyph->bitmap_data_g[dst_idx] = in_range ? bitmap->buffer[src_idx + 1] : 0;
+            glyph->bitmap_data_b[dst_idx] = in_range ? bitmap->buffer[src_idx + 2] : 0;
+        }
+    }
+}
+
+static void copy_gray_bitmap_checked(Glyph* glyph, const FT_Bitmap* bitmap) {
+    const int width = bitmap->width;
+    const int height = bitmap->rows;
+    const size_t buffer_size = (size_t)bitmap->rows * (size_t)abs(bitmap->pitch);
+
+    for_count(y, height) {
+        for_count(x, width) {
+            int src_idx = y * bitmap->pitch + x;
+            int dst_idx = y * width + x;
+            glyph->bitmap_data_r[dst_idx]
+                = (src_idx < (int)buffer_size && bitmap->buffer) ? bitmap->buffer[src_idx] : 0;
+        }
+    }
+}
+
+// Loads the glyph for char_code into ft_face's glyph slot. Returns nullptr when the font lacks the character or
+// the load fails.
+static FT_GlyphSlot load_char_slot(FT_Face ft_face, int char_code, FontRenderMode render_mode, FT_UInt* glyph_index) {
+    *glyph_index = FT_Get_Char_Index(ft_face, char_code);
+    if (*glyph_index == 0) {
+        return nullptr; // Character not available in font
+    }
+
+    if (FT_Load_Glyph(ft_face, *glyph_index, glyph_load_flags(render_mode)) != 0) {
+        return nullptr;
+    }
+
+    if (ft_face->glyph == nullptr) {
+        log_error("FT_Load_Glyph succeeded but slot is null for char %d", char_code);
+    }
+    return ft_face->glyph;
+}
+
+static void alloc_glyph_planes(Glyph* glyph, FlArena* arena, int total_pixels, bool lcd) {
+    glyph->bitmap_data_r = arena_alloc_array(arena, u8, total_pixels);
+    glyph->bitmap_data_g = lcd ? arena_alloc_array(arena, u8, total_pixels) : nullptr;
+    glyph->bitmap_data_b = lcd ? arena_alloc_array(arena, u8, total_pixels) : nullptr;
+}
+
+// Fill one ASCII glyph of an atlas. Glyphs the font lacks or fails to load stay zeroed.
+static void rasterize_ascii_glyph(FT_Face ft_face, SwAtlas* atlas, Glyph* glyph, int char_code,
+                                  FontRenderMode render_mode) {
+    FT_UInt glyph_index;
+    FT_GlyphSlot slot = load_char_slot(ft_face, char_code, render_mode, &glyph_index);
+    if (slot == nullptr) {
+        return;
+    }
+
+    const FT_Bitmap* bitmap = &slot->bitmap;
+    atlas->glyphs[glyph_index] = glyph;
+    glyph_set_metrics(glyph, slot);
+
+    const bool lcd = render_mode == FontRenderMode_LCD;
+    glyph->width = bitmap->width;
+    glyph->height = bitmap->rows;
+
+    // For LCD mode each pixel contains 3 sub-pixels (R, G, B), so divide by 3; grayscale is one value.
+    glyph->pixel_width = lcd ? glyph->width / 3 : glyph->width;
+
+    if (bitmap->width == 0 || bitmap->rows == 0) {
+        return; // Empty glyph
+    }
+
+    alloc_glyph_planes(glyph, atlas->arena, bitmap->width * bitmap->rows, lcd);
+
+    if (lcd && bitmap->pixel_mode == FT_PIXEL_MODE_LCD) {
+        copy_lcd_bitmap_checked(glyph, bitmap);
+    } else {
+        copy_gray_bitmap_checked(glyph, bitmap);
+    }
+}
+
 // Rasterize ASCII 0-127 into an atlas using a FreeType face.
 
 static void rasterize_and_update_glyph_table(FT_Face ft_face, SwAtlas* atlas, u16 font_size,
                                              FontRenderMode render_mode) {
-    FT_Int32 load_flags = FT_LOAD_RENDER;
-    if (render_mode == FontRenderMode_LCD) {
-        load_flags |= FT_LOAD_TARGET_LCD;
-    } else {
-        load_flags |= FT_LOAD_TARGET_NORMAL;
-    }
-
     int ascii_count = 128;
     Glyph* ascii_glyphs = arena_alloc_array_zero(atlas->arena, Glyph, ascii_count);
     atlas->glyphs = arena_alloc_array_zero(atlas->arena, Glyph*, ft_face->num_glyphs);
@@ -145,82 +246,7 @@ static void rasterize_and_update_glyph_table(FT_Face ft_face, SwAtlas* atlas, u1
     FT_Set_Pixel_Sizes(ft_face, font_size, font_size);
 
     for_count(char_code, ascii_count) {
-        FT_UInt glyph_index = FT_Get_Char_Index(ft_face, char_code);
-        if (glyph_index == 0) {
-            continue; // Character not available in font
-        }
-
-        Glyph* glyph = &ascii_glyphs[char_code];
-
-        FT_Error load_error = FT_Load_Glyph(ft_face, glyph_index, load_flags);
-        if (load_error != 0) {
-            continue;
-        }
-
-        FT_GlyphSlot slot = ft_face->glyph;
-        if (slot == nullptr) {
-            log_error("FT_Load_Glyph succeeded but slot is null for char %d", char_code);
-            continue;
-        }
-
-        FT_Bitmap* bitmap = &slot->bitmap;
-        atlas->glyphs[glyph_index] = glyph;
-
-        glyph->advance_x = slot->advance.x;
-        glyph->bearing_x = slot->bitmap_left * 64;
-        glyph->bearing_y = slot->bitmap_top;
-        glyph->height_metrics = slot->metrics.height;
-
-        const int width = bitmap->width;
-        const int height = bitmap->rows;
-        glyph->width = width;
-        glyph->height = height;
-
-        // For LCD mode each pixel contains 3 sub-pixels (R, G, B), so divide by 3; grayscale is one value.
-        glyph->pixel_width = (render_mode == FontRenderMode_LCD) ? width / 3 : width;
-
-        if (width == 0 || height == 0) {
-            continue; // Empty glyph
-        }
-
-        int total_pixels = width * height;
-        glyph->bitmap_data_r = arena_alloc_array(atlas->arena, u8, total_pixels);
-        if (render_mode == FontRenderMode_LCD) {
-            glyph->bitmap_data_g = arena_alloc_array(atlas->arena, u8, total_pixels);
-            glyph->bitmap_data_b = arena_alloc_array(atlas->arena, u8, total_pixels);
-        } else {
-            glyph->bitmap_data_g = nullptr;
-            glyph->bitmap_data_b = nullptr;
-        }
-
-        const size_t buffer_size = (size_t)bitmap->rows * (size_t)abs(bitmap->pitch);
-
-        if (render_mode == FontRenderMode_LCD && bitmap->pixel_mode == FT_PIXEL_MODE_LCD) {
-            for_count(y, height) {
-                for_count(x, width) {
-                    int src_idx = y * bitmap->pitch + x * 3;
-                    int dst_idx = y * width + x;
-                    if (src_idx + 2 < (int)buffer_size && bitmap->buffer) {
-                        glyph->bitmap_data_r[dst_idx] = bitmap->buffer[src_idx + 0];
-                        glyph->bitmap_data_g[dst_idx] = bitmap->buffer[src_idx + 1];
-                        glyph->bitmap_data_b[dst_idx] = bitmap->buffer[src_idx + 2];
-                    } else {
-                        glyph->bitmap_data_r[dst_idx] = 0;
-                        glyph->bitmap_data_g[dst_idx] = 0;
-                        glyph->bitmap_data_b[dst_idx] = 0;
-                    }
-                }
-            }
-        } else {
-            for_count(y, height) {
-                for_count(x, width) {
-                    int src_idx = y * bitmap->pitch + x;
-                    int dst_idx = y * width + x;
-                    glyph->bitmap_data_r[dst_idx]
-                        = (src_idx < (int)buffer_size && bitmap->buffer) ? bitmap->buffer[src_idx] : 0;
-                }
-            }
-        }
+        rasterize_ascii_glyph(ft_face, atlas, &ascii_glyphs[char_code], char_code, render_mode);
     }
 }
 
@@ -276,6 +302,56 @@ static void atlas_rasterize_job(void* user_data, FlJobsWorkerInfo info) {
     ctx->atlas->status = success ? FontStatus_Ready : FontStatus_Failed;
 }
 
+// Unpack the 1-bit font bitmap to a full 128x128 byte array.
+static u8* unpack_default_font_bitmap(FlArena* arena) {
+    u8* unpacked_bitmap = arena_alloc_array(arena, u8, 128 * 128);
+    int pixel_index = 0;
+    for_count(i, 2048) {
+        u8 byte = s_microknight_font_data[i];
+        for (int bit = 7; bit >= 0; bit--) {
+            unpacked_bitmap[pixel_index++] = (byte >> bit) & 1;
+        }
+    }
+    return unpacked_bitmap;
+}
+
+static void rasterize_default_glyph_pixels(Glyph* glyph, const u8* unpacked_bitmap, CharLayout layout, int scale) {
+    const int size = 8 * scale;
+
+    for_count(y, size) {
+        for_count(x, size) {
+            int src_x = layout.x + (x / scale);
+            int src_y = layout.y + (y / scale);
+            bool in_sheet = src_x < 128 && src_y < 128;
+            glyph->bitmap_data_r[y * size + x] = (in_sheet && unpacked_bitmap[src_y * 128 + src_x]) ? 255 : 0;
+        }
+    }
+}
+
+static void build_default_glyph(Glyph* glyph, FlArena* arena, const u8* unpacked_bitmap, int char_code, int scale) {
+    // Out-of-range characters use '?' at layout index 31 (63 - 32).
+    int layout_index = char_code - 32;
+    if (layout_index < 0 || layout_index >= 224) {
+        layout_index = 31;
+    }
+
+    const int size = 8 * scale;
+
+    glyph->advance_x = size * 64; // Advance by full width
+    glyph->bearing_x = 0;
+    glyph->bearing_y = size; // Ascent for the 8x8 font, scaled to match width/height
+    glyph->height_metrics = size * 64;
+    glyph->width = size;
+    glyph->height = size;
+    glyph->pixel_width = size;
+
+    glyph->bitmap_data_r = arena_alloc_array(arena, u8, size * size);
+    glyph->bitmap_data_g = nullptr;
+    glyph->bitmap_data_b = nullptr;
+
+    rasterize_default_glyph_pixels(glyph, unpacked_bitmap, s_microknight_layout[layout_index], scale);
+}
+
 // Build the single atlas for the built-in MICROKNIGHT 8x8 default font (synchronous).
 
 static void build_default_atlas(SwFace* face) {
@@ -293,57 +369,12 @@ static void build_default_atlas(SwFace* face) {
     atlas->glyphs = arena_alloc_array_zero(atlas->arena, Glyph*, ascii_count);
     atlas->glyph_count = (u32)ascii_count;
 
-    // Unpack the 1-bit font bitmap to a full 128x128 byte array.
-    u8* unpacked_bitmap = arena_alloc_array(atlas->arena, u8, 128 * 128);
-    int pixel_index = 0;
-    for_count(i, 2048) {
-        u8 byte = s_microknight_font_data[i];
-        for (int bit = 7; bit >= 0; bit--) {
-            unpacked_bitmap[pixel_index++] = (byte >> bit) & 1;
-        }
-    }
+    const u8* unpacked_bitmap = unpack_default_font_bitmap(atlas->arena);
 
     for_count(char_code, ascii_count) {
         Glyph* glyph = &ascii_glyphs[char_code];
         atlas->glyphs[char_code] = glyph;
-
-        // Out-of-range characters use '?' at layout index 31 (63 - 32).
-        int layout_index = char_code - 32;
-        if (layout_index < 0 || layout_index >= 224) {
-            layout_index = 31;
-        }
-
-        CharLayout layout = s_microknight_layout[layout_index];
-
-        int scaled_width = 8 * scale;
-        int scaled_height = 8 * scale;
-
-        glyph->advance_x = scaled_width * 64; // Advance by full width
-        glyph->bearing_x = 0;
-        glyph->bearing_y = 8 * scale; // Ascent for the 8x8 font, scaled to match width/height
-        glyph->height_metrics = scaled_height * 64;
-        glyph->width = scaled_width;
-        glyph->height = scaled_height;
-        glyph->pixel_width = scaled_width;
-
-        int total_pixels = scaled_width * scaled_height;
-        glyph->bitmap_data_r = arena_alloc_array(atlas->arena, u8, total_pixels);
-        glyph->bitmap_data_g = nullptr;
-        glyph->bitmap_data_b = nullptr;
-
-        for_count(y, scaled_height) {
-            for_count(x, scaled_width) {
-                int src_x = layout.x + (x / scale);
-                int src_y = layout.y + (y / scale);
-                if (src_x >= 128 || src_y >= 128) {
-                    glyph->bitmap_data_r[y * scaled_width + x] = 0;
-                    continue;
-                }
-                int src_index = src_y * 128 + src_x;
-                u8 pixel = unpacked_bitmap[src_index];
-                glyph->bitmap_data_r[y * scaled_width + x] = pixel ? 255 : 0;
-            }
-        }
+        build_default_glyph(glyph, atlas->arena, unpacked_bitmap, char_code, scale);
     }
 
     atomic_store_explicit(&face->atlas_count, 1, memory_order_release);
@@ -458,19 +489,47 @@ static SwAtlas* get_or_create_atlas(SwGlyphCache* self, SwFace* face, u16 size) 
     return create_atlas_at_size(self, face, size);
 }
 
+static void copy_lcd_bitmap(Glyph* glyph, const FT_Bitmap* bitmap, FlArena* arena) {
+    const int total_pixels = bitmap->width * bitmap->rows;
+    glyph->bitmap_data_r = arena_alloc_array(arena, u8, total_pixels);
+    glyph->bitmap_data_g = arena_alloc_array(arena, u8, total_pixels);
+    glyph->bitmap_data_b = arena_alloc_array(arena, u8, total_pixels);
+
+    const int lcd_width = bitmap->width / 3;
+    glyph->width = lcd_width;
+    glyph->pixel_width = lcd_width;
+
+    for (int y = 0; y < (int)bitmap->rows; y++) {
+        for (int x = 0; x < lcd_width; x++) {
+            int src_idx = y * bitmap->pitch + x * 3;
+            int dst_idx = y * lcd_width + x;
+            glyph->bitmap_data_r[dst_idx] = bitmap->buffer[src_idx + 0];
+            glyph->bitmap_data_g[dst_idx] = bitmap->buffer[src_idx + 1];
+            glyph->bitmap_data_b[dst_idx] = bitmap->buffer[src_idx + 2];
+        }
+    }
+}
+
+static void copy_gray_bitmap(Glyph* glyph, const FT_Bitmap* bitmap, FlArena* arena) {
+    glyph->bitmap_data_r = arena_alloc_array(arena, u8, bitmap->width * bitmap->rows);
+    glyph->bitmap_data_g = nullptr;
+    glyph->bitmap_data_b = nullptr;
+
+    for (int y = 0; y < (int)bitmap->rows; y++) {
+        for (int x = 0; x < (int)bitmap->width; x++) {
+            int src_idx = y * bitmap->pitch + x;
+            int dst_idx = y * bitmap->width + x;
+            glyph->bitmap_data_r[dst_idx] = bitmap->buffer[src_idx];
+        }
+    }
+}
+
 // Rasterize a single glyph from a FreeType face (on-demand path for glyphs the atlas job did not rasterize).
 
 static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_Face ft_face, u32 glyph_index) {
     FT_Set_Pixel_Sizes(ft_face, 0, atlas->size);
 
-    FT_Int32 load_flags = FT_LOAD_RENDER;
-    if (self->render_mode == FontRenderMode_LCD) {
-        load_flags |= FT_LOAD_TARGET_LCD;
-    } else {
-        load_flags |= FT_LOAD_TARGET_NORMAL;
-    }
-
-    if (FT_Load_Glyph(ft_face, glyph_index, load_flags) != 0) {
+    if (FT_Load_Glyph(ft_face, glyph_index, glyph_load_flags(self->render_mode)) != 0) {
         return nullptr;
     }
 
@@ -479,14 +538,10 @@ static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_F
         return nullptr;
     }
 
-    FT_Bitmap* bitmap = &slot->bitmap;
+    const FT_Bitmap* bitmap = &slot->bitmap;
 
     Glyph* glyph = arena_alloc_zero(atlas->arena, Glyph);
-
-    glyph->advance_x = slot->advance.x;
-    glyph->bearing_x = slot->bitmap_left * 64;
-    glyph->bearing_y = slot->bitmap_top;
-    glyph->height_metrics = slot->metrics.height;
+    glyph_set_metrics(glyph, slot);
     glyph->width = bitmap->width;
     glyph->height = bitmap->rows;
     glyph->pixel_width = bitmap->width;
@@ -495,37 +550,10 @@ static Glyph* rasterize_glyph_from_face(SwGlyphCache* self, SwAtlas* atlas, FT_F
         return glyph; // Empty glyph (like space): still valid, with no bitmap data
     }
 
-    int total_pixels = bitmap->width * bitmap->rows;
     if (self->render_mode == FontRenderMode_LCD && bitmap->pixel_mode == FT_PIXEL_MODE_LCD) {
-        glyph->bitmap_data_r = arena_alloc_array(atlas->arena, u8, total_pixels);
-        glyph->bitmap_data_g = arena_alloc_array(atlas->arena, u8, total_pixels);
-        glyph->bitmap_data_b = arena_alloc_array(atlas->arena, u8, total_pixels);
-
-        int lcd_width = bitmap->width / 3;
-        glyph->width = lcd_width;
-        glyph->pixel_width = lcd_width;
-
-        for (int y = 0; y < (int)bitmap->rows; y++) {
-            for (int x = 0; x < lcd_width; x++) {
-                int src_idx = y * bitmap->pitch + x * 3;
-                int dst_idx = y * lcd_width + x;
-                glyph->bitmap_data_r[dst_idx] = bitmap->buffer[src_idx + 0];
-                glyph->bitmap_data_g[dst_idx] = bitmap->buffer[src_idx + 1];
-                glyph->bitmap_data_b[dst_idx] = bitmap->buffer[src_idx + 2];
-            }
-        }
+        copy_lcd_bitmap(glyph, bitmap, atlas->arena);
     } else {
-        glyph->bitmap_data_r = arena_alloc_array(atlas->arena, u8, total_pixels);
-        glyph->bitmap_data_g = nullptr;
-        glyph->bitmap_data_b = nullptr;
-
-        for (int y = 0; y < (int)bitmap->rows; y++) {
-            for (int x = 0; x < (int)bitmap->width; x++) {
-                int src_idx = y * bitmap->pitch + x;
-                int dst_idx = y * bitmap->width + x;
-                glyph->bitmap_data_r[dst_idx] = bitmap->buffer[src_idx];
-            }
-        }
+        copy_gray_bitmap(glyph, bitmap, atlas->arena);
     }
 
     return glyph;

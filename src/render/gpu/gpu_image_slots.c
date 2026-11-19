@@ -78,39 +78,54 @@ void gpu_image_slots_release_static(GpuImageSlots* slots, FlImageHandle handle) 
     }
 }
 
-int gpu_image_slots_touch_dynamic(GpuImageSlots* slots, const void* pixels, u32 w, u32 h, u32 stride, bool alpha_only) {
-    GpuSlotImage* img = nullptr;
-    u32 index = 0;
+static int find_dynamic(const GpuImageSlots* slots, const void* pixels) {
     for (u32 i = 0; i < slots->image_count; i++) {
         if (slots->images[i].is_dynamic && slots->images[i].pixels == pixels) {
-            img = &slots->images[i];
-            index = i;
-            break;
+            return (int)i;
         }
     }
-    if (img == nullptr) {
-        if (slots->image_count >= GPU_IMAGE_SLOT_TABLE_CAP) {
-            if (!slots->table_full_diagnosed) {
-                log_error("gpu backend: image-slot table full (%d) - dynamic image dropped", GPU_IMAGE_SLOT_TABLE_CAP);
-                slots->table_full_diagnosed = true;
-            }
-            return -1;
+    return -1;
+}
+
+static int append_dynamic(GpuImageSlots* slots, const void* pixels) {
+    if (slots->image_count >= GPU_IMAGE_SLOT_TABLE_CAP) {
+        if (!slots->table_full_diagnosed) {
+            log_error("gpu backend: image-slot table full (%d) - dynamic image dropped", GPU_IMAGE_SLOT_TABLE_CAP);
+            slots->table_full_diagnosed = true;
         }
-        index = slots->image_count++;
-        img = &slots->images[index];
-        *img = (GpuSlotImage) { .is_dynamic = true, .pixels = pixels };
-    } else if (img->w != w || img->h != h || img->alpha_only != alpha_only) {
+        return -1;
+    }
+    u32 index = slots->image_count++;
+    slots->images[index] = (GpuSlotImage) { .is_dynamic = true, .pixels = pixels };
+    return (int)index;
+}
+
+static bool storage_shape_changed(const GpuSlotImage* img, GpuDynamicImage image) {
+    if (img->w != image.w || img->h != image.h) {
+        return true;
+    }
+    return img->alpha_only != image.alpha_only;
+}
+
+int gpu_image_slots_touch_dynamic(GpuImageSlots* slots, GpuDynamicImage image) {
+    int found = find_dynamic(slots, image.pixels);
+    int index = found >= 0 ? found : append_dynamic(slots, image.pixels);
+    if (index < 0) {
+        return -1;
+    }
+    GpuSlotImage* img = &slots->images[index];
+    if (found >= 0 && storage_shape_changed(img, image)) {
         // Storage shape changed: the renderer must recreate the texture before the next upload.
         push_dead(slots, img->tex);
         img->tex = 0;
     }
-    img->w = w;
-    img->h = h;
-    img->stride = stride;
-    img->alpha_only = alpha_only;
+    img->w = image.w;
+    img->h = image.h;
+    img->stride = image.stride;
+    img->alpha_only = image.alpha_only;
     img->dirty = true;
     img->last_ref = slots->frame;
-    return (int)index;
+    return index;
 }
 
 int gpu_image_slots_assign(GpuImageSlots* slots, u32 image_index, u8 filter) {

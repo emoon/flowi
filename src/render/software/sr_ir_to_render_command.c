@@ -276,7 +276,8 @@ static void emit_text_run(const SrIrRequest* req, const FlCmdTextRun* tr) {
     u16 size_px = font_cache_q4_to_whole_px(tr->size);
     for (u32 i = 0; i < tr->glyph_count; ++i) {
         const Glyph* glyph = sw_glyph_cache_get(req->glyph_cache, tr->font, size_px, glyphs[i].glyph_index);
-        sr_emit_glyph(req->commands_arena, glyph, glyphs[i].x, glyphs[i].y, color, req->global_alpha);
+        sr_emit_glyph(req->commands_arena, glyph, (GlyphPen) { .cursor_x = glyphs[i].x, .baseline_y = glyphs[i].y },
+                      (GlyphStyle) { .text_color = color, .global_alpha = req->global_alpha });
     }
 }
 

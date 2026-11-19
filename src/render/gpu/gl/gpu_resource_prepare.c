@@ -28,8 +28,12 @@ static bool prepare_large_image(GpuShared* self, FlImageHandle handle, const FlI
 
     bool alpha_only = decoded->channels == 1;
     GLuint tex = create_slot_texture(&self->gl, w, h, alpha_only, false);
-    tex_sub_image_strided(scratch, 0, 0, w, h, (u32)decoded->stride, alpha_only ? 1u : 4u,
-                          alpha_only ? GL_RED : GL_RGBA, decoded->pixels);
+    tex_sub_image_strided(scratch, &(GpuTexUpload) { .w = w,
+                                                      .h = h,
+                                                      .stride = (u32)decoded->stride,
+                                                      .bpp = alpha_only ? 1u : 4u,
+                                                      .format = alpha_only ? GL_RED : GL_RGBA,
+                                                      .pixels = decoded->pixels });
 
     if (gpu_image_slots_register_static(&self->cpu.image_slots, handle, w, h, (u32)tex) < 0) {
         glDeleteTextures(1, &tex); // table full or duplicate; register logged the reason
@@ -55,7 +59,14 @@ bool prepare_image(void* user_data, FlImageLoadRequestId request_id, const FlIma
         return false;
     }
     glBindTexture(GL_TEXTURE_2D, self->atlas_tex);
-    tex_sub_image_strided(scratch, upload.x, upload.y, upload.w, upload.h, upload.stride, 4, GL_RGBA, upload.pixels);
+    tex_sub_image_strided(scratch, &(GpuTexUpload) { .x = upload.x,
+                                                      .y = upload.y,
+                                                      .w = upload.w,
+                                                      .h = upload.h,
+                                                      .stride = upload.stride,
+                                                      .bpp = 4,
+                                                      .format = GL_RGBA,
+                                                      .pixels = upload.pixels });
 
     return true;
 }
@@ -77,17 +88,21 @@ static void dispatch_cell(const GpuGl* gl, u32 pw, u32 ph) {
     gl->MemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 }
 
-// Rasterize quad_count quadratics into the cell at (x, y) of the R8 atlas texture target through glyph_prog.
-static void raster_coverage_cell(GpuShared* self, GLuint target, u32 x, u32 y, u32 pw, u32 ph, const f32* floats,
-                                 u32 quad_count) {
+typedef struct CurveSoup {
+    const f32* floats;
+    u32 quad_count;
+} CurveSoup;
+
+// Rasterize the soup's quadratics into cell of the R8 atlas texture target through glyph_prog.
+static void raster_coverage_cell(GpuShared* self, GLuint target, GpuAtlasCell cell, CurveSoup soup) {
     const GpuGl* gl = &self->gl;
-    upload_curves(self, floats, quad_count);
+    upload_curves(self, soup.floats, soup.quad_count);
     gl->UseProgram(self->glyph_prog);
-    gl->Uniform2ui(self->u_glyph_cell_origin, x, y);
-    gl->Uniform2ui(self->u_glyph_cell_size, pw, ph);
-    gl->Uniform1ui(self->u_glyph_seg_count, quad_count);
+    gl->Uniform2ui(self->u_glyph_cell_origin, cell.x, cell.y);
+    gl->Uniform2ui(self->u_glyph_cell_size, cell.w, cell.h);
+    gl->Uniform1ui(self->u_glyph_seg_count, soup.quad_count);
     gl->BindImageTexture(0, target, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
-    dispatch_cell(gl, pw, ph);
+    dispatch_cell(gl, cell.w, cell.h);
 }
 
 // Glyph preparation seam: place the glyph and rasterize its lowered outline into the R8 glyph atlas with one
@@ -101,8 +116,8 @@ void prepare_glyph(void* user_data, FlFontId font, u16 size, u32 glyph_index, co
         return;
     }
 
-    raster_coverage_cell(self, self->glyph_atlas_tex, glyph.entry->cell.x, glyph.entry->cell.y, glyph.cell.pw,
-                         glyph.cell.ph, glyph.floats, glyph.quad_count);
+    GpuAtlasCell cell = { glyph.entry->cell.x, glyph.entry->cell.y, glyph.cell.pw, glyph.cell.ph };
+    raster_coverage_cell(self, self->glyph_atlas_tex, cell, (CurveSoup) { glyph.floats, glyph.quad_count });
     self->glyph_dispatch_count++;
 
     fl_arena_rewind(self->frame_arena);
@@ -138,8 +153,7 @@ static void raster_svg_cell(void* backend, const GpuSvgEntry* entry, const FlVec
         gl->BindImageTexture(0, self->color_svg_atlas_tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
         dispatch_cell(gl, pw, ph);
     } else {
-        raster_coverage_cell(self, self->svg_atlas_tex, entry->cell.x, entry->cell.y, pw, ph, geom.floats,
-                             geom.quad_count);
+        raster_coverage_cell(self, self->svg_atlas_tex, entry->cell, (CurveSoup) { geom.floats, geom.quad_count });
     }
     self->cpu.svg_raster_count++;
 

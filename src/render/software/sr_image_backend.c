@@ -11,8 +11,12 @@
 // Adds one extra pixel at the end of each line and duplicates the last line, for bilinear filtering.
 // Handles strided input data (after border detection).
 
+static bool image_has_pixels(const InternalImageData* image_data) {
+    return image_data->data && image_data->width > 0 && image_data->height > 0;
+}
+
 static void pad_image_for_bilinear(InternalImageData* image_data, FlArena* arena) {
-    if (!image_data->data || image_data->width <= 0 || image_data->height <= 0) {
+    if (!image_has_pixels(image_data)) {
         return;
     }
 
@@ -78,12 +82,56 @@ static void deinterleave_image(InternalImageData* image_data, FlArena* arena) {
     u8* b_buffer = g_buffer + pixel_count;
     u8* a_buffer = (source_channels == 4) ? b_buffer + pixel_count : nullptr;
 
-    sr_deinterleave_pixels(image_data->data, r_buffer, g_buffer, b_buffer, a_buffer, pixel_count, source_channels,
-                           source_channels == 4);
+    const PlanarPlanes planes = {
+        .r = r_buffer,
+        .g = g_buffer,
+        .b = b_buffer,
+        .a = a_buffer,
+        .keep_alpha = source_channels == 4,
+    };
+    sr_deinterleave_pixels(image_data->data, pixel_count, source_channels, &planes);
 
     image_data->data = new_data;
     image_data->format = FlImageFormat_Deinterleaved;
     image_data->stride = image_data->padded_width * source_channels;
+}
+
+static FlImageFormat decoded_image_format(int channels) {
+    if (channels == 1) {
+        return FlImageFormat_Alpha;
+    }
+    return (channels == 3) ? FlImageFormat_RGB : FlImageFormat_RGBA;
+}
+
+static InternalImageData internal_image_from_decoded(const FlImageDecodeResult* decoded) {
+    return (InternalImageData) {
+        .data = decoded->pixels,
+        .width = decoded->width,
+        .height = decoded->height,
+        .padded_width = decoded->width,
+        .padded_height = decoded->height,
+        .stride = decoded->stride,
+        .channels = decoded->channels,
+        .format = decoded_image_format(decoded->channels),
+        .status = VFS_STATE_SUCCESS,
+    };
+}
+
+static FlImageLoadOptions load_options_from_request(const FlImageLoadRequest* request, FlImageFormat target_format) {
+    return (FlImageLoadOptions) {
+        .target_width = request->decode_options.target_width,
+        .target_height = request->decode_options.target_height,
+        .svg_scale_factor = request->decode_options.svg_scale_factor,
+        .resize_filter = (request->decode_options.resize_filter == ImageDecodeResizeFilter_Nearest)
+                             ? FlResizeFilter_Nearest
+                             : FlResizeFilter_Linear,
+        .background_mode = (request->thumbnail_options.background_mode == ImageDecodeBackgroundMode_Tint)
+                               ? FlBackgroundMode_Tint
+                               : FlBackgroundMode_Regular,
+        .svg_preserve_aspect_ratio = request->decode_options.preserve_aspect_ratio,
+        .detect_black_border = request->thumbnail_options.detect_black_border,
+        .format = target_format,
+    };
 }
 
 // SW backend prepare_image seam. Runs on a job worker thread after image_decode() completes.
@@ -98,19 +146,7 @@ bool sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const Fl
         return false;
     }
 
-    InternalImageData temp_data = {
-        .data = decoded->pixels,
-        .width = decoded->width,
-        .height = decoded->height,
-        .padded_width = decoded->width,
-        .padded_height = decoded->height,
-        .stride = decoded->stride,
-        .channels = decoded->channels,
-        .format = (decoded->channels == 1)   ? FlImageFormat_Alpha
-                  : (decoded->channels == 3) ? FlImageFormat_RGB
-                                             : FlImageFormat_RGBA,
-        .status = VFS_STATE_SUCCESS,
-    };
+    InternalImageData temp_data = internal_image_from_decoded(decoded);
 
     pad_image_for_bilinear(&temp_data, scratch);
 
@@ -118,9 +154,6 @@ bool sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const Fl
     FlImageFormat target_format = FlImageFormat_Default;
     if (request->thumbnail_options.background_mode == ImageDecodeBackgroundMode_Regular) {
         target_format = FlImageFormat_Deinterleaved;
-    }
-
-    if (target_format == FlImageFormat_Deinterleaved) {
         deinterleave_image(&temp_data, scratch);
     }
 
@@ -137,21 +170,7 @@ bool sw_prepare_image(void* user_data, FlImageLoadRequestId request_id, const Fl
     entry->public_data.height = temp_data.height;
     entry->public_data.channels = temp_data.channels;
 
-    FlImageLoadOptions load_options = {
-        .target_width = request->decode_options.target_width,
-        .target_height = request->decode_options.target_height,
-        .svg_scale_factor = request->decode_options.svg_scale_factor,
-        .resize_filter = (request->decode_options.resize_filter == ImageDecodeResizeFilter_Nearest)
-                             ? FlResizeFilter_Nearest
-                             : FlResizeFilter_Linear,
-        .background_mode = (request->thumbnail_options.background_mode == ImageDecodeBackgroundMode_Tint)
-                               ? FlBackgroundMode_Tint
-                               : FlBackgroundMode_Regular,
-        .svg_preserve_aspect_ratio = request->decode_options.preserve_aspect_ratio,
-        .detect_black_border = request->thumbnail_options.detect_black_border,
-        .format = target_format,
-    };
-    entry->options = load_options;
+    entry->options = load_options_from_request(request, target_format);
     entry->status = VFS_STATE_SUCCESS;
     entry->mount = request->mount;
     entry->relative_path = image_cache_copy_string(request->relative_path);

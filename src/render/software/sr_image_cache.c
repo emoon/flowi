@@ -205,63 +205,80 @@ void image_cache_destroy(ImageCache* self) {
     (void)self;
 }
 
-void image_cache_update(ImageCache* self, u64 frame_counter) {
-    atomic_store(&self->current_frame, frame_counter);
-
-    // Drain the deferred-free list. Runs on the render thread before this frame's image_cache_get_data calls,
-    // so blocks queued by earlier frames are no longer being read.
+// Drain the deferred-free list. Runs on the render thread before this frame's image_cache_get_data calls,
+// so blocks queued by earlier frames are no longer being read.
+static void image_cache_drain_pending_free(ImageCache* self) {
     mutex_lock(&self->mutex);
     for (u32 i = 0; i < self->pending_free_count; i++) {
         tlsf_free(self->tlsf, self->pending_free[i]);
     }
     self->pending_free_count = 0;
     mutex_unlock(&self->mutex);
+}
+
+static bool image_cache_remove_evicted(ImageCache* self, ImageHandle handle) {
+    EvictedImageEntry** evicted_ptr = hashmap_get(&self->evicted_lookup, handle);
+    if (!evicted_ptr) {
+        return false;
+    }
+
+    // FlString is managed by string_allocator, no need to free explicitly
+    pool_free(&self->evicted_pool, *evicted_ptr);
+    hashmap_remove(&self->evicted_lookup, handle);
+    return true;
+}
+
+// Called with the cache mutex held. Returns the number of entries removed.
+static int image_cache_remove_stale_evicted(ImageCache* self) {
+    arena_scratch_auto(temp);
+
+    const u32 evicted_count = hashmap_count(&self->evicted_lookup);
+    if (evicted_count == 0) {
+        return 0;
+    }
+
+    const u64 current = atomic_load(&self->current_frame);
+    const u64 cleanup_threshold = self->config.evicted_cleanup_frames;
+
+    fixed_array(ImageHandle) to_remove;
+    fixed_array_new(&to_remove, temp.arena, evicted_count);
+
+    // Collect keys to remove (to avoid modifying hashmap during iteration)
+    for_each_hashmap(&self->evicted_lookup, handle, evicted_ptr) {
+        if (current - (*evicted_ptr)->eviction_frame > cleanup_threshold) {
+            fixed_array_add(&to_remove, *handle);
+        }
+    }
+
+    int removed_count = 0;
+    for_each_fixed_array(handle, &to_remove) {
+        removed_count += image_cache_remove_evicted(self, handle) ? 1 : 0;
+    }
+
+    return removed_count;
+}
+
+static void image_cache_cleanup_evicted(ImageCache* self) {
+    mutex_lock(&self->mutex);
+
+    const int removed_count = image_cache_remove_stale_evicted(self);
+    if (removed_count > 0) {
+        log_debug("Evicted cache cleanup: Removed %d stale entries (threshold: %llu frames)", removed_count,
+                  (u64)self->config.evicted_cleanup_frames);
+    }
+
+    stats_inc(self->stats, self->stat_ids.eviction_cleanup_runs);
+    mutex_unlock(&self->mutex);
+}
+
+void image_cache_update(ImageCache* self, u64 frame_counter) {
+    atomic_store(&self->current_frame, frame_counter);
+
+    image_cache_drain_pending_free(self);
 
     // Cleanup runs every 600 frames (10 seconds at 60fps)
-    if (frame_counter % 600 == 0) {
-        if (self->config.enable_evicted_cache) {
-            mutex_lock(&self->mutex);
-
-            u64 current = atomic_load(&self->current_frame);
-            u64 cleanup_threshold = self->config.evicted_cleanup_frames;
-            int removed_count = 0;
-
-            arena_scratch_auto(temp);
-
-            u32 evicted_count = hashmap_count(&self->evicted_lookup);
-            if (evicted_count > 0) {
-                fixed_array(ImageHandle) to_remove;
-                fixed_array_new(&to_remove, temp.arena, evicted_count);
-
-                // Collect keys to remove (to avoid modifying hashmap during iteration)
-                for_each_hashmap(&self->evicted_lookup, handle, evicted_ptr) {
-                    EvictedImageEntry* evicted = *evicted_ptr;
-                    u64 age = current - evicted->eviction_frame;
-                    if (age > cleanup_threshold) {
-                        fixed_array_add(&to_remove, *handle);
-                    }
-                }
-
-                for_each_fixed_array(handle, &to_remove) {
-                    EvictedImageEntry** evicted_ptr = hashmap_get(&self->evicted_lookup, handle);
-                    if (evicted_ptr) {
-                        EvictedImageEntry* evicted = *evicted_ptr;
-                        // FlString is managed by string_allocator, no need to free explicitly
-                        pool_free(&self->evicted_pool, evicted);
-                        hashmap_remove(&self->evicted_lookup, handle);
-                        removed_count++;
-                    }
-                }
-
-                if (removed_count > 0) {
-                    log_debug("Evicted cache cleanup: Removed %d stale entries (threshold: %llu frames)", removed_count,
-                              cleanup_threshold);
-                }
-            }
-
-            stats_inc(self->stats, self->stat_ids.eviction_cleanup_runs);
-            mutex_unlock(&self->mutex);
-        }
+    if (frame_counter % 600 == 0 && self->config.enable_evicted_cache) {
+        image_cache_cleanup_evicted(self);
     }
 }
 
@@ -334,6 +351,10 @@ static u32 evict_batch(ImageCache* self) {
     return batch.count;
 }
 
+static bool image_cache_cannot_evict_more(const ImageCache* self, u32 evicted) {
+    return evicted == 0 || hashmap_count(&self->handle_lookup) == 0;
+}
+
 ImageCacheEntry* image_cache_alloc_entry(InternalImageData* image) {
     ImageCache* self = atomic_load(&s_image_cache);
 
@@ -350,7 +371,7 @@ ImageCacheEntry* image_cache_alloc_entry(InternalImageData* image) {
     while (!data) {
         u32 evicted = evict_batch(self);
         data = tlsf_malloc(self->tlsf, alloc_size);
-        if (!data && (evicted == 0 || hashmap_count(&self->handle_lookup) == 0)) {
+        if (!data && image_cache_cannot_evict_more(self, evicted)) {
             log_error("Failed to allocate %zu bytes even after evicting all entries", alloc_size);
             stats_inc(self->stats, self->stat_ids.allocation_failures);
             mutex_unlock(&self->mutex);

@@ -116,7 +116,9 @@ static const char* gpu_shader_defines(void) {
     return buf;
 }
 
-int gpu_classify_sources(const char** out) {
+// The tile-pipeline passes (classify, raster) share every snippet but their body, which the caller appends.
+
+static int tile_pass_prefix(const char** out) {
     int n = 0;
     out[n++] = gpu_shader_preamble();
     out[n++] = gpu_glsl_shader_compat;
@@ -125,31 +127,35 @@ int gpu_classify_sources(const char** out) {
     out[n++] = gpu_glsl_kind_defs;
     out[n++] = gpu_glsl_drawcmd;
     out[n++] = gpu_glsl_segment;
+    return n;
+}
+
+int gpu_classify_sources(const char** out) {
+    int n = tile_pass_prefix(out);
     out[n++] = gpu_glsl_classify;
     return n;
 }
 
 int gpu_raster_sources(const char** out) {
-    int n = 0;
-    out[n++] = gpu_shader_preamble();
-    out[n++] = gpu_glsl_shader_compat;
-    out[n++] = gpu_shader_defines();
-    out[n++] = gpu_glsl_tile_defs;
-    out[n++] = gpu_glsl_kind_defs;
-    out[n++] = gpu_glsl_drawcmd;
-    out[n++] = gpu_glsl_segment;
+    int n = tile_pass_prefix(out);
     out[n++] = gpu_glsl_raster;
     return n;
 }
 
 // Glyph and color SVG are standalone coverage rasters: past the shared kernel they use none of the tile / atlas
 // constants, but they take the same #define preamble for its binding indices.
-int gpu_glyph_sources(const char** out) {
+
+static int coverage_raster_prefix(const char** out) {
     int n = 0;
     out[n++] = gpu_shader_preamble();
     out[n++] = gpu_glsl_shader_compat;
     out[n++] = gpu_shader_defines();
     out[n++] = gpu_glsl_coverage_kernel;
+    return n;
+}
+
+int gpu_glyph_sources(const char** out) {
+    int n = coverage_raster_prefix(out);
     out[n++] = gpu_glsl_glyph;
     return n;
 }
@@ -163,11 +169,7 @@ void gpu_shaders_test_force_color_svg_failure(bool enable) {
 }
 
 int gpu_color_svg_sources(const char** out) {
-    int n = 0;
-    out[n++] = gpu_shader_preamble();
-    out[n++] = gpu_glsl_shader_compat;
-    out[n++] = gpu_shader_defines();
-    out[n++] = gpu_glsl_coverage_kernel;
+    int n = coverage_raster_prefix(out);
     out[n++] = g_force_color_svg_failure ? "#error forced compile failure (test seam)\n" : gpu_glsl_color_svg;
     return n;
 }
