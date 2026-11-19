@@ -280,22 +280,13 @@ UTEST(log_file, path_converts_to_valid_cstr) {
     file_remove_directory_recursive_os(dir);
 }
 
-// The data dir, log file name and file-watcher queue default to neutral "flowi" values. A host override replaces
-// only the fields it sets, and fl_log_file_init takes the log file name from the app identity.
+// The log file name defaults to "flowi.log". An override replaces only the fields it sets, and fl_log_file_init
+// builds the log file from the overridden name.
 
-UTEST(app_identity, defaults_override_and_log_routing) {
-    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi")));
-    ASSERT_TRUE(fl_string_equals(app_identity_log_file_name(), FL_S("flowi.log")));
-    ASSERT_TRUE(fl_string_equals(app_identity_file_watcher_queue(), FL_S("org.flowi.filewatcher")));
+UTEST(log_file_names, override_routes_through_fl_log_file_init) {
+    log_file_set_names(string_empty(), FL_S("myapp.log"));
 
-    // A partial override changes only the non-empty fields.
-    app_identity_set(string_empty(), FL_S("myapp.log"), string_empty());
-    ASSERT_TRUE(fl_string_equals(app_identity_log_file_name(), FL_S("myapp.log")));
-    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi")));
-    ASSERT_TRUE(fl_string_equals(app_identity_file_watcher_queue(), FL_S("org.flowi.filewatcher")));
-
-    // fl_log_file_init builds the log file from the overridden name, so the override shows up on disk.
-    FlString dir = FL_S("/tmp/flowi_app_identity_test");
+    FlString dir = FL_S("/tmp/flowi_log_file_names_test");
     file_remove_directory_recursive_os(dir);
     ASSERT_TRUE(fl_log_file_init(dir));
     FlArena* path_arena = arena_new();
@@ -303,18 +294,31 @@ UTEST(app_identity, defaults_override_and_log_routing) {
     ASSERT_TRUE(fl_string_equals(fl_log_file_get_path(), expected));
     fl_arena_destroy(path_arena);
     file_remove_directory_recursive_os(dir);
-
-    app_identity_set(string_empty(), FL_S("other.log"), string_empty());
-    ASSERT_TRUE(fl_string_equals(app_identity_log_file_name(), FL_S("other.log")));
-    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi")));
 }
 
-UTEST(app_identity, data_dir_name_routes_through_seam) {
-    app_identity_set(FL_S(".flowi_datadirtest"), string_empty(), string_empty());
-    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi_datadirtest")));
+UTEST(log_file_names, reset_restores_the_default) {
+    log_file_set_names(string_empty(), FL_S("other.log"));
+    log_file_reset_names();
 
-    app_identity_set(FL_S(".flowi_other"), string_empty(), string_empty());
-    ASSERT_TRUE(fl_string_equals(app_identity_data_dir_name(), FL_S(".flowi_other")));
+    FlString dir = FL_S("/tmp/flowi_log_file_names_default_test");
+    file_remove_directory_recursive_os(dir);
+    ASSERT_TRUE(fl_log_file_init(dir));
+    FlArena* path_arena = arena_new();
+    FlString expected = file_build_path_os(path_arena, dir, FL_S("flowi.log"));
+    ASSERT_TRUE(fl_string_equals(fl_log_file_get_path(), expected));
+    fl_arena_destroy(path_arena);
+    file_remove_directory_recursive_os(dir);
+}
+
+UTEST(file_watcher_queue_label, empty_keeps_the_current_label_and_non_empty_replaces_it) {
+    FileWatcherRegistry* registry = get_file_watcher_registry();
+    file_watcher_set_queue_label(FL_S("org.test.first"));
+
+    file_watcher_set_queue_label(string_empty());
+    ASSERT_TRUE(fl_string_equals(registry->queue_label, FL_S("org.test.first")));
+
+    file_watcher_set_queue_label(FL_S("org.test.second"));
+    ASSERT_TRUE(fl_string_equals(registry->queue_label, FL_S("org.test.second")));
 }
 
 // Stopping a watcher leaves every other watcher's state where it is. Platform layers (FSEvents on macOS) keep the

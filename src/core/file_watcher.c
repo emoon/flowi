@@ -20,6 +20,7 @@ void file_watcher_init(void) {
     g_registry.arena = arena_new();
     fixed_array_new(&g_registry.watchers, g_registry.arena, 16);
     g_registry.next_handle = 1; // Start from 1, 0 is invalid
+    g_registry.queue_label = FL_S("org.flowi.filewatcher");
     mutex_init(&g_registry.lock);
 
     logc_info(FW_ID, "File watcher system initialized");
@@ -86,6 +87,14 @@ static void remove_watcher_state(FlFileWatcherHandle handle) {
             return;
         }
     }
+}
+
+void file_watcher_set_queue_label(FlString label) {
+    if (label.length == 0) {
+        return;
+    }
+    mutex_lock_auto(&g_registry.lock);
+    g_registry.queue_label = fl_string_copy(g_registry.arena, label);
 }
 
 void file_watcher_destroy(void) {

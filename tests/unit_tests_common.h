@@ -56,7 +56,6 @@
 #include "core/file_watcher.h"
 #include "core/stats.h"
 #include "core/file_watcher_internal.h"
-#include "core/app_identity.h"
 #include "ui/font_cache.h"
 #include <flowi/ui/cursor.h>
 #include <flowi/ui/feedback.h>

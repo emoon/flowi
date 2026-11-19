@@ -38,6 +38,11 @@ typedef u32 FileWatcherCallbackHandle;
 // registry lock exists by the time two mounts race for it.
 void file_watcher_init(void);
 
+// Sets the label of the macOS dispatch queue behind each later watch (default "org.flowi.filewatcher"). An empty
+// label keeps the current one. Needs the registry, so call it after file_watcher_init; the registry's destroy
+// restores the default.
+void file_watcher_set_queue_label(FlString label);
+
 // Stops every watcher still running and releases the registry.
 void file_watcher_destroy(void);
 

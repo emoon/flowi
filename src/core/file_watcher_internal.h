@@ -59,6 +59,7 @@ typedef struct FileWatcherRegistry {
     fixed_array(FileWatcherState) watchers;
     FlFileWatcherHandle next_handle;
     Mutex lock; // Protects all registry operations (handle allocation, arena, watcher array)
+    FlString queue_label; // macOS dispatch queue label; lives in arena
 } FileWatcherRegistry;
 
 // Internal functions for platform implementations

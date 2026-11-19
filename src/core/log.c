@@ -1,5 +1,4 @@
 #include "log.h"
-#include "app_identity.h"
 #include "arena.h"
 #include "assert.h"
 #include "once.h"
@@ -42,6 +41,12 @@ static OnceFlag s_log_file_mutex_initialized;
 
 // Persistent arena for log file path (lives for duration of program)
 static FlArena* s_log_arena = nullptr;
+
+// The log directory under $HOME and the log file base name. The overrides live in s_log_arena.
+#define DEFAULT_LOG_DATA_DIR_NAME FL_S_(".flowi")
+#define DEFAULT_LOG_FILE_NAME FL_S_("flowi.log")
+static FlString s_log_data_dir_name = DEFAULT_LOG_DATA_DIR_NAME;
+static FlString s_log_file_name = DEFAULT_LOG_FILE_NAME;
 
 static void ensure_channel_mutex_initialized(void) {
     if (once_begin(&s_channel_mutex_initialized)) {
@@ -160,7 +165,7 @@ static bool resolve_log_dir(FlString base_dir, FlString* dir_path) {
         return false;
     }
 
-    *dir_path = file_build_path_os(s_log_arena, string_from_cstr(home), app_identity_data_dir_name());
+    *dir_path = file_build_path_os(s_log_arena, string_from_cstr(home), s_log_data_dir_name);
     return true;
 }
 
@@ -202,6 +207,23 @@ static bool open_log_file(FlString log_path) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void log_file_set_names(FlString data_dir_name, FlString log_file_name) {
+    if (s_log_arena == nullptr) {
+        s_log_arena = arena_new();
+    }
+    if (data_dir_name.length > 0) {
+        s_log_data_dir_name = fl_string_copy(s_log_arena, data_dir_name);
+    }
+    if (log_file_name.length > 0) {
+        s_log_file_name = fl_string_copy(s_log_arena, log_file_name);
+    }
+}
+
+void log_file_reset_names(void) {
+    s_log_data_dir_name = (FlString) DEFAULT_LOG_DATA_DIR_NAME;
+    s_log_file_name = (FlString) DEFAULT_LOG_FILE_NAME;
+}
+
 bool fl_log_file_init(FlString base_dir) {
     ensure_log_file_mutex_initialized();
 
@@ -218,7 +240,7 @@ bool fl_log_file_init(FlString base_dir) {
         return false;
     }
 
-    FlString log_name = app_identity_log_file_name();
+    FlString log_name = s_log_file_name;
     FlString log_path = file_build_path_os(s_log_arena, dir_path, log_name);
     rotate_log_file(dir_path, log_name, log_path);
 
