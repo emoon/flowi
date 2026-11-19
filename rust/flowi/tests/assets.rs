@@ -39,19 +39,19 @@ fn count_ink(pv: &PixelView) -> (usize, u16) {
     (ink, brightest)
 }
 
+fn is_red(r: u8, g: u8, b: u8) -> bool {
+    r > 150 && g < 100 && b < 100
+}
+
 // The test paints the 4x4 PNG at (8, 8); ui scale is 1.0 headless.
 fn has_red_near_origin(pv: &PixelView) -> bool {
     let w = pv.width as usize;
-    for y in 4..20 {
-        for x in 4..20 {
+    (4..20).any(|y| {
+        (4..20).any(|x| {
             let i = (y * w + x) * 3;
-            let (r, g, b) = (pv.pixels[i], pv.pixels[i + 1], pv.pixels[i + 2]);
-            if r > 150 && g < 100 && b < 100 {
-                return true;
-            }
-        }
-    }
-    false
+            is_red(pv.pixels[i], pv.pixels[i + 1], pv.pixels[i + 2])
+        })
+    })
 }
 
 #[test]

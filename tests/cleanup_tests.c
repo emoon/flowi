@@ -151,31 +151,42 @@ UTEST(cleanup, arena_temp_auto_always_cleans) {
     fl_arena_destroy(test_arena);
 }
 
-UTEST(cleanup, arena_scratch_auto_loop_control) {
-    FlArena* scratch_arena = fl_arena_scratch_begin().arena;
-    u64 start_pos = scratch_arena->pos;
+static void expect_scratch_allocation(int* utest_result, FlArena* arena) {
+    char* buffer = arena_alloc_array(arena, char, 100);
+    ASSERT_TRUE(buffer != nullptr);
+}
 
+static void scratch_loop_with_break(int* utest_result) {
     for (int i = 0; i < 10; i++) {
         arena_scratch_auto(temp);
-        char* buffer = arena_alloc_array(temp.arena, char, 100);
-        ASSERT_TRUE(buffer != nullptr);
+        expect_scratch_allocation(utest_result, temp.arena);
 
         if (i == 5) {
             break;
         }
     }
+}
 
-    ASSERT_EQ(scratch_arena->pos, start_pos);
-
+static void scratch_loop_with_continue(int* utest_result) {
     for (int i = 0; i < 10; i++) {
         arena_scratch_auto(temp);
-        char* buffer = arena_alloc_array(temp.arena, char, 100);
-        ASSERT_TRUE(buffer != nullptr);
+        expect_scratch_allocation(utest_result, temp.arena);
 
         if (i % 2 == 0) {
             continue;
         }
     }
+}
+
+UTEST(cleanup, arena_scratch_auto_loop_control) {
+    FlArena* scratch_arena = fl_arena_scratch_begin().arena;
+    u64 start_pos = scratch_arena->pos;
+
+    scratch_loop_with_break(utest_result);
+
+    ASSERT_EQ(scratch_arena->pos, start_pos);
+
+    scratch_loop_with_continue(utest_result);
 
     ASSERT_EQ(scratch_arena->pos, start_pos);
 }

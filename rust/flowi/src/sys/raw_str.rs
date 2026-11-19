@@ -155,16 +155,8 @@ impl RawStr {
     /// # Safety
     /// arena must be a live arena for the call, and nothing checks that it is.
     pub unsafe fn in_arena(arena: *mut Arena, s: &str) -> RawStr {
-        if s.is_empty() {
-            return RawStr::EMPTY;
-        }
-        // SAFETY: arena is live for the call (the caller's contract), so the allocation returns s.len()
-        // writable, uniquely-owned bytes; s is a live &str and the two regions cannot overlap.
-        unsafe {
-            let buf = fl_arena_alloc_raw(arena, s.len() as u64, 1) as *mut u8;
-            core::ptr::copy_nonoverlapping(s.as_ptr(), buf, s.len());
-            RawStr::packed_in_arena(buf as *const c_char, s)
-        }
+        // SAFETY: the caller guarantees arena is live for the call.
+        unsafe { RawStr::copy_in_arena(arena, s, false) }
     }
 
     /// Copy s into arena NUL-terminated: the terminator is written but excluded from the
@@ -173,16 +165,26 @@ impl RawStr {
     /// # Safety
     /// arena must be a live arena for the call, and nothing checks that it is.
     pub unsafe fn in_arena_nul(arena: *mut Arena, s: &str) -> RawStr {
+        // SAFETY: the caller guarantees arena is live for the call.
+        unsafe { RawStr::copy_in_arena(arena, s, true) }
+    }
+
+    /// # Safety
+    /// arena must be a live arena for the call.
+    unsafe fn copy_in_arena(arena: *mut Arena, s: &str, nul_terminate: bool) -> RawStr {
         if s.is_empty() {
             return RawStr::EMPTY;
         }
         // SAFETY: arena is live for the call (the caller's contract), so the allocation returns
-        // s.len() + 1 writable, uniquely-owned bytes; s is a live &str that cannot overlap them, and
-        // the terminator is written at the last of the requested bytes, which is in bounds.
+        // the requested writable, uniquely-owned bytes; s is a live &str that cannot overlap them,
+        // and the terminator, when written, lands on the last requested byte, which is in bounds.
         unsafe {
-            let buf = fl_arena_alloc_raw(arena, (s.len() + 1) as u64, 1) as *mut u8;
+            let size = s.len() + usize::from(nul_terminate);
+            let buf = fl_arena_alloc_raw(arena, size as u64, 1) as *mut u8;
             core::ptr::copy_nonoverlapping(s.as_ptr(), buf, s.len());
-            *buf.add(s.len()) = 0;
+            if nul_terminate {
+                *buf.add(s.len()) = 0;
+            }
             RawStr::packed_in_arena(buf as *const c_char, s)
         }
     }

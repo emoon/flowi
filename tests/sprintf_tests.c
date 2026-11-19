@@ -6,14 +6,23 @@
 #include <limits.h>
 #include <string.h>
 
+#define EXPECT_SPRINTF(arena, expected, ...)                  \
+    do {                                                      \
+        FlString formatted_ = fl_sprintf_arena(arena, __VA_ARGS__); \
+        ASSERT_STREQ(formatted_.data, expected);              \
+    } while (0)
+
+static void expect_text(int* utest_result, FlString result, const char* expected) {
+    ASSERT_EQ((u64)result.length, strlen(expected));
+    ASSERT_STREQ(result.data, expected);
+}
+
 UTEST(sprintf, basic_format) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     FlString result = fl_sprintf_arena(arena, "Hello %s, number: %d", "World", 42);
 
-    const char* expected = "Hello World, number: 42";
-    ASSERT_EQ((u64)result.length, strlen(expected));
-    ASSERT_STREQ(result.data, expected);
+    expect_text(utest_result, result, "Hello World, number: 42");
 
     fl_arena_destroy(arena);
 }
@@ -24,9 +33,7 @@ UTEST(sprintf, string_struct_single) {
     FlString test_string = FL_S("TestString");
     FlString result = fl_sprintf_arena(arena, "FlString: %S", test_string);
 
-    const char* expected = "FlString: TestString";
-    ASSERT_EQ((u64)result.length, strlen(expected));
-    ASSERT_STREQ(result.data, expected);
+    expect_text(utest_result, result, "FlString: TestString");
 
     fl_arena_destroy(arena);
 }
@@ -38,9 +45,7 @@ UTEST(sprintf, string_struct_multiple) {
     FlString str2 = FL_S("Second");
     FlString result = fl_sprintf_arena(arena, "%S and %S", str1, str2);
 
-    const char* expected = "First and Second";
-    ASSERT_EQ((u64)result.length, strlen(expected));
-    ASSERT_STREQ(result.data, expected);
+    expect_text(utest_result, result, "First and Second");
 
     fl_arena_destroy(arena);
 }
@@ -51,9 +56,7 @@ UTEST(sprintf, mixed_format_specifiers) {
     FlString name = FL_S("Alice");
     FlString result = fl_sprintf_arena(arena, "Name: %S, Age: %d", name, 25);
 
-    const char* expected = "Name: Alice, Age: 25";
-    ASSERT_EQ((u64)result.length, strlen(expected));
-    ASSERT_STREQ(result.data, expected);
+    expect_text(utest_result, result, "Name: Alice, Age: 25");
 
     fl_arena_destroy(arena);
 }
@@ -64,9 +67,7 @@ UTEST(sprintf, empty_string_struct) {
     FlString empty_string = { .data = "", .length = 0 };
     FlString result = fl_sprintf_arena(arena, "Empty: '%S'", empty_string);
 
-    const char* expected = "Empty: ''";
-    ASSERT_EQ((u64)result.length, strlen(expected));
-    ASSERT_STREQ(result.data, expected);
+    expect_text(utest_result, result, "Empty: ''");
 
     fl_arena_destroy(arena);
 }
@@ -261,17 +262,10 @@ UTEST(sprintf_std, integer_formats) {
 UTEST(sprintf_std, width_precision) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    FlString result = fl_sprintf_arena(arena, "%5d %5d", 42, -17);
-    ASSERT_STREQ(result.data, "   42   -17");
-
-    result = fl_sprintf_arena(arena, "%05d %05d", 42, -17);
-    ASSERT_STREQ(result.data, "00042 -0017");
-
-    result = fl_sprintf_arena(arena, "%.5d %.5d", 42, -17);
-    ASSERT_STREQ(result.data, "00042 -00017");
-
-    result = fl_sprintf_arena(arena, "%10.5d", 42);
-    ASSERT_STREQ(result.data, "     00042");
+    EXPECT_SPRINTF(arena, "   42   -17", "%5d %5d", 42, -17);
+    EXPECT_SPRINTF(arena, "00042 -0017", "%05d %05d", 42, -17);
+    EXPECT_SPRINTF(arena, "00042 -00017", "%.5d %.5d", 42, -17);
+    EXPECT_SPRINTF(arena, "     00042", "%10.5d", 42);
 
     fl_arena_destroy(arena);
 }
@@ -409,17 +403,10 @@ UTEST(sprintf_edge, extreme_values) {
 UTEST(sprintf_edge, width_from_arg) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    FlString result = fl_sprintf_arena(arena, "%*d", 5, 42);
-    ASSERT_STREQ(result.data, "   42");
-
-    result = fl_sprintf_arena(arena, "%*d", -5, 42);
-    ASSERT_STREQ(result.data, "42");
-
-    result = fl_sprintf_arena(arena, "%.*f", 2, 3.14159);
-    ASSERT_STREQ(result.data, "3.14");
-
-    result = fl_sprintf_arena(arena, "%*.*f", 10, 2, 3.14159);
-    ASSERT_STREQ(result.data, "      3.14");
+    EXPECT_SPRINTF(arena, "   42", "%*d", 5, 42);
+    EXPECT_SPRINTF(arena, "42", "%*d", -5, 42);
+    EXPECT_SPRINTF(arena, "3.14", "%.*f", 2, 3.14159);
+    EXPECT_SPRINTF(arena, "      3.14", "%*.*f", 10, 2, 3.14159);
 
     fl_arena_destroy(arena);
 }

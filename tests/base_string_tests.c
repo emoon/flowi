@@ -2,6 +2,44 @@
 #include <core/arena.h>
 #include <core/string.h>
 
+static void expect_begins_with(int* utest_result, FlString str, FlString prefix, bool want) {
+    ASSERT_EQ(fl_string_begins_with(str, prefix), want);
+}
+
+static void expect_contains(int* utest_result, FlString str, FlString needle, bool want) {
+    ASSERT_EQ(fl_string_contains(str, needle), want);
+}
+
+static void expect_find_char(int* utest_result, FlString str, char c, i64 want) {
+    ASSERT_EQ(fl_string_find_char(str, c), want);
+}
+
+static void expect_index(int* utest_result, i64 got, i64 want) {
+    ASSERT_EQ(got, want);
+}
+
+static void expect_find_substr(int* utest_result, FlString str, FlString needle, i64 want) {
+    ASSERT_EQ(fl_string_find_substr(str, needle), want);
+}
+
+static void expect_string(int* utest_result, FlString got, FlString want) {
+    ASSERT_TRUE(fl_string_equals(got, want));
+}
+
+static void expect_string_length(int* utest_result, FlString got, u64 want) {
+    ASSERT_EQ((u64)got.length, want);
+}
+
+static void expect_sb_text(int* utest_result, FlStringBuilder sb, FlString prefix, u64 length) {
+    FlString result = fl_sb_to_string(sb);
+    ASSERT_EQ((u64)result.length, length);
+    ASSERT_TRUE(fl_string_begins_with(result, prefix));
+}
+
+static void expect_sb_length(int* utest_result, FlStringBuilder sb, u64 want) {
+    ASSERT_EQ(fl_sb_length(sb), want);
+}
+
 UTEST(base_string, string_begins_with_basic) {
     FlString str = FL_S("hello world");
     FlString prefix1 = FL_S("hello");
@@ -10,11 +48,11 @@ UTEST(base_string, string_begins_with_basic) {
     FlString prefix4 = FL_S("hello world");
     FlString prefix5 = FL_S("hello world!");
 
-    ASSERT_TRUE(fl_string_begins_with(str, prefix1));
-    ASSERT_FALSE(fl_string_begins_with(str, prefix2));
-    ASSERT_TRUE(fl_string_begins_with(str, prefix3));
-    ASSERT_TRUE(fl_string_begins_with(str, prefix4));
-    ASSERT_FALSE(fl_string_begins_with(str, prefix5));
+    expect_begins_with(utest_result, str, prefix1, true);
+    expect_begins_with(utest_result, str, prefix2, false);
+    expect_begins_with(utest_result, str, prefix3, true);
+    expect_begins_with(utest_result, str, prefix4, true);
+    expect_begins_with(utest_result, str, prefix5, false);
 }
 
 UTEST(base_string, string_begins_with_protocols) {
@@ -27,21 +65,21 @@ UTEST(base_string, string_begins_with_protocols) {
     FlString https_prefix = FL_S("https://");
     FlString ftp_prefix = FL_S("ftp://");
 
-    ASSERT_TRUE(fl_string_begins_with(http_url, http_prefix));
-    ASSERT_FALSE(fl_string_begins_with(http_url, https_prefix));
-    ASSERT_FALSE(fl_string_begins_with(http_url, ftp_prefix));
+    expect_begins_with(utest_result, http_url, http_prefix, true);
+    expect_begins_with(utest_result, http_url, https_prefix, false);
+    expect_begins_with(utest_result, http_url, ftp_prefix, false);
 
-    ASSERT_TRUE(fl_string_begins_with(https_url, https_prefix));
-    ASSERT_FALSE(fl_string_begins_with(https_url, http_prefix));
-    ASSERT_FALSE(fl_string_begins_with(https_url, ftp_prefix));
+    expect_begins_with(utest_result, https_url, https_prefix, true);
+    expect_begins_with(utest_result, https_url, http_prefix, false);
+    expect_begins_with(utest_result, https_url, ftp_prefix, false);
 
-    ASSERT_TRUE(fl_string_begins_with(ftp_url, ftp_prefix));
-    ASSERT_FALSE(fl_string_begins_with(ftp_url, http_prefix));
-    ASSERT_FALSE(fl_string_begins_with(ftp_url, https_prefix));
+    expect_begins_with(utest_result, ftp_url, ftp_prefix, true);
+    expect_begins_with(utest_result, ftp_url, http_prefix, false);
+    expect_begins_with(utest_result, ftp_url, https_prefix, false);
 
-    ASSERT_FALSE(fl_string_begins_with(file_path, http_prefix));
-    ASSERT_FALSE(fl_string_begins_with(file_path, https_prefix));
-    ASSERT_FALSE(fl_string_begins_with(file_path, ftp_prefix));
+    expect_begins_with(utest_result, file_path, http_prefix, false);
+    expect_begins_with(utest_result, file_path, https_prefix, false);
+    expect_begins_with(utest_result, file_path, ftp_prefix, false);
 }
 
 UTEST(base_string, string_begins_with_edge_cases) {
@@ -49,16 +87,16 @@ UTEST(base_string, string_begins_with_edge_cases) {
     FlString normal_str = FL_S("test");
     FlString empty_prefix = FL_S("");
 
-    ASSERT_TRUE(fl_string_begins_with(empty_str, empty_prefix));
-    ASSERT_FALSE(fl_string_begins_with(empty_str, normal_str));
-    ASSERT_TRUE(fl_string_begins_with(normal_str, empty_prefix));
+    expect_begins_with(utest_result, empty_str, empty_prefix, true);
+    expect_begins_with(utest_result, empty_str, normal_str, false);
+    expect_begins_with(utest_result, normal_str, empty_prefix, true);
 }
 
 UTEST(string_builder, sb_create_and_length) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlStringBuilder sb = fl_sb_create(arena);
 
-    ASSERT_EQ(fl_sb_length(sb), 0UL);
+    expect_sb_length(utest_result, sb, 0UL);
     ASSERT_EQ(sb.arena, arena);
 
     fl_arena_destroy(arena);
@@ -69,14 +107,12 @@ UTEST(string_builder, fl_sb_append_cstr) {
     FlStringBuilder sb = fl_sb_create(arena);
 
     sb = fl_sb_append_cstr(sb, "Hello");
-    ASSERT_EQ(fl_sb_length(sb), 5UL);
+    expect_sb_length(utest_result, sb, 5UL);
 
     sb = fl_sb_append_cstr(sb, " World");
-    ASSERT_EQ(fl_sb_length(sb), 11UL);
+    expect_sb_length(utest_result, sb, 11UL);
 
-    FlString result = fl_sb_to_string(sb);
-    ASSERT_EQ((u64)result.length, 11UL);
-    ASSERT_TRUE(fl_string_begins_with(result, FL_S("Hello World")));
+    expect_sb_text(utest_result, sb, FL_S("Hello World"), 11UL);
 
     fl_arena_destroy(arena);
 }
@@ -89,13 +125,12 @@ UTEST(string_builder, fl_sb_append_string) {
     FlString world = FL_S(" World");
 
     sb = fl_sb_append_string(sb, hello);
-    ASSERT_EQ(fl_sb_length(sb), 5UL);
+    expect_sb_length(utest_result, sb, 5UL);
 
     sb = fl_sb_append_string(sb, world);
-    ASSERT_EQ(fl_sb_length(sb), 11UL);
+    expect_sb_length(utest_result, sb, 11UL);
 
-    FlString result = fl_sb_to_string(sb);
-    ASSERT_EQ((u64)result.length, 11UL);
+    expect_string_length(utest_result, fl_sb_to_string(sb), 11UL);
 
     fl_arena_destroy(arena);
 }
@@ -108,11 +143,9 @@ UTEST(string_builder, fl_sb_append_char) {
     sb = fl_sb_append_char(sb, 'B');
     sb = fl_sb_append_char(sb, 'C');
 
-    ASSERT_EQ(fl_sb_length(sb), 3UL);
+    expect_sb_length(utest_result, sb, 3UL);
 
-    FlString result = fl_sb_to_string(sb);
-    ASSERT_EQ((u64)result.length, 3UL);
-    ASSERT_TRUE(fl_string_begins_with(result, FL_S("ABC")));
+    expect_sb_text(utest_result, sb, FL_S("ABC"), 3UL);
 
     fl_arena_destroy(arena);
 }
@@ -122,7 +155,7 @@ UTEST(string_builder, fl_sb_appendf) {
     FlStringBuilder sb = fl_sb_create(arena);
 
     sb = fl_sb_appendf(sb, "Number: %d", 42);
-    ASSERT_EQ(fl_sb_length(sb), 10UL);
+    expect_sb_length(utest_result, sb, 10UL);
 
     sb = fl_sb_appendf(sb, ", Float: %.2f", 3.14f);
 
@@ -162,13 +195,13 @@ UTEST(string_builder, fl_sb_clear) {
     FlStringBuilder sb = fl_sb_create(arena);
 
     sb = fl_sb_append_cstr(sb, "Hello World");
-    ASSERT_EQ(fl_sb_length(sb), 11UL);
+    expect_sb_length(utest_result, sb, 11UL);
 
     sb = fl_sb_clear(sb);
-    ASSERT_EQ(fl_sb_length(sb), 0UL);
+    expect_sb_length(utest_result, sb, 0UL);
 
     sb = fl_sb_append_cstr(sb, "New");
-    ASSERT_EQ(fl_sb_length(sb), 3UL);
+    expect_sb_length(utest_result, sb, 3UL);
 
     FlString result = fl_sb_to_string(sb);
     ASSERT_TRUE(fl_string_begins_with(result, FL_S("New")));
@@ -209,61 +242,61 @@ UTEST(string_builder, sb_mixed_operations) {
 UTEST(string_search, string_find_char_basic) {
     FlString str = FL_S("hello world");
 
-    ASSERT_EQ(fl_string_find_char(str, 'h'), 0);
-    ASSERT_EQ(fl_string_find_char(str, 'e'), 1);
-    ASSERT_EQ(fl_string_find_char(str, 'l'), 2);
-    ASSERT_EQ(fl_string_find_char(str, ' '), 5);
-    ASSERT_EQ(fl_string_find_char(str, 'd'), 10);
+    expect_find_char(utest_result, str, 'h', 0);
+    expect_find_char(utest_result, str, 'e', 1);
+    expect_find_char(utest_result, str, 'l', 2);
+    expect_find_char(utest_result, str, ' ', 5);
+    expect_find_char(utest_result, str, 'd', 10);
 
-    ASSERT_EQ(fl_string_find_char(str, 'x'), -1);
-    ASSERT_EQ(fl_string_find_char(str, 'H'), -1);
-    ASSERT_EQ(fl_string_find_char(str, '\0'), -1);
+    expect_find_char(utest_result, str, 'x', -1);
+    expect_find_char(utest_result, str, 'H', -1);
+    expect_find_char(utest_result, str, '\0', -1);
 }
 
 UTEST(string_search, string_find_char_edge_cases) {
     FlString empty_str = FL_S("");
     FlString single_char = FL_S("a");
 
-    ASSERT_EQ(fl_string_find_char(empty_str, 'a'), -1);
+    expect_find_char(utest_result, empty_str, 'a', -1);
 
-    ASSERT_EQ(fl_string_find_char(single_char, 'a'), 0);
-    ASSERT_EQ(fl_string_find_char(single_char, 'b'), -1);
+    expect_find_char(utest_result, single_char, 'a', 0);
+    expect_find_char(utest_result, single_char, 'b', -1);
 }
 
 UTEST(string_search, string_find_char_url_parsing) {
     FlString http_url = FL_S("https://example.com/path");
 
-    ASSERT_EQ(fl_string_find_char(http_url, ':'), 5);
-    ASSERT_EQ(fl_string_find_char(http_url, '/'), 6);
-    ASSERT_EQ(fl_string_find_char(http_url, '.'), 15);
+    expect_find_char(utest_result, http_url, ':', 5);
+    expect_find_char(utest_result, http_url, '/', 6);
+    expect_find_char(utest_result, http_url, '.', 15);
 }
 
 UTEST(string_search, string_find_substr_basic) {
     FlString str = FL_S("hello world, hello universe");
 
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("hello")), 0);
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("world")), 6);
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("universe")), 19);
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("o w")), 4);
+    expect_find_substr(utest_result, str, FL_S("hello"), 0);
+    expect_find_substr(utest_result, str, FL_S("world"), 6);
+    expect_find_substr(utest_result, str, FL_S("universe"), 19);
+    expect_find_substr(utest_result, str, FL_S("o w"), 4);
 
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("goodbye")), -1);
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("Hello")), -1);
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("hello world, hello universe!")), -1);
+    expect_find_substr(utest_result, str, FL_S("goodbye"), -1);
+    expect_find_substr(utest_result, str, FL_S("Hello"), -1);
+    expect_find_substr(utest_result, str, FL_S("hello world, hello universe!"), -1);
 }
 
 UTEST(string_search, string_find_substr_edge_cases) {
     FlString str = FL_S("test string");
     FlString empty_str = FL_S("");
 
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("")), 0);
-    ASSERT_EQ(fl_string_find_substr(empty_str, FL_S("")), 0);
+    expect_find_substr(utest_result, str, FL_S(""), 0);
+    expect_find_substr(utest_result, empty_str, FL_S(""), 0);
 
-    ASSERT_EQ(fl_string_find_substr(empty_str, FL_S("test")), -1);
+    expect_find_substr(utest_result, empty_str, FL_S("test"), -1);
 
     FlString exact = FL_S("exact");
-    ASSERT_EQ(fl_string_find_substr(exact, FL_S("exact")), 0);
+    expect_find_substr(utest_result, exact, FL_S("exact"), 0);
 
-    ASSERT_EQ(fl_string_find_substr(str, FL_S("t")), 0);
+    expect_find_substr(utest_result, str, FL_S("t"), 0);
 }
 
 UTEST(string_search, string_find_substr_protocols) {
@@ -271,37 +304,37 @@ UTEST(string_search, string_find_substr_protocols) {
     FlString https_url = FL_S("https://secure.example.com");
     FlString ftp_url = FL_S("ftp://files.example.com");
 
-    ASSERT_EQ(fl_string_find_substr(http_url, FL_S("://")), 4);
-    ASSERT_EQ(fl_string_find_substr(https_url, FL_S("://")), 5);
-    ASSERT_EQ(fl_string_find_substr(ftp_url, FL_S("://")), 3);
+    expect_find_substr(utest_result, http_url, FL_S("://"), 4);
+    expect_find_substr(utest_result, https_url, FL_S("://"), 5);
+    expect_find_substr(utest_result, ftp_url, FL_S("://"), 3);
 
-    ASSERT_EQ(fl_string_find_substr(http_url, FL_S("example")), 7);
-    ASSERT_EQ(fl_string_find_substr(https_url, FL_S("secure")), 8);
-    ASSERT_EQ(fl_string_find_substr(ftp_url, FL_S("files")), 6);
+    expect_find_substr(utest_result, http_url, FL_S("example"), 7);
+    expect_find_substr(utest_result, https_url, FL_S("secure"), 8);
+    expect_find_substr(utest_result, ftp_url, FL_S("files"), 6);
 }
 
 UTEST(string_search, string_find_char_from_basic) {
     FlString str = FL_S("hello world hello");
 
-    ASSERT_EQ(fl_string_find_char_from(str, 'l', 0), 2);
-    ASSERT_EQ(fl_string_find_char_from(str, 'l', 3), 3);
-    ASSERT_EQ(fl_string_find_char_from(str, 'l', 4), 9);
-    ASSERT_EQ(fl_string_find_char_from(str, 'l', 10), 14);
-    ASSERT_EQ(fl_string_find_char_from(str, 'l', 15), 15);
+    expect_index(utest_result, fl_string_find_char_from(str, 'l', 0), 2);
+    expect_index(utest_result, fl_string_find_char_from(str, 'l', 3), 3);
+    expect_index(utest_result, fl_string_find_char_from(str, 'l', 4), 9);
+    expect_index(utest_result, fl_string_find_char_from(str, 'l', 10), 14);
+    expect_index(utest_result, fl_string_find_char_from(str, 'l', 15), 15);
 
-    ASSERT_EQ(fl_string_find_char_from(str, 'x', 0), -1);
-    ASSERT_EQ(fl_string_find_char_from(str, 'h', 1), 12);
+    expect_index(utest_result, fl_string_find_char_from(str, 'x', 0), -1);
+    expect_index(utest_result, fl_string_find_char_from(str, 'h', 1), 12);
 }
 
 UTEST(string_search, string_find_char_from_edge_cases) {
     FlString str = FL_S("test");
 
-    ASSERT_EQ(fl_string_find_char_from(str, 't', 4), -1);
-    ASSERT_EQ(fl_string_find_char_from(str, 't', 5), -1);
-    ASSERT_EQ(fl_string_find_char_from(str, 't', 3), 3);
+    expect_index(utest_result, fl_string_find_char_from(str, 't', 4), -1);
+    expect_index(utest_result, fl_string_find_char_from(str, 't', 5), -1);
+    expect_index(utest_result, fl_string_find_char_from(str, 't', 3), 3);
 
     FlString empty = FL_S("");
-    ASSERT_EQ(fl_string_find_char_from(empty, 'a', 0), -1);
+    expect_index(utest_result, fl_string_find_char_from(empty, 'a', 0), -1);
 }
 
 UTEST(string_search, string_find_char_from_url_parsing) {
@@ -320,46 +353,46 @@ UTEST(string_search, string_find_char_from_url_parsing) {
 UTEST(string_search, string_contains_basic) {
     FlString str = FL_S("The quick brown fox jumps over the lazy dog");
 
-    ASSERT_TRUE(fl_string_contains(str, FL_S("quick")));
-    ASSERT_TRUE(fl_string_contains(str, FL_S("brown fox")));
-    ASSERT_TRUE(fl_string_contains(str, FL_S("The")));
-    ASSERT_TRUE(fl_string_contains(str, FL_S("dog")));
-    ASSERT_TRUE(fl_string_contains(str, FL_S("over the")));
+    expect_contains(utest_result, str, FL_S("quick"), true);
+    expect_contains(utest_result, str, FL_S("brown fox"), true);
+    expect_contains(utest_result, str, FL_S("The"), true);
+    expect_contains(utest_result, str, FL_S("dog"), true);
+    expect_contains(utest_result, str, FL_S("over the"), true);
 
-    ASSERT_FALSE(fl_string_contains(str, FL_S("cat")));
-    ASSERT_FALSE(fl_string_contains(str, FL_S("THE")));
-    ASSERT_FALSE(fl_string_contains(str, FL_S("elephant")));
+    expect_contains(utest_result, str, FL_S("cat"), false);
+    expect_contains(utest_result, str, FL_S("THE"), false);
+    expect_contains(utest_result, str, FL_S("elephant"), false);
 }
 
 UTEST(string_search, string_contains_edge_cases) {
     FlString str = FL_S("test string");
     FlString empty_str = FL_S("");
 
-    ASSERT_TRUE(fl_string_contains(str, FL_S("")));
-    ASSERT_TRUE(fl_string_contains(empty_str, FL_S("")));
+    expect_contains(utest_result, str, FL_S(""), true);
+    expect_contains(utest_result, empty_str, FL_S(""), true);
 
-    ASSERT_FALSE(fl_string_contains(empty_str, FL_S("test")));
+    expect_contains(utest_result, empty_str, FL_S("test"), false);
 
-    ASSERT_TRUE(fl_string_contains(str, str));
+    expect_contains(utest_result, str, str, true);
 }
 
 UTEST(string_search, string_contains_url_components) {
     FlString url = FL_S("https://api.example.com:8443/v1/users?id=123&format=json");
 
-    ASSERT_TRUE(fl_string_contains(url, FL_S("https://")));
-    ASSERT_FALSE(fl_string_contains(url, FL_S("http://")));
+    expect_contains(utest_result, url, FL_S("https://"), true);
+    expect_contains(utest_result, url, FL_S("http://"), false);
 
-    ASSERT_TRUE(fl_string_contains(url, FL_S("api.example.com")));
-    ASSERT_TRUE(fl_string_contains(url, FL_S("example")));
+    expect_contains(utest_result, url, FL_S("api.example.com"), true);
+    expect_contains(utest_result, url, FL_S("example"), true);
 
-    ASSERT_TRUE(fl_string_contains(url, FL_S(":8443")));
+    expect_contains(utest_result, url, FL_S(":8443"), true);
 
-    ASSERT_TRUE(fl_string_contains(url, FL_S("/v1/users")));
-    ASSERT_TRUE(fl_string_contains(url, FL_S("id=123")));
-    ASSERT_TRUE(fl_string_contains(url, FL_S("format=json")));
+    expect_contains(utest_result, url, FL_S("/v1/users"), true);
+    expect_contains(utest_result, url, FL_S("id=123"), true);
+    expect_contains(utest_result, url, FL_S("format=json"), true);
 
-    ASSERT_FALSE(fl_string_contains(url, FL_S(":80")));
-    ASSERT_FALSE(fl_string_contains(url, FL_S("admin")));
+    expect_contains(utest_result, url, FL_S(":80"), false);
+    expect_contains(utest_result, url, FL_S("admin"), false);
 }
 
 UTEST(string_search, real_world_url_parsing) {
@@ -387,24 +420,24 @@ UTEST(string_search, real_world_url_parsing) {
     u64 path_len3 = file_url.length - (u64)path_pos3;
     ASSERT_GT(path_len3, (u64)1); // Has significant path, not a base URL
 
-    ASSERT_EQ(fl_string_find_substr(local_path, FL_S("://")), -1);
+    expect_find_substr(utest_result, local_path, FL_S("://"), -1);
 }
 
 UTEST(string_substr, clamps_to_the_end) {
     FlString str = FL_S("hello world");
 
-    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 0, 5), FL_S("hello")));
-    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 6, 5), FL_S("world")));
-    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 6, 100), FL_S("world")));
-    ASSERT_EQ((u64)fl_string_substr(str, 11, 1).length, (u64)0);
-    ASSERT_EQ((u64)fl_string_substr(str, 3, 0).length, (u64)0);
+    expect_string(utest_result, fl_string_substr(str, 0, 5), FL_S("hello"));
+    expect_string(utest_result, fl_string_substr(str, 6, 5), FL_S("world"));
+    expect_string(utest_result, fl_string_substr(str, 6, 100), FL_S("world"));
+    expect_string_length(utest_result, fl_string_substr(str, 11, 1), 0);
+    expect_string_length(utest_result, fl_string_substr(str, 3, 0), 0);
 }
 
 UTEST(string_substr, length_near_u64_max_clamps) {
     FlString str = FL_S("hello world");
 
     // start + length wraps around u64 here, which must still clamp to the end of the string
-    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 6, UINT64_MAX), FL_S("world")));
-    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 2, UINT64_MAX - 1), FL_S("llo world")));
-    ASSERT_TRUE(fl_string_equals(fl_string_substr(str, 10, UINT64_MAX), FL_S("d")));
+    expect_string(utest_result, fl_string_substr(str, 6, UINT64_MAX), FL_S("world"));
+    expect_string(utest_result, fl_string_substr(str, 2, UINT64_MAX - 1), FL_S("llo world"));
+    expect_string(utest_result, fl_string_substr(str, 10, UINT64_MAX), FL_S("d"));
 }

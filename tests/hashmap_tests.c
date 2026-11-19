@@ -12,46 +12,56 @@ typedef struct {
     char data[256];
 } LargeStruct;
 
+typedef hashmap(int, int) IntMap;
+typedef hashmap(FlString, int) StringIntMap;
+
+static void expect_int_value(int* utest_result, const int* val, int want) {
+    ASSERT_NE(val, nullptr);
+    ASSERT_EQ(*val, want);
+}
+
+static void expect_int_contains(int* utest_result, IntMap* map, int key, bool want) {
+    ASSERT_EQ(hashmap_contains(map, key), want);
+}
+
+static void expect_string_value(int* utest_result, StringIntMap* map, FlString key, int want) {
+    expect_int_value(utest_result, hashmap_string_get(map, key), want);
+}
+
+static void expect_string_contains(int* utest_result, StringIntMap* map, FlString key, bool want) {
+    ASSERT_EQ(hashmap_string_contains(map, key), want);
+}
+
 UTEST(hashmap, int_to_int) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    hashmap(int, int) map;
+    IntMap map;
     hashmap_new(&map, arena, 16);
 
     hashmap_insert(&map, 42, 100);
     hashmap_insert(&map, 7, 200);
     hashmap_insert(&map, 99, 300);
 
-    int* val = hashmap_get(&map, 42);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 100);
+    expect_int_value(utest_result, hashmap_get(&map, 42), 100);
+    expect_int_value(utest_result, hashmap_get(&map, 7), 200);
+    expect_int_value(utest_result, hashmap_get(&map, 99), 300);
 
-    val = hashmap_get(&map, 7);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 200);
-
-    val = hashmap_get(&map, 99);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 300);
-
-    val = hashmap_get(&map, 123);
+    int* val = hashmap_get(&map, 123);
     ASSERT_EQ(val, nullptr);
 
     hashmap_insert(&map, 42, 999);
-    val = hashmap_get(&map, 42);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 999);
+    expect_int_value(utest_result, hashmap_get(&map, 42), 999);
 
     ASSERT_EQ(hashmap_count(&map), 3UL);
 
-    ASSERT_TRUE(hashmap_contains(&map, 42));
-    ASSERT_TRUE(hashmap_contains(&map, 7));
-    ASSERT_TRUE(hashmap_contains(&map, 99));
-    ASSERT_FALSE(hashmap_contains(&map, 123));
+    expect_int_contains(utest_result, &map, 42, true);
+    expect_int_contains(utest_result, &map, 7, true);
+    expect_int_contains(utest_result, &map, 99, true);
+    expect_int_contains(utest_result, &map, 123, false);
 
     ASSERT_TRUE(hashmap_remove(&map, 7));
     ASSERT_EQ(hashmap_count(&map), 2UL);
-    ASSERT_FALSE(hashmap_contains(&map, 7));
+    expect_int_contains(utest_result, &map, 7, false);
     ASSERT_FALSE(hashmap_remove(&map, 7));
 
     fl_arena_destroy(arena);
@@ -209,7 +219,7 @@ UTEST(hashmap, large_data) {
 UTEST(hashmap, string_keys_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    hashmap(FlString, int) map;
+    StringIntMap map;
     hashmap_new(&map, arena, 16);
 
     FlString key1 = FL_S("hello");
@@ -220,17 +230,9 @@ UTEST(hashmap, string_keys_basic) {
     hashmap_string_insert(&map, key2, 200);
     hashmap_string_insert(&map, key3, 300);
 
-    int* val = hashmap_string_get(&map, key1);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 100);
-
-    val = hashmap_string_get(&map, key2);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 200);
-
-    val = hashmap_string_get(&map, key3);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 300);
+    expect_string_value(utest_result, &map, key1, 100);
+    expect_string_value(utest_result, &map, key2, 200);
+    expect_string_value(utest_result, &map, key3, 300);
 
     ASSERT_EQ(hashmap_count(&map), 3UL);
 
@@ -240,7 +242,7 @@ UTEST(hashmap, string_keys_basic) {
 UTEST(hashmap, string_keys_same_content_different_memory) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    hashmap(FlString, int) map;
+    StringIntMap map;
     hashmap_new(&map, arena, 16);
 
     char* buf1 = arena_alloc_array(arena, char, 5);
@@ -256,12 +258,10 @@ UTEST(hashmap, string_keys_same_content_different_memory) {
 
     hashmap_string_insert(&map, key1, 42);
 
-    int* val = hashmap_string_get(&map, key2);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 42);
+    expect_string_value(utest_result, &map, key2, 42);
 
-    ASSERT_TRUE(hashmap_string_contains(&map, key1));
-    ASSERT_TRUE(hashmap_string_contains(&map, key2));
+    expect_string_contains(utest_result, &map, key1, true);
+    expect_string_contains(utest_result, &map, key2, true);
 
     fl_arena_destroy(arena);
 }
@@ -269,7 +269,7 @@ UTEST(hashmap, string_keys_same_content_different_memory) {
 UTEST(hashmap, string_keys_empty_strings) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    hashmap(FlString, int) map;
+    StringIntMap map;
     hashmap_new(&map, arena, 16);
 
     FlString empty1 = FL_S("");
@@ -277,12 +277,10 @@ UTEST(hashmap, string_keys_empty_strings) {
 
     hashmap_string_insert(&map, empty1, 999);
 
-    int* val = hashmap_string_get(&map, empty2);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 999);
+    expect_string_value(utest_result, &map, empty2, 999);
 
-    ASSERT_TRUE(hashmap_string_contains(&map, empty1));
-    ASSERT_TRUE(hashmap_string_contains(&map, empty2));
+    expect_string_contains(utest_result, &map, empty1, true);
+    expect_string_contains(utest_result, &map, empty2, true);
 
     fl_arena_destroy(arena);
 }
@@ -290,20 +288,16 @@ UTEST(hashmap, string_keys_empty_strings) {
 UTEST(hashmap, string_keys_update_value) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    hashmap(FlString, int) map;
+    StringIntMap map;
     hashmap_new(&map, arena, 16);
 
     FlString key = FL_S("updateme");
 
     hashmap_string_insert(&map, key, 100);
-    int* val = hashmap_string_get(&map, key);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 100);
+    expect_string_value(utest_result, &map, key, 100);
 
     hashmap_string_insert(&map, key, 200);
-    val = hashmap_string_get(&map, key);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 200);
+    expect_string_value(utest_result, &map, key, 200);
 
     ASSERT_EQ(hashmap_count(&map), 1UL);
 
@@ -313,7 +307,7 @@ UTEST(hashmap, string_keys_update_value) {
 UTEST(hashmap, string_keys_remove) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    hashmap(FlString, int) map;
+    StringIntMap map;
     hashmap_new(&map, arena, 16);
 
     FlString key1 = FL_S("remove1");
@@ -328,16 +322,16 @@ UTEST(hashmap, string_keys_remove) {
 
     ASSERT_TRUE(hashmap_string_remove(&map, key1));
     ASSERT_EQ(hashmap_count(&map), 2UL);
-    ASSERT_FALSE(hashmap_string_contains(&map, key1));
-    ASSERT_TRUE(hashmap_string_contains(&map, key2));
-    ASSERT_TRUE(hashmap_string_contains(&map, key3));
+    expect_string_contains(utest_result, &map, key1, false);
+    expect_string_contains(utest_result, &map, key2, true);
+    expect_string_contains(utest_result, &map, key3, true);
 
     ASSERT_FALSE(hashmap_string_remove(&map, key1));
 
     FlString key2_copy = fl_string_copy(arena, FL_S("remove2"));
     ASSERT_TRUE(hashmap_string_remove(&map, key2_copy));
     ASSERT_EQ(hashmap_count(&map), 1UL);
-    ASSERT_FALSE(hashmap_string_contains(&map, key2));
+    expect_string_contains(utest_result, &map, key2, false);
 
     fl_arena_destroy(arena);
 }
@@ -345,7 +339,7 @@ UTEST(hashmap, string_keys_remove) {
 UTEST(hashmap, string_keys_iteration) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    hashmap(FlString, int) map;
+    StringIntMap map;
     hashmap_new(&map, arena, 16);
 
     FlString keys[] = { FL_S("alpha"), FL_S("beta"), FL_S("gamma"), FL_S("delta") };
@@ -381,7 +375,7 @@ UTEST(hashmap, string_keys_collision_handling) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     // A small capacity makes collisions likely.
-    hashmap(FlString, int) map;
+    StringIntMap map;
     hashmap_new(&map, arena, 4);
 
     FlString keys[] = { FL_S("a"),   FL_S("aa"),         FL_S("aaa"),        FL_S("b"),       FL_S("bb"),
@@ -393,10 +387,8 @@ UTEST(hashmap, string_keys_collision_handling) {
     }
 
     for (int i = 0; i < num_keys; i++) {
-        int* val = hashmap_string_get(&map, keys[i]);
-        ASSERT_NE(val, nullptr);
-        ASSERT_EQ(*val, i * 10);
-        ASSERT_TRUE(hashmap_string_contains(&map, keys[i]));
+        expect_string_value(utest_result, &map, keys[i], i * 10);
+        expect_string_contains(utest_result, &map, keys[i], true);
     }
 
     ASSERT_EQ(hashmap_count(&map), (u64)num_keys);
@@ -407,7 +399,7 @@ UTEST(hashmap, string_keys_collision_handling) {
 UTEST(hashmap, string_keys_clear_and_reuse) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    hashmap(FlString, int) map;
+    StringIntMap map;
     hashmap_new(&map, arena, 8);
 
     FlString keys[] = { FL_S("key1"), FL_S("key2"), FL_S("key3"), FL_S("key4"), FL_S("key5") };
@@ -422,15 +414,13 @@ UTEST(hashmap, string_keys_clear_and_reuse) {
 
     for (int i = 0; i < 5; i++) {
         ASSERT_EQ(hashmap_string_get(&map, keys[i]), nullptr);
-        ASSERT_FALSE(hashmap_string_contains(&map, keys[i]));
+        expect_string_contains(utest_result, &map, keys[i], false);
     }
 
     // An insert after a clear takes its node from the free list.
     FlString new_key = FL_S("newkey");
     hashmap_string_insert(&map, new_key, 9999);
-    int* val = hashmap_string_get(&map, new_key);
-    ASSERT_NE(val, nullptr);
-    ASSERT_EQ(*val, 9999);
+    expect_string_value(utest_result, &map, new_key, 9999);
     ASSERT_EQ(hashmap_count(&map), 1UL);
 
     fl_arena_destroy(arena);
