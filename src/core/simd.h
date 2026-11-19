@@ -103,18 +103,41 @@ static inline f32x4 f32x4_new_splat(float a) {
 #endif
 }
 
-static inline f32x4 f32x4_new(float a, float b, float c, float d) {
 #if CPU_X64 || CPU_X86
-    return (f32x4) { .v = _mm_set_ps(d, c, b, a) };
+#define SIMD_DEFINE_NEW4(vec, scalar, set, lane_t, neon_t, sfx, zero)                      \
+    static inline vec vec##_new(scalar a, scalar b, scalar c, scalar d) {                  \
+        return (vec) { .v = set((lane_t)d, (lane_t)c, (lane_t)b, (lane_t)a) };             \
+    }
 #elif CPU_ARM64
-    float32x4_t v = vdupq_n_f32(0.0f);
-    v = vsetq_lane_f32(a, v, 0);
-    v = vsetq_lane_f32(b, v, 1);
-    v = vsetq_lane_f32(c, v, 2);
-    v = vsetq_lane_f32(d, v, 3);
-    return (f32x4) { .v = v };
+#define SIMD_DEFINE_NEW4(vec, scalar, set, lane_t, neon_t, sfx, zero)                      \
+    static inline vec vec##_new(scalar a, scalar b, scalar c, scalar d) {                  \
+        neon_t v = vdupq_n_##sfx(zero);                                                    \
+        v = vsetq_lane_##sfx(a, v, 0);                                                     \
+        v = vsetq_lane_##sfx(b, v, 1);                                                     \
+        v = vsetq_lane_##sfx(c, v, 2);                                                     \
+        v = vsetq_lane_##sfx(d, v, 3);                                                     \
+        return (vec) { .v = v };                                                           \
+    }
 #endif
-}
+
+#define SIMD_NO_CAST(x) x
+
+#if CPU_X64 || CPU_X86
+#define SIMD_DEFINE_TABLE_SHUFFLE(vec, to_i, from_i, sfx)                                  \
+    static inline vec vec##_table_shuffle(vec a, const uint8_t table[16]) {                \
+        __m128i mask = _mm_loadu_si128((const __m128i*)table);                             \
+        return (vec) { .v = from_i(_mm_shuffle_epi8(to_i(a.v), mask)) };                   \
+    }
+#elif CPU_ARM64
+#define SIMD_DEFINE_TABLE_SHUFFLE(vec, to_i, from_i, sfx)                                  \
+    static inline vec vec##_table_shuffle(vec a, const uint8_t table[16]) {                \
+        uint8x16_t mask = vld1q_u8(table);                                                 \
+        int8x16_t result_s8 = vqtbl1q_s8(vreinterpretq_s8_##sfx(a.v), mask);               \
+        return (vec) { .v = vreinterpretq_##sfx##_s8(result_s8) };                         \
+    }
+#endif
+
+SIMD_DEFINE_NEW4(f32x4, float, _mm_set_ps, float, float32x4_t, f32, 0.0f)
 
 static inline f32x4 f32x4_new_xy(float a, float b) {
     return f32x4_new(a, b, a, b);
@@ -220,16 +243,7 @@ static inline f32x4 f32x4_and(f32x4 a, f32x4 b) {
 
 #define f32x4_shuffle(v0, v1, i0, i1, i2, i3) ((f32x4) { .v = __builtin_shufflevector((v0).v, (v1).v, i0, i1, i2, i3) })
 
-static inline f32x4 f32x4_table_shuffle(f32x4 a, const uint8_t table[16]) {
-#if CPU_X64 || CPU_X86
-    __m128i mask = _mm_loadu_si128((const __m128i*)table);
-    return (f32x4) { .v = _mm_castsi128_ps(_mm_shuffle_epi8(_mm_castps_si128(a.v), mask)) };
-#elif CPU_ARM64
-    uint8x16_t mask = vld1q_u8(table);
-    int8x16_t result_s8 = vqtbl1q_s8(vreinterpretq_s8_f32(a.v), mask);
-    return (f32x4) { .v = vreinterpretq_f32_s8(result_s8) };
-#endif
-}
+SIMD_DEFINE_TABLE_SHUFFLE(f32x4, _mm_castps_si128, _mm_castsi128_ps, f32)
 
 static inline bool f32x4_test_intersect(f32x4 a, f32x4 b) {
 #if CPU_X64 || CPU_X86
@@ -273,33 +287,12 @@ static inline bool f32x4_test_intersect(f32x4 a, f32x4 b) {
 
 // i32x4 Functions
 
-static inline i32x4 i32x4_new(int32_t a, int32_t b, int32_t c, int32_t d) {
-#if CPU_X64 || CPU_X86
-    return (i32x4) { .v = _mm_set_epi32(d, c, b, a) };
-#elif CPU_ARM64
-    int32x4_t v = vdupq_n_s32(0);
-    v = vsetq_lane_s32(a, v, 0);
-    v = vsetq_lane_s32(b, v, 1);
-    v = vsetq_lane_s32(c, v, 2);
-    v = vsetq_lane_s32(d, v, 3);
-    return (i32x4) { .v = v };
-#endif
-}
+SIMD_DEFINE_NEW4(i32x4, int32_t, _mm_set_epi32, int32_t, int32x4_t, s32, 0)
 
 // u32x4 Functions
 
-static inline u32x4 u32x4_new(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-#if CPU_X64 || CPU_X86
-    return (u32x4) { .v = _mm_set_epi32((int32_t)d, (int32_t)c, (int32_t)b, (int32_t)a) };
-#elif CPU_ARM64
-    uint32x4_t v = vdupq_n_u32(0);
-    v = vsetq_lane_u32(a, v, 0);
-    v = vsetq_lane_u32(b, v, 1);
-    v = vsetq_lane_u32(c, v, 2);
-    v = vsetq_lane_u32(d, v, 3);
-    return (u32x4) { .v = v };
-#endif
-}
+SIMD_DEFINE_NEW4(u32x4, uint32_t, _mm_set_epi32, int32_t, uint32x4_t, u32, 0)
+#undef SIMD_DEFINE_NEW4
 
 // u16x8 Functions
 
@@ -438,16 +431,7 @@ static inline i16x8 i32x4_pack_i16x8(i32x4 a) {
 #endif
 }
 
-static inline i32x4 i32x4_table_shuffle(i32x4 a, const uint8_t table[16]) {
-#if CPU_X64 || CPU_X86
-    __m128i mask = _mm_loadu_si128((const __m128i*)table);
-    return (i32x4) { .v = _mm_shuffle_epi8(a.v, mask) };
-#elif CPU_ARM64
-    uint8x16_t mask = vld1q_u8(table);
-    int8x16_t result_s8 = vqtbl1q_s8(vreinterpretq_s8_s32(a.v), mask);
-    return (i32x4) { .v = vreinterpretq_s32_s8(result_s8) };
-#endif
-}
+SIMD_DEFINE_TABLE_SHUFFLE(i32x4, SIMD_NO_CAST, SIMD_NO_CAST, s32)
 
 // i16x8 Functions
 
@@ -561,18 +545,7 @@ static inline i16x8 i16x8_lerp_diff(i16x8 start, i16x8 delta, i16x8 t) {
     return result;
 }
 
-static inline i16x8 i16x8_table_shuffle(i16x8 a, const uint8_t table[16]) {
-    i16x8 result;
-#if CPU_X64 || CPU_X86
-    __m128i mask = _mm_loadu_si128((const __m128i*)table);
-    result.v = _mm_shuffle_epi8(a.v, mask);
-#elif CPU_ARM64
-    uint8x16_t mask = vld1q_u8(table);
-    int8x16_t result_s8 = vqtbl1q_s8(vreinterpretq_s8_s16(a.v), mask);
-    result.v = vreinterpretq_s16_s8(result_s8);
-#endif
-    return result;
-}
+SIMD_DEFINE_TABLE_SHUFFLE(i16x8, SIMD_NO_CAST, SIMD_NO_CAST, s16)
 
 static inline i16x8 i16x8_and(i16x8 a, i16x8 b) {
 #if CPU_X64 || CPU_X86
@@ -750,16 +723,9 @@ static inline bool u8x16_all_true(u8x16 a) {
 #endif
 }
 
-static inline u8x16 u8x16_table_shuffle(u8x16 a, const uint8_t table[16]) {
-#if CPU_X64 || CPU_X86
-    __m128i mask = _mm_loadu_si128((const __m128i*)table);
-    return (u8x16) { .v = _mm_shuffle_epi8(a.v, mask) };
-#elif CPU_ARM64
-    uint8x16_t mask = vld1q_u8(table);
-    int8x16_t result_s8 = vqtbl1q_s8(vreinterpretq_s8_u8(a.v), mask);
-    return (u8x16) { .v = vreinterpretq_u8_s8(result_s8) };
-#endif
-}
+SIMD_DEFINE_TABLE_SHUFFLE(u8x16, SIMD_NO_CAST, SIMD_NO_CAST, u8)
+#undef SIMD_DEFINE_TABLE_SHUFFLE
+#undef SIMD_NO_CAST
 
 static inline u8x16 u8x16_shuffle2(u8x16 v0, u8x16 v1, u8x16 mask) {
     u8x16 result;
@@ -928,29 +894,56 @@ typedef struct {
     u8x16 b;
 } u8x16_rgb_result;
 
-static inline u8x16_rgb_result u8x16_load_deinterleaved_3(const uint8_t* data, size_t offset) {
-    u8x16_rgb_result result;
-    const uint8_t* ptr = data + offset;
+#define U8X16_CHANNELS_3(X, n) X(r, 0, n) X(g, 1, n) X(b, 2, n)
+#define U8X16_CHANNELS_4(X, n) U8X16_CHANNELS_3(X, n) X(a, 3, n)
+#define U8X16_CHANNELS(n, X) U8X16_CHANNELS_##n(X, n)
 
 #if CPU_ARM64
-    uint8x16x3_t loaded = vld3q_u8(ptr);
-    result.r.v = loaded.val[0];
-    result.g.v = loaded.val[1];
-    result.b.v = loaded.val[2];
-#elif CPU_X64 || CPU_X86
-    // x86 fallback: scalar deinterleave
-    uint8_t temp_r[16], temp_g[16], temp_b[16];
-    for (int i = 0; i < 16; i++) {
-        temp_r[i] = ptr[i * 3 + 0];
-        temp_g[i] = ptr[i * 3 + 1];
-        temp_b[i] = ptr[i * 3 + 2];
+#define U8X16_LOAD_LANE(c, idx, n) result.c.v = loaded.val[idx];
+#define SIMD_DEFINE_LOAD_DEINTERLEAVED(n, result_t)                                        \
+    static inline result_t u8x16_load_deinterleaved_##n(const uint8_t* data, size_t offset) { \
+        result_t result;                                                                   \
+        const uint8_t* ptr = data + offset;                                                \
+        uint8x16x##n##_t loaded = vld##n##q_u8(ptr);                                       \
+        U8X16_CHANNELS(n, U8X16_LOAD_LANE)                                                 \
+        return result;                                                                     \
     }
-    result.r = u8x16_new(temp_r);
-    result.g = u8x16_new(temp_g);
-    result.b = u8x16_new(temp_b);
+#define U8X16_STORE_LANE(c, idx, n) c.v,
+#define SIMD_DEFINE_STORE_INTERLEAVED(n, ...)                                              \
+    static inline void u8x16_store_interleaved_##n(uint8_t* data, __VA_ARGS__, size_t offset) { \
+        uint8_t* ptr = data + offset;                                                      \
+        uint8x16x##n##_t to_store = { { U8X16_CHANNELS(n, U8X16_STORE_LANE) } };           \
+        vst##n##q_u8(ptr, to_store);                                                       \
+    }
+#elif CPU_X64 || CPU_X86
+#define U8X16_TEMP_DECL(c, idx, n) uint8_t temp_##c[16];
+#define U8X16_LOAD_LANE(c, idx, n) temp_##c[i] = ptr[i * n + idx];
+#define U8X16_LOAD_RESULT(c, idx, n) result.c = u8x16_new(temp_##c);
+#define SIMD_DEFINE_LOAD_DEINTERLEAVED(n, result_t)                                        \
+    static inline result_t u8x16_load_deinterleaved_##n(const uint8_t* data, size_t offset) { \
+        result_t result;                                                                   \
+        const uint8_t* ptr = data + offset;                                                \
+        U8X16_CHANNELS(n, U8X16_TEMP_DECL)                                                 \
+        for (int i = 0; i < 16; i++) {                                                     \
+            U8X16_CHANNELS(n, U8X16_LOAD_LANE)                                             \
+        }                                                                                  \
+        U8X16_CHANNELS(n, U8X16_LOAD_RESULT)                                               \
+        return result;                                                                     \
+    }
+#define U8X16_STORE_TEMP(c, idx, n) u8x16_store_unaligned(c, temp_##c, 0);
+#define U8X16_STORE_LANE(c, idx, n) ptr[i * n + idx] = temp_##c[i];
+#define SIMD_DEFINE_STORE_INTERLEAVED(n, ...)                                              \
+    static inline void u8x16_store_interleaved_##n(uint8_t* data, __VA_ARGS__, size_t offset) { \
+        uint8_t* ptr = data + offset;                                                      \
+        U8X16_CHANNELS(n, U8X16_TEMP_DECL)                                                 \
+        U8X16_CHANNELS(n, U8X16_STORE_TEMP)                                                \
+        for (int i = 0; i < 16; i++) {                                                     \
+            U8X16_CHANNELS(n, U8X16_STORE_LANE)                                            \
+        }                                                                                  \
+    }
 #endif
-    return result;
-}
+
+SIMD_DEFINE_LOAD_DEINTERLEAVED(3, u8x16_rgb_result)
 
 typedef struct {
     u8x16 r;
@@ -959,76 +952,22 @@ typedef struct {
     u8x16 a;
 } u8x16_rgba_result;
 
-static inline u8x16_rgba_result u8x16_load_deinterleaved_4(const uint8_t* data, size_t offset) {
-    u8x16_rgba_result result;
-    const uint8_t* ptr = data + offset;
+SIMD_DEFINE_LOAD_DEINTERLEAVED(4, u8x16_rgba_result)
 
-#if CPU_ARM64
-    uint8x16x4_t loaded = vld4q_u8(ptr);
-    result.r.v = loaded.val[0];
-    result.g.v = loaded.val[1];
-    result.b.v = loaded.val[2];
-    result.a.v = loaded.val[3];
-#elif CPU_X64 || CPU_X86
-    // x86 fallback: scalar deinterleave
-    uint8_t temp_r[16], temp_g[16], temp_b[16], temp_a[16];
-    for (int i = 0; i < 16; i++) {
-        temp_r[i] = ptr[i * 4 + 0];
-        temp_g[i] = ptr[i * 4 + 1];
-        temp_b[i] = ptr[i * 4 + 2];
-        temp_a[i] = ptr[i * 4 + 3];
-    }
-    result.r = u8x16_new(temp_r);
-    result.g = u8x16_new(temp_g);
-    result.b = u8x16_new(temp_b);
-    result.a = u8x16_new(temp_a);
-#endif
-    return result;
-}
+SIMD_DEFINE_STORE_INTERLEAVED(3, u8x16 r, u8x16 g, u8x16 b)
 
-static inline void u8x16_store_interleaved_3(uint8_t* data, u8x16 r, u8x16 g, u8x16 b, size_t offset) {
-    uint8_t* ptr = data + offset;
+SIMD_DEFINE_STORE_INTERLEAVED(4, u8x16 r, u8x16 g, u8x16 b, u8x16 a)
 
-#if CPU_ARM64
-    uint8x16x3_t to_store = { { r.v, g.v, b.v } };
-    vst3q_u8(ptr, to_store);
-#elif CPU_X64 || CPU_X86
-    // x86 fallback: scalar interleave
-    uint8_t temp_r[16], temp_g[16], temp_b[16];
-    u8x16_store_unaligned(r, temp_r, 0);
-    u8x16_store_unaligned(g, temp_g, 0);
-    u8x16_store_unaligned(b, temp_b, 0);
-
-    for (int i = 0; i < 16; i++) {
-        ptr[i * 3 + 0] = temp_r[i];
-        ptr[i * 3 + 1] = temp_g[i];
-        ptr[i * 3 + 2] = temp_b[i];
-    }
-#endif
-}
-
-static inline void u8x16_store_interleaved_4(uint8_t* data, u8x16 r, u8x16 g, u8x16 b, u8x16 a, size_t offset) {
-    uint8_t* ptr = data + offset;
-
-#if CPU_ARM64
-    uint8x16x4_t to_store = { { r.v, g.v, b.v, a.v } };
-    vst4q_u8(ptr, to_store);
-#elif CPU_X64 || CPU_X86
-    // Simple fallback for x64
-    uint8_t temp_r[16], temp_g[16], temp_b[16], temp_a[16];
-    u8x16_store_unaligned(r, temp_r, 0);
-    u8x16_store_unaligned(g, temp_g, 0);
-    u8x16_store_unaligned(b, temp_b, 0);
-    u8x16_store_unaligned(a, temp_a, 0);
-
-    for (int i = 0; i < 16; i++) {
-        ptr[i * 4 + 0] = temp_r[i];
-        ptr[i * 4 + 1] = temp_g[i];
-        ptr[i * 4 + 2] = temp_b[i];
-        ptr[i * 4 + 3] = temp_a[i];
-    }
-#endif
-}
+#undef SIMD_DEFINE_LOAD_DEINTERLEAVED
+#undef SIMD_DEFINE_STORE_INTERLEAVED
+#undef U8X16_CHANNELS
+#undef U8X16_CHANNELS_3
+#undef U8X16_CHANNELS_4
+#undef U8X16_TEMP_DECL
+#undef U8X16_LOAD_LANE
+#undef U8X16_LOAD_RESULT
+#undef U8X16_STORE_TEMP
+#undef U8X16_STORE_LANE
 
 // Cross-type conversions
 
