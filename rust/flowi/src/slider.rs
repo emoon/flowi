@@ -102,22 +102,7 @@ impl Slider {
         max: f32,
         config: SliderConfig,
     ) -> Signal {
-        let label = label.as_ref();
-        let fmt = slider_format_cstring(config.format, false);
-        let _frame = frame_thread_guard("Slider::float");
-        // SAFETY: fl_frame_str copies the bytes into the frame arena before returning, so the borrow of
-        // label only has to outlive the call; the copy stays valid for the rest of the frame. It asserts an
-        // active frame, which this slot is emitted inside, and _frame keeps the call to the thread that
-        // owns the frame context.
-        unsafe {
-            sys::fl_slider_float_impl(
-                sys::fl_frame_str(label.as_ptr() as *const c_char, label.len()),
-                value as *mut f32,
-                min,
-                max,
-                config.to_sys(&fmt),
-            )
-        }
+        emit_slider(label.as_ref(), value, min, max, config)
     }
 
     /// Emit an integer slider for label bound to `*value` in `[min, max]` and return its interaction
@@ -134,22 +119,74 @@ impl Slider {
         max: i32,
         config: SliderConfig,
     ) -> Signal {
-        let label = label.as_ref();
-        let fmt = slider_format_cstring(config.format, true);
-        let _frame = frame_thread_guard("Slider::int");
-        // SAFETY: fl_frame_str copies the bytes into the frame arena before returning, so the borrow of
-        // label only has to outlive the call; the copy stays valid for the rest of the frame. It asserts an
-        // active frame, which this slot is emitted inside, and _frame keeps the call to the thread that
-        // owns the frame context.
-        unsafe {
-            sys::fl_slider_int_impl(
-                sys::fl_frame_str(label.as_ptr() as *const c_char, label.len()),
-                value as *mut i32,
-                min,
-                max,
-                config.to_sys(&fmt),
-            )
-        }
+        emit_slider(label.as_ref(), value, min, max, config)
+    }
+}
+
+/// The value types a slider binds, each lowering to its own native entry point.
+trait SliderValue: Copy {
+    const IS_INT: bool;
+    const SITE: &'static str;
+
+    /// # Safety
+    /// Must run inside a frame callback on the frame thread, with `label` and `config` valid for the
+    /// call and `value` pointing at a live value.
+    unsafe fn emit(
+        label: sys::RawStr,
+        value: *mut Self,
+        range: (Self, Self),
+        config: sys::SliderConfig,
+    ) -> Signal;
+}
+
+impl SliderValue for f32 {
+    const IS_INT: bool = false;
+    const SITE: &'static str = "Slider::float";
+
+    unsafe fn emit(
+        label: sys::RawStr,
+        value: *mut f32,
+        (min, max): (f32, f32),
+        config: sys::SliderConfig,
+    ) -> Signal {
+        // SAFETY: forwarded from this method's contract.
+        unsafe { sys::fl_slider_float_impl(label, value, min, max, config) }
+    }
+}
+
+impl SliderValue for i32 {
+    const IS_INT: bool = true;
+    const SITE: &'static str = "Slider::int";
+
+    unsafe fn emit(
+        label: sys::RawStr,
+        value: *mut i32,
+        (min, max): (i32, i32),
+        config: sys::SliderConfig,
+    ) -> Signal {
+        // SAFETY: forwarded from this method's contract.
+        unsafe { sys::fl_slider_int_impl(label, value, min, max, config) }
+    }
+}
+
+/// Emits one slider, with the label copied into the frame arena and the format sanitized for the
+/// slider's value type.
+fn emit_slider<V: SliderValue>(
+    label: &str,
+    value: &mut V,
+    min: V,
+    max: V,
+    config: SliderConfig,
+) -> Signal {
+    let fmt = slider_format_cstring(config.format, V::IS_INT);
+    let _frame = frame_thread_guard(V::SITE);
+    // SAFETY: fl_frame_str copies the bytes into the frame arena before returning, so the borrow of
+    // label only has to outlive the call; the copy stays valid for the rest of the frame. It asserts an
+    // active frame, which this slot is emitted inside, and _frame keeps the call to the thread that
+    // owns the frame context. value is a live &mut, and fmt outlives the call.
+    unsafe {
+        let label = sys::fl_frame_str(label.as_ptr() as *const c_char, label.len());
+        V::emit(label, value, (min, max), config.to_sys(&fmt))
     }
 }
 
@@ -169,66 +206,66 @@ pub fn slider_float(label: impl AsRef<str>, value: &mut f32, min: f32, max: f32)
 /// Everything else is rejected, including an interior NUL byte.
 fn valid_slider_format(fmt: &str, is_int: bool) -> bool {
     let bytes = fmt.as_bytes();
-    if bytes.contains(&0) {
-        return false;
-    }
+    !bytes.contains(&0)
+        && count_conversions(bytes, is_int).is_some_and(|n| n == 1 || fmt.is_empty())
+}
+
+/// The number of conversions in the template; [`None`] when any `%` item is malformed.
+fn count_conversions(bytes: &[u8], is_int: bool) -> Option<usize> {
     let mut i = 0;
     let mut conversions = 0;
     while i < bytes.len() {
-        if bytes[i] != b'%' {
-            i += 1;
-            continue;
-        }
-        i += 1;
-        if i >= bytes.len() {
-            return false; // trailing lone '%'
-        }
-        if bytes[i] == b'%' {
-            i += 1; // literal "%%", not a conversion
-            continue;
-        }
-        // Optional flags.
-        while i < bytes.len() && matches!(bytes[i], b'-' | b'+' | b'0' | b'#' | b' ') {
-            i += 1;
-        }
-        // Optional width: decimal digits only ('*' is left in place and rejected as a bad conversion char).
-        let width_start = i;
-        while i < bytes.len() && bytes[i].is_ascii_digit() {
-            i += 1;
-        }
-        if i > width_start && fmt[width_start..i].parse::<u32>().map_or(true, |w| w > 512) {
-            return false;
-        }
-        // Optional precision: '.' then decimal digits only.
-        if i < bytes.len() && bytes[i] == b'.' {
-            i += 1;
-            let prec_start = i;
-            while i < bytes.len() && bytes[i].is_ascii_digit() {
-                i += 1;
-            }
-            if i > prec_start && fmt[prec_start..i].parse::<u32>().map_or(true, |p| p > 512) {
-                return false;
-            }
-        }
-        // Conversion char, matched to the slider's value type.
-        if i >= bytes.len() {
-            return false;
-        }
-        let ok = if is_int {
-            matches!(bytes[i], b'd' | b'i')
-        } else {
-            matches!(bytes[i], b'e' | b'E' | b'f' | b'F' | b'g' | b'G')
-        };
-        if !ok {
-            return false;
-        }
-        i += 1;
-        conversions += 1;
-        if conversions > 1 {
-            return false;
-        }
+        let (next, is_conversion) = scan_item(bytes, i, is_int)?;
+        i = next;
+        conversions += usize::from(is_conversion);
     }
-    conversions == 1 || fmt.is_empty()
+    Some(conversions)
+}
+
+/// Scans the item at `i`: a literal byte, a `%%`, or a conversion. Returns the index after it and
+/// whether it was a conversion; [`None`] for a malformed one (including a trailing lone `%`).
+fn scan_item(bytes: &[u8], i: usize, is_int: bool) -> Option<(usize, bool)> {
+    if bytes[i] != b'%' {
+        return Some((i + 1, false));
+    }
+    match bytes.get(i + 1)? {
+        b'%' => Some((i + 2, false)),
+        _ => scan_conversion(bytes, i + 1, is_int).map(|next| (next, true)),
+    }
+}
+
+/// Scans flags, width, precision and the conversion char after a `%`; returns the index after it.
+fn scan_conversion(bytes: &[u8], i: usize, is_int: bool) -> Option<usize> {
+    let mut i = skip_while(bytes, i, |b| matches!(b, b'-' | b'+' | b'0' | b'#' | b' '));
+    i = scan_bounded_number(bytes, i)?;
+    if bytes.get(i) == Some(&b'.') {
+        i = scan_bounded_number(bytes, i + 1)?;
+    }
+    let conversion = *bytes.get(i)?;
+    let matches_type = if is_int {
+        matches!(conversion, b'd' | b'i')
+    } else {
+        matches!(conversion, b'e' | b'E' | b'f' | b'F' | b'g' | b'G')
+    };
+    matches_type.then_some(i + 1)
+}
+
+/// Skips optional decimal digits (a '*' is left in place and rejected as a bad conversion char);
+/// [`None`] when the value exceeds 512.
+fn scan_bounded_number(bytes: &[u8], start: usize) -> Option<usize> {
+    let end = skip_while(bytes, start, |b| b.is_ascii_digit());
+    if end == start {
+        return Some(end);
+    }
+    let digits = std::str::from_utf8(&bytes[start..end]).ok()?;
+    digits.parse::<u32>().ok().filter(|&n| n <= 512).map(|_| end)
+}
+
+fn skip_while(bytes: &[u8], start: usize, pred: impl Fn(u8) -> bool) -> usize {
+    bytes[start..]
+        .iter()
+        .position(|&b| !pred(b))
+        .map_or(bytes.len(), |n| start + n)
 }
 
 /// A valid template as its NUL-terminated copy. Anything [`valid_slider_format`] rejects silently comes

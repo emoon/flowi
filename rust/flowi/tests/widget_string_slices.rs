@@ -67,19 +67,7 @@ fn frame(p: &mut Probe) {
     }}
 }
 
-#[test]
-fn headless_widget_string_slices() {
-    let mut app = Application::new(200, 120, true);
-    // A fixed 0.1s step settles every eased widget state within the frame budget, so the byte-exact pixel
-    // comparisons below see settled colors.
-    app.set_test_dt(0.1);
-    let mut probe = Probe::default();
-
-    // Layout geometry is the previous frame's, so the hit-test needs a few frames before a press can
-    // land.
-    app.inject_mouse_move(HIT_X, HIT_Y);
-    common::tick_n(&mut app, &mut probe, frame, 4, "settle");
-
+fn assert_initial_clamps(probe: &Probe) {
     assert_eq!(
         probe.radio_len, 3,
         "the runtime-length options list reached the widget"
@@ -101,6 +89,64 @@ fn headless_widget_string_slices() {
         !probe.tab_changed,
         "no selection change before any input is injected"
     );
+}
+
+fn assert_label_order_is_rendered(app: &mut Application) {
+    // The comparisons below each render two option lists through the same widget. Labels are chosen to have
+    // obviously different drawn widths so a difference is unmissable at 200x120.
+    let distinct = render_tabs(app, &["WWWWWWWW", "i", "MMMM"]);
+    let repeated = render_tabs(app, &["WWWWWWWW", "WWWWWWWW", "WWWWWWWW"]);
+    assert_ne!(
+        distinct, repeated,
+        "three distinct tab labels must not render identically to the same label repeated — if they do, the \
+         packing loop wrote one element into every slot"
+    );
+
+    let forward = render_tabs(app, &["WWWWWWWW", "i"]);
+    let reversed = render_tabs(app, &["i", "WWWWWWWW"]);
+    assert_ne!(
+        forward, reversed,
+        "a label list must not render identically to its reverse — if it does, slot order is being ignored"
+    );
+
+    // Anchors slot 0 to an absolute reference: the tab strip is left-aligned with fit-sized children, so tab 0
+    // starts at x = 0 and a two-element list paints its leftmost columns like the one-element list with the
+    // same first label. 20 columns is inside the wide label's own tab.
+    const ANCHOR_COLS: u32 = 20;
+    let two = render_tabs_view(app, &["WWWWWWWW", "i"]);
+    let one = render_tabs_view(app, &["WWWWWWWW"]);
+    assert_eq!(
+        left_columns(&two, ANCHOR_COLS),
+        left_columns(&one, ANCHOR_COLS),
+        "slot 0 must hold the FIRST label: the leftmost {ANCHOR_COLS} columns of a two-element list should \
+         match the one-element list with the same leading label, but they diverged — the array is not being \
+         packed in caller order"
+    );
+
+    // The dropdown's trigger draws "label: options[selected_index]", so the only difference between the two
+    // frames is which slot the widget reads.
+    let pick_first = render_dropdown(app, &QUALITY, 0);
+    let pick_second = render_dropdown(app, &QUALITY, 1);
+    assert_ne!(
+        pick_first, pick_second,
+        "selecting index 0 vs 1 must change the dropdown's trigger text — if it does not, index i is not \
+         reading slot i of the packed array"
+    );
+}
+
+#[test]
+fn headless_widget_string_slices() {
+    let mut app = Application::new(200, 120, true);
+    // A fixed 0.1s step settles every eased widget state within the frame budget, so the byte-exact pixel
+    // comparisons below see settled colors.
+    app.set_test_dt(0.1);
+    let mut probe = Probe::default();
+
+    // Layout geometry is the previous frame's, so the hit-test needs a few frames before a press can
+    // land.
+    app.inject_mouse_move(HIT_X, HIT_Y);
+    common::tick_n(&mut app, &mut probe, frame, 4, "settle");
+    assert_initial_clamps(&probe);
 
     // The tab strip selects on press (not release), so the press tick alone moves it.
     app.inject_mouse_button(MouseButton::Left, true);
@@ -120,47 +166,7 @@ fn headless_widget_string_slices() {
     // Park the cursor off the tab strip so no render below carries hover state into the byte-exact
     // comparisons.
     app.inject_mouse_move(RESTING_X, RESTING_Y);
-
-    // The comparisons below each render two option lists through the same widget. Labels are chosen to have
-    // obviously different drawn widths so a difference is unmissable at 200x120.
-    let distinct = render_tabs(&mut app, &["WWWWWWWW", "i", "MMMM"]);
-    let repeated = render_tabs(&mut app, &["WWWWWWWW", "WWWWWWWW", "WWWWWWWW"]);
-    assert_ne!(
-        distinct, repeated,
-        "three distinct tab labels must not render identically to the same label repeated — if they do, the \
-         packing loop wrote one element into every slot"
-    );
-
-    let forward = render_tabs(&mut app, &["WWWWWWWW", "i"]);
-    let reversed = render_tabs(&mut app, &["i", "WWWWWWWW"]);
-    assert_ne!(
-        forward, reversed,
-        "a label list must not render identically to its reverse — if it does, slot order is being ignored"
-    );
-
-    // Anchors slot 0 to an absolute reference: the tab strip is left-aligned with fit-sized children, so tab 0
-    // starts at x = 0 and a two-element list paints its leftmost columns like the one-element list with the
-    // same first label. 20 columns is inside the wide label's own tab.
-    const ANCHOR_COLS: u32 = 20;
-    let two = render_tabs_view(&mut app, &["WWWWWWWW", "i"]);
-    let one = render_tabs_view(&mut app, &["WWWWWWWW"]);
-    assert_eq!(
-        left_columns(&two, ANCHOR_COLS),
-        left_columns(&one, ANCHOR_COLS),
-        "slot 0 must hold the FIRST label: the leftmost {ANCHOR_COLS} columns of a two-element list should \
-         match the one-element list with the same leading label, but they diverged — the array is not being \
-         packed in caller order"
-    );
-
-    // The dropdown's trigger draws "label: options[selected_index]", so the only difference between the two
-    // frames is which slot the widget reads.
-    let pick_first = render_dropdown(&mut app, &QUALITY, 0);
-    let pick_second = render_dropdown(&mut app, &QUALITY, 1);
-    assert_ne!(
-        pick_first, pick_second,
-        "selecting index 0 vs 1 must change the dropdown's trigger text — if it does not, index i is not \
-         reading slot i of the packed array"
-    );
+    assert_label_order_is_rendered(&mut app);
 }
 
 /// The leftmost cols columns of every row, as a flat byte vector.
@@ -175,47 +181,37 @@ fn left_columns(view: &PixelView, cols: u32) -> Vec<u8> {
 fn render_tabs_view(app: &mut Application, labels: &[&str]) -> PixelView {
     let mut selected = 0i32;
     // Sizing settles on the second tick; the extra four let the eased widget state reach its snap target.
-    for _ in 0..6 {
-        assert!(
-            app.tick(&mut selected, |sel: &mut i32| {
-                col! { width: grow!(), height: grow!() {
-                    TabBar::new(labels, sel, Default::default());
-                }}
-            }),
-            "tab render tick should keep running"
-        );
-    }
+    common::tick_n(
+        app,
+        &mut selected,
+        |sel: &mut i32| {
+            col! { width: grow!(), height: grow!() {
+                TabBar::new(labels, sel, Default::default());
+            }}
+        },
+        6,
+        "tab render",
+    );
     app.read_pixels().expect("render backend readback")
 }
 
 fn render_tabs(app: &mut Application, labels: &[&str]) -> Vec<u8> {
-    let mut selected = 0i32;
-    // Sizing settles on the second tick; the extra four let the eased widget state reach its snap target.
-    for _ in 0..6 {
-        assert!(
-            app.tick(&mut selected, |sel: &mut i32| {
-                col! { width: grow!(), height: grow!() {
-                    TabBar::new(labels, sel, Default::default());
-                }}
-            }),
-            "tab render tick should keep running"
-        );
-    }
-    app.read_pixels().expect("render backend readback").pixels
+    render_tabs_view(app, labels).pixels
 }
 
 /// Renders the dropdown closed, with selected picked.
 fn render_dropdown(app: &mut Application, options: &[&str], selected: i32) -> Vec<u8> {
     let mut state = (false, selected);
-    for _ in 0..6 {
-        assert!(
-            app.tick(&mut state, |s: &mut (bool, i32)| {
-                col! { width: grow!(), height: grow!() {
-                    Dropdown::new("Q", &mut s.0, options, &mut s.1, Default::default());
-                }}
-            }),
-            "dropdown render tick should keep running"
-        );
-    }
+    common::tick_n(
+        app,
+        &mut state,
+        |s: &mut (bool, i32)| {
+            col! { width: grow!(), height: grow!() {
+                Dropdown::new("Q", &mut s.0, options, &mut s.1, Default::default());
+            }}
+        },
+        6,
+        "dropdown render",
+    );
     app.read_pixels().expect("render backend readback").pixels
 }

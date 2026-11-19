@@ -78,13 +78,19 @@ StubVfsHandle* stub_vfs_alloc(bool is_dir) {
 }
 
 // Matches the single file relative to the mount root ("hello.txt") and absolute ("/hello.txt").
-bool stub_vfs_is_file(FlString path) {
+static bool stub_vfs_name_is_file(FlString name) {
     const int n = (int)sizeof(STUB_VFS_FILE) - 1;
-    if (path.length == n && memcmp(path.data, STUB_VFS_FILE, (size_t)n) == 0) {
+    return name.length == n && memcmp(name.data, STUB_VFS_FILE, (size_t)n) == 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool stub_vfs_is_file(FlString path) {
+    if (stub_vfs_name_is_file(path)) {
         return true;
     }
-    if (path.length == n + 1 && path.data[0] == '/' && memcmp(path.data + 1, STUB_VFS_FILE, (size_t)n) == 0) {
-        return true;
+    if (path.length > 0 && path.data[0] == '/') {
+        return stub_vfs_name_is_file((FlString) { .data = path.data + 1, .length = path.length - 1 });
     }
     return false;
 }
@@ -113,6 +119,31 @@ bool stub_vfs_can_open(FlString path) {
     return true;
 }
 
+static FlVfsOpenResult stub_vfs_open_handle(bool is_dir) {
+    StubVfsHandle* h = stub_vfs_alloc(is_dir);
+    return (FlVfsOpenResult) { .handle = h,
+                               .is_directory = is_dir,
+                               .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVfsOpenResult stub_vfs_open_not_found(void) {
+    return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static FlVfsOpenResult stub_vfs_open_root(FlString path) {
+    const bool is_file = stub_vfs_is_file(path);
+    if (!stub_vfs_is_stub_root(path) && !is_file) {
+        return stub_vfs_open_not_found();
+    }
+    return stub_vfs_open_handle(!(s_stub_vfs_open_as_file && is_file));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 FlVfsOpenResult stub_vfs_open(void* instance, void* parent_handle, FlString path, uint32_t flags,
                               FlVfsMountOptions mount_options) {
     (void)instance;
@@ -125,26 +156,12 @@ FlVfsOpenResult stub_vfs_open(void* instance, void* parent_handle, FlString path
     // The driver claims only the /stub* sources the cases mount. Driver resolution tries registered drivers before
     // the built-in LocalFS fallback, so a broader claim would shadow LocalFS for every path.
     if (parent_handle == nullptr) {
-        if (!stub_vfs_is_stub_root(path) && !stub_vfs_is_file(path)) {
-            return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
-        }
-        if (s_stub_vfs_open_as_file && stub_vfs_is_file(path)) {
-            StubVfsHandle* h = stub_vfs_alloc(false);
-            return (FlVfsOpenResult) { .handle = h,
-                                       .is_directory = false,
-                                       .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
-        }
-        StubVfsHandle* h = stub_vfs_alloc(true);
-        return (
-            FlVfsOpenResult) { .handle = h, .is_directory = true, .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
+        return stub_vfs_open_root(path);
     }
-    if (stub_vfs_is_file(path)) {
-        StubVfsHandle* h = stub_vfs_alloc(false);
-        return (
-            FlVfsOpenResult) { .handle = h, .is_directory = false, .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
-    }
-    return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
+    return stub_vfs_is_file(path) ? stub_vfs_open_handle(false) : stub_vfs_open_not_found();
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool stub_vfs_is_directory(void* instance, void* handle) {
     (void)instance;
@@ -187,19 +204,35 @@ _Atomic bool s_stub_vfs_read_gate_armed;
 _Atomic bool s_stub_vfs_read_entered;
 _Atomic bool s_stub_vfs_read_release;
 
+static void stub_vfs_wait_at_gate(void) {
+    if (!atomic_load(&s_stub_vfs_read_gate_armed)) {
+        return;
+    }
+    atomic_store(&s_stub_vfs_read_entered, true);
+    const u64 deadline_ns = get_monotonic_time_ns_os() + STUB_VFS_GATE_TIMEOUT_NS;
+    while (!atomic_load(&s_stub_vfs_read_release) && get_monotonic_time_ns_os() < deadline_ns) {
+        sleep_ms(1);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool stub_vfs_read_args_valid(const StubVfsHandle* h, const uint8_t* buffer, int64_t size) {
+    if (!h || h->is_dir) {
+        return false;
+    }
+    return buffer && size >= 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 FlVfsReadResult stub_vfs_read(void* instance, void* handle, FlString relative_path, uint8_t* buffer, int64_t size) {
     (void)instance;
     (void)relative_path;
     atomic_fetch_add(&s_stub_vfs_read_count, 1);
-    if (atomic_load(&s_stub_vfs_read_gate_armed)) {
-        atomic_store(&s_stub_vfs_read_entered, true);
-        const u64 deadline_ns = get_monotonic_time_ns_os() + STUB_VFS_GATE_TIMEOUT_NS;
-        while (!atomic_load(&s_stub_vfs_read_release) && get_monotonic_time_ns_os() < deadline_ns) {
-            sleep_ms(1);
-        }
-    }
+    stub_vfs_wait_at_gate();
     StubVfsHandle* h = (StubVfsHandle*)handle;
-    if (!h || h->is_dir || !buffer || size < 0) {
+    if (!stub_vfs_read_args_valid(h, buffer, size)) {
         return (FlVfsReadResult) { .bytes_read = -1, .error = stub_vfs_not_found() };
     }
     size_t data_size = 0;
@@ -217,12 +250,14 @@ FlVfsReadResult stub_vfs_read(void* instance, void* handle, FlString relative_pa
     return (FlVfsReadResult) { .bytes_read = reported, .error = stub_vfs_ok() };
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void stub_vfs_list_directory(void* instance, void* handle, FlString relative_path, FlVfsListingCallback callback,
                              void* user_data) {
     (void)instance;
     (void)relative_path;
     StubVfsHandle* h = (StubVfsHandle*)handle;
-    if (!h || !h->is_dir || !callback) {
+    if (!stub_vfs_is_directory(nullptr, h) || !callback) {
         return;
     }
     FlVfsEntry entry = {
@@ -266,38 +301,52 @@ FlVfsPlugin s_stub_vfs_plugin = {
 
 RenderFixture s_render;
 
+static void render_fixture_capture_text_run(const FlCmdTextRun* run) {
+    s_render.submitted_text_run = *run;
+    const FlGlyph* glyphs = (const FlGlyph*)(run + 1);
+    u32 n = run->glyph_count;
+    if (n > 4) {
+        n = 4;
+    }
+    for (u32 g = 0; g < n; g++) {
+        s_render.text_run_glyphs[g] = glyphs[g];
+    }
+    s_render.text_run_glyph_count = n;
+    s_render.text_run_found = true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void render_fixture_capture_command(const FlCmdHeader* h) {
+    if (h->kind == FlCmd_Border && !s_render.border_found) {
+        s_render.submitted_border = *(const FlCmdBorder*)(h + 1);
+        s_render.border_found = true;
+    } else if (h->kind == FlCmd_Image && !s_render.image_found) {
+        s_render.submitted_image = *(const FlCmdImage*)(h + 1);
+        s_render.image_found = true;
+    } else if (h->kind == FlCmd_TextRun && !s_render.text_run_found) {
+        render_fixture_capture_text_run((const FlCmdTextRun*)(h + 1));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void render_fixture_capture(void* user_data, FlSurface* surface, const FlRenderFrame* frame) {
     s_render.submitted_global_alpha = frame->global_alpha;
     s_render.submitted_background = frame->background;
     s_render.border_found = false;
     s_render.image_found = false;
     s_render.text_run_found = false;
-    for (const u8* p = (const u8*)frame->commands; p < (const u8*)frame->commands + frame->bytes;) {
+    const u8* end = (const u8*)frame->commands + frame->bytes;
+    for (const u8* p = (const u8*)frame->commands; p < end;) {
         const FlCmdHeader* h = (const FlCmdHeader*)p;
-        if (h->kind == FlCmd_Border && !s_render.border_found) {
-            s_render.submitted_border = *(const FlCmdBorder*)(h + 1);
-            s_render.border_found = true;
-        } else if (h->kind == FlCmd_Image && !s_render.image_found) {
-            s_render.submitted_image = *(const FlCmdImage*)(h + 1);
-            s_render.image_found = true;
-        } else if (h->kind == FlCmd_TextRun && !s_render.text_run_found) {
-            const FlCmdTextRun* run = (const FlCmdTextRun*)(h + 1);
-            s_render.submitted_text_run = *run;
-            const FlGlyph* glyphs = (const FlGlyph*)(run + 1);
-            u32 n = run->glyph_count;
-            if (n > 4) {
-                n = 4;
-            }
-            for (u32 g = 0; g < n; g++) {
-                s_render.text_run_glyphs[g] = glyphs[g];
-            }
-            s_render.text_run_glyph_count = n;
-            s_render.text_run_found = true;
-        }
+        render_fixture_capture_command(h);
         p += h->byte_size;
     }
     s_render.render(user_data, surface, frame);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlUiCtx* render_fixture_get(void) {
     if (s_render.created) {
@@ -395,8 +444,7 @@ int render_cmd_collect(UiRenderCommandType type, UiRenderCommand* out, int max) 
 
 // Same half-LSB comparison as slot_override_color_eq.
 bool tab_color_eq(UiColor4 got, FlColor want) {
-    return fabsf(got.r - (float)want.r) < 0.5f && fabsf(got.g - (float)want.g) < 0.5f
-           && fabsf(got.b - (float)want.b) < 0.5f && fabsf(got.a - (float)want.a) < 0.5f;
+    return slot_override_color_eq(got, want);
 }
 
 // Sets the shared render fixture to a 1:1 logical to physical mapping over a known clear color with no
@@ -410,6 +458,27 @@ void canvas_fixture_reset(FlUiCtx* ctx) {
     ui_background_set_clear_color(12, 12, 14);
 }
 
+static bool render_command_is_border(int index, UiRenderCommand* cmd) {
+    return ui_get_render_command(index, cmd) && cmd->type == UiRenderCmd_Border;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool channel_close(float got, u8 want) {
+    return fabsf(got - (float)want) < 1.0f;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool border_is_focus_color(UiColor4 got, FlColor want) {
+    if (want.a == 0 || got.a <= 0.0f) {
+        return false;
+    }
+    return channel_close(got.r, want.r) && channel_close(got.g, want.g) && channel_close(got.b, want.b);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // True if this frame drew the keyboard focus ring: a border render command in the theme's border.focus color.
 // item_begin draws it only on the frame_focus_cursor row.
 bool focus_ring_drawn(void) {
@@ -417,11 +486,10 @@ bool focus_ring_drawn(void) {
     const int n = ui_get_render_command_count();
     for (int i = 0; i < n; i++) {
         UiRenderCommand cmd;
-        if (!ui_get_render_command(i, &cmd) || cmd.type != UiRenderCmd_Border) {
+        if (!render_command_is_border(i, &cmd)) {
             continue;
         }
-        if (want.a > 0 && cmd.border_color.a > 0.0f && fabsf(cmd.border_color.r - want.r) < 1.0f
-            && fabsf(cmd.border_color.g - want.g) < 1.0f && fabsf(cmd.border_color.b - want.b) < 1.0f) {
+        if (border_is_focus_color(cmd.border_color, want)) {
             return true;
         }
     }

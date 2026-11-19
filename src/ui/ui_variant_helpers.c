@@ -12,65 +12,32 @@
 #define SOFT_BG_ALPHA 38 // 15% of 255 ~ 38
 
 FlColor ui_get_variant_bg(FlWidgetVariant variant, const FlThemeColors* theme) {
-    switch (variant) {
-        case FlWidgetVariant_Solid:
-            return theme->interactive.base;
-
-        case FlWidgetVariant_Outline:
-            return theme->surface.base;
-
-        case FlWidgetVariant_Ghost:
-            return theme->surface.base;
-
-        case FlWidgetVariant_Soft:
-            return (FlColor) {
-                .r = theme->interactive.base.r,
-                .g = theme->interactive.base.g,
-                .b = theme->interactive.base.b,
-                .a = SOFT_BG_ALPHA,
-            };
-
-        default:
-            return theme->interactive.base;
+    if (variant == FlWidgetVariant_Outline || variant == FlWidgetVariant_Ghost) {
+        return theme->surface.base;
     }
+    if (variant == FlWidgetVariant_Soft) {
+        FlColor soft = theme->interactive.base;
+        soft.a = SOFT_BG_ALPHA;
+        return soft;
+    }
+    return theme->interactive.base;
 }
 
 FlColor ui_get_variant_text(FlWidgetVariant variant, const FlThemeColors* theme) {
-    switch (variant) {
-        case FlWidgetVariant_Solid:
-            return theme->text.primary;
-
-        case FlWidgetVariant_Outline:
-            return theme->text.primary;
-
-        case FlWidgetVariant_Ghost:
-            return theme->text.secondary;
-
-        case FlWidgetVariant_Soft:
-            return theme->text.accent;
-
-        default:
-            return theme->text.primary;
+    if (variant == FlWidgetVariant_Ghost) {
+        return theme->text.secondary;
     }
+    if (variant == FlWidgetVariant_Soft) {
+        return theme->text.accent;
+    }
+    return theme->text.primary;
 }
 
 FlColor ui_get_variant_border(FlWidgetVariant variant, const FlThemeColors* theme) {
-    switch (variant) {
-        case FlWidgetVariant_Solid:
-            return (FlColor) { 0, 0, 0, 0 }; // No border
-
-        case FlWidgetVariant_Outline:
-            return theme->interactive.base;
-
-        case FlWidgetVariant_Ghost:
-            return (FlColor) { 0, 0, 0, 0 }; // No border
-
-        case FlWidgetVariant_Soft:
-            return (FlColor) { 0, 0, 0, 0 }; // No border
-
-        default:
-            return (FlColor) { 0, 0, 0, 0 };
+    if (variant == FlWidgetVariant_Outline) {
+        return theme->interactive.base;
     }
+    return (FlColor) { 0, 0, 0, 0 };
 }
 
 FlColor ui_apply_state_color(FlColor base, const struct ItemState* item) {

@@ -194,28 +194,34 @@ GLuint create_slot_texture(const GpuGl* gl, u32 w, u32 h, bool alpha_only, bool 
     return tex;
 }
 
+// Copy h rows of tight bytes out of a strided source into one contiguous block.
+
+static const u8* repack_tight(FlArena* arena, const GpuTexUpload* upload, u32 tight) {
+    u8* repacked = arena_alloc_array(arena, u8, (size_t)tight * upload->h);
+    for (u32 row = 0; row < upload->h; row++) {
+        memcpy(repacked + (size_t)row * tight, upload->pixels + (size_t)row * upload->stride, tight);
+    }
+    return repacked;
+}
+
 // Upload possibly-padded rows into the texture bound on the active unit: rows ride GL_UNPACK_ROW_LENGTH
 // when the stride is a whole number of pixels, the rare remainder repacks tight through arena. stride 0
 // means tightly packed. Shared by every image upload path (atlas, large static, dynamic).
-void tex_sub_image_strided(FlArena* arena, u32 x, u32 y, u32 w, u32 h, u32 stride, u32 bpp, GLenum format,
-                           const u8* pixels) {
-    u32 tight = w * bpp;
-    if (stride == 0) {
-        stride = tight;
+void tex_sub_image_strided(FlArena* arena, const GpuTexUpload* upload) {
+    u32 tight = upload->w * upload->bpp;
+    GpuTexUpload tight_upload = *upload;
+    if (tight_upload.stride == 0) {
+        tight_upload.stride = tight;
     }
+    const u8* pixels = upload->pixels;
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    if (stride != tight) {
-        if (stride % bpp == 0) {
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(stride / bpp));
-        } else {
-            u8* repacked = arena_alloc_array(arena, u8, (size_t)tight * h);
-            for (u32 row = 0; row < h; row++) {
-                memcpy(repacked + (size_t)row * tight, pixels + (size_t)row * stride, tight);
-            }
-            pixels = repacked;
-        }
+    if (tight_upload.stride != tight && tight_upload.stride % upload->bpp == 0) {
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(tight_upload.stride / upload->bpp));
+    } else if (tight_upload.stride != tight) {
+        pixels = repack_tight(arena, &tight_upload, tight);
     }
-    glTexSubImage2D(GL_TEXTURE_2D, 0, (GLint)x, (GLint)y, (GLsizei)w, (GLsizei)h, format, GL_UNSIGNED_BYTE, pixels);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, (GLint)upload->x, (GLint)upload->y, (GLsizei)upload->w, (GLsizei)upload->h,
+                    upload->format, GL_UNSIGNED_BYTE, pixels);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 }
 
@@ -241,8 +247,12 @@ static void bind_frame_slot_textures(GpuShared* self) {
         if (img->dirty) {
             // Stream the referencing frame's content. The frame arena backs any repack and is rewound
             // only after the dispatch, so the copy lives long enough.
-            tex_sub_image_strided(self->frame_arena, 0, 0, img->w, img->h, img->stride, img->alpha_only ? 1u : 4u,
-                                  img->alpha_only ? GL_RED : GL_RGBA, img->pixels);
+            tex_sub_image_strided(self->frame_arena, &(GpuTexUpload) { .w = img->w,
+                                                                       .h = img->h,
+                                                                       .stride = img->stride,
+                                                                       .bpp = img->alpha_only ? 1u : 4u,
+                                                                       .format = img->alpha_only ? GL_RED : GL_RGBA,
+                                                                       .pixels = img->pixels });
             img->dirty = false;
             self->cpu.dynamic_upload_count++; // one tick per dynamic stream, only on referencing frames
         }
@@ -489,38 +499,49 @@ static void destroy(void* user_data) {
     fl_arena_destroy(self->frame_arena);
 }
 
-FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
-    GpuShared* self = arena_alloc_zero(arena, GpuShared);
-    self->perm_arena = arena;
-
-    if (!gpu_gl_load(&self->gl)) {
-        return (FlRenderBackend) { 0 };
-    }
-
+static bool gl_version_supported(void) {
     GLint major = 0;
     GLint minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
     if (major * 10 + minor < 43) {
         log_error("gpu backend: GL %d.%d below the 4.3 core floor", major, minor);
-        return (FlRenderBackend) { 0 };
+        return false;
     }
+    return true;
+}
 
+static bool any_program_missing(const GpuShared* self) {
+    if (self->classify_prog == 0 || self->raster_prog == 0) {
+        return true;
+    }
+    return self->glyph_prog == 0 || self->color_svg_prog == 0;
+}
+
+static void delete_compute_programs(const GpuGl* gl, const GpuShared* self) {
+    // glDeleteProgram ignores 0, so deleting all four releases exactly the programs that compiled.
+    gl->DeleteProgram(self->classify_prog);
+    gl->DeleteProgram(self->raster_prog);
+    gl->DeleteProgram(self->glyph_prog);
+    gl->DeleteProgram(self->color_svg_prog);
+}
+
+static bool compile_compute_programs(GpuShared* self) {
     const GpuGl* gl = &self->gl;
     const char* srcs[GPU_SHADER_MAX_SOURCES];
     self->classify_prog = compile_program(gl, srcs, gpu_classify_sources(srcs), "classification shader");
     self->raster_prog = compile_program(gl, srcs, gpu_raster_sources(srcs), "raster shader");
     self->glyph_prog = compile_program(gl, srcs, gpu_glyph_sources(srcs), "glyph raster shader");
     self->color_svg_prog = compile_program(gl, srcs, gpu_color_svg_sources(srcs), "color svg raster shader");
-    if (self->classify_prog == 0 || self->raster_prog == 0 || self->glyph_prog == 0 || self->color_svg_prog == 0) {
-        // glDeleteProgram ignores 0, so deleting all four releases exactly the programs that compiled.
-        gl->DeleteProgram(self->classify_prog);
-        gl->DeleteProgram(self->raster_prog);
-        gl->DeleteProgram(self->glyph_prog);
-        gl->DeleteProgram(self->color_svg_prog);
-        return (FlRenderBackend) { 0 };
+    if (any_program_missing(self)) {
+        delete_compute_programs(gl, self);
+        return false;
     }
+    return true;
+}
 
+static void resolve_uniform_locations(GpuShared* self) {
+    const GpuGl* gl = &self->gl;
     self->u_classify_cmd_count = gl->GetUniformLocation(self->classify_prog, "cmd_count");
     self->u_classify_tile_cols = gl->GetUniformLocation(self->classify_prog, "tile_cols");
     self->u_classify_tile_rows = gl->GetUniformLocation(self->classify_prog, "tile_rows");
@@ -533,9 +554,13 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     self->u_color_svg_cell_origin = gl->GetUniformLocation(self->color_svg_prog, "cell_origin");
     self->u_color_svg_cell_size = gl->GetUniformLocation(self->color_svg_prog, "cell_size");
     self->u_color_svg_shape_count = gl->GetUniformLocation(self->color_svg_prog, "shape_count");
+}
 
-    // The atlas samplers and the slot sampler array live on fixed texture units; set once (the program
-    // object keeps them). Per-frame slot state is the textures bound to those units + slot_inv_size.
+// The atlas samplers and the slot sampler array live on fixed texture units; set once (the program
+// object keeps them). Per-frame slot state is the textures bound to those units + slot_inv_size.
+
+static void bind_raster_texture_units(GpuShared* self) {
+    const GpuGl* gl = &self->gl;
     gl->UseProgram(self->raster_prog);
     gl->Uniform1i(gl->GetUniformLocation(self->raster_prog, "atlas_linear"), 1);
     gl->Uniform1i(gl->GetUniformLocation(self->raster_prog, "atlas_nearest"), 2);
@@ -552,12 +577,13 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     }
     gl->Uniform1iv(gl->GetUniformLocation(self->raster_prog, "slot_tex"), GPU_IMAGE_SLOT_COUNT, slot_units);
     self->u_raster_slot_inv_size = gl->GetUniformLocation(self->raster_prog, "slot_inv_size");
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &self->max_texture_size);
+}
 
-    self->frame_arena = arena_new();
+// Shared per-frame SSBOs (one frame in flight). The per-tile classification SSBO is per-surface and genned
+// in gpu_create_surface; the readback buffer's arena is per-surface too.
 
-    // Shared per-frame SSBOs (one frame in flight). The per-tile classification SSBO is per-surface and genned
-    // in gpu_create_surface; the readback buffer's arena is per-surface too.
+static void create_shared_ssbos(GpuShared* self) {
+    const GpuGl* gl = &self->gl;
     GLuint buffers[5];
     gl->GenBuffers(5, buffers);
     self->cmd_ssbo = buffers[0];
@@ -571,52 +597,46 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
     seed_empty_ssbo(gl, self->cmd_ssbo, sizeof(zero_cmd), &zero_cmd);
     seed_empty_ssbo(gl, self->aabb_ssbo, sizeof(zero_aabb), &zero_aabb);
     seed_empty_ssbo(gl, self->clip_ssbo, sizeof(zero_aabb), &zero_aabb);
+}
 
-    // Image atlas: CPU bookkeeping + the RGBA8 texture. Immutable storage, one level (no mips; sampling is
-    // explicit-LOD). The sampler-slot bookkeeping for large/dynamic images sits alongside; its
-    // textures are created on demand (prepare seam / render).
+// Create an immutable single-level atlas texture (no mips; sampling is explicit-LOD) and leave it bound.
+
+static GLuint create_atlas_texture(const GpuGl* gl, GLenum internal_format, u32 size) {
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    gl->TexStorage2D(GL_TEXTURE_2D, 1, internal_format, (GLsizei)size, (GLsizei)size);
+    return tex;
+}
+
+// CPU bookkeeping plus the GL texture behind every atlas. None is ever cleared: a prepared cell is fully
+// written including its padding ring, and nothing samples outside prepared cells. The sampler-slot
+// bookkeeping for large/dynamic images sits alongside; its textures are created on demand (prepare seam /
+// render).
+
+static void create_atlases(GpuShared* self, struct FlArena* arena) {
+    const GpuGl* gl = &self->gl;
+
+    // Image atlas: RGBA8.
     gpu_image_atlas_init(&self->cpu.image_atlas, arena);
     gpu_image_slots_init(&self->cpu.image_slots, arena);
-    glGenTextures(1, &self->atlas_tex);
-    glBindTexture(GL_TEXTURE_2D, self->atlas_tex);
-    gl->TexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, GPU_IMAGE_ATLAS_SIZE, GPU_IMAGE_ATLAS_SIZE);
+    self->atlas_tex = create_atlas_texture(gl, GL_RGBA8, GPU_IMAGE_ATLAS_SIZE);
 
-    // Glyph atlas: R8 coverage, image-stored by the glyph-raster dispatch. Never cleared: a
-    // prepared cell is fully written including its padding ring, and nothing samples outside prepared cells.
+    // Glyph atlas: R8 coverage, image-stored by the glyph-raster dispatch.
     gpu_glyph_atlas_init(&self->cpu.glyph_atlas, arena);
-    glGenTextures(1, &self->glyph_atlas_tex);
-    glBindTexture(GL_TEXTURE_2D, self->glyph_atlas_tex);
-    gl->TexStorage2D(GL_TEXTURE_2D, 1, GL_R8, GPU_GLYPH_ATLAS_SIZE, GPU_GLYPH_ATLAS_SIZE);
+    self->glyph_atlas_tex = create_atlas_texture(gl, GL_R8, GPU_GLYPH_ATLAS_SIZE);
 
-    // SVG vector-icon atlas: R8 coverage, image-stored by the glyph-raster dispatch reused for monochrome
-    // icons. Never cleared: every prepared cell including its padding ring is fully written, and nothing
-    // samples outside a prepared cell.
+    // SVG vector-icon atlas: R8 coverage, image-stored by the glyph-raster dispatch reused for monochrome icons.
     gpu_svg_atlas_init(&self->cpu.svg_atlas, arena, GpuSvgTexel_R8);
-    glGenTextures(1, &self->svg_atlas_tex);
-    glBindTexture(GL_TEXTURE_2D, self->svg_atlas_tex);
-    gl->TexStorage2D(GL_TEXTURE_2D, 1, GL_R8, GPU_SVG_ATLAS_SIZE_MONO, GPU_SVG_ATLAS_SIZE_MONO);
+    self->svg_atlas_tex = create_atlas_texture(gl, GL_R8, GPU_SVG_ATLAS_SIZE_MONO);
 
-    // Multi-color SVG atlas: the same bookkeeping as the R8 atlas, but RGBA8: its cells hold baked
-    // premultiplied color composited by the color-raster dispatch. Never cleared either; every prepared cell
-    // including its padding ring is fully written (the ring stays transparent).
+    // Multi-color SVG atlas: RGBA8; its cells hold baked premultiplied color composited by the color-raster
+    // dispatch, the padding ring staying transparent.
     gpu_svg_atlas_init(&self->cpu.color_svg_atlas, arena, GpuSvgTexel_Rgba8);
-    glGenTextures(1, &self->color_svg_atlas_tex);
-    glBindTexture(GL_TEXTURE_2D, self->color_svg_atlas_tex);
-    gl->TexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, GPU_SVG_ATLAS_SIZE_COLOR, GPU_SVG_ATLAS_SIZE_COLOR);
+    self->color_svg_atlas_tex = create_atlas_texture(gl, GL_RGBA8, GPU_SVG_ATLAS_SIZE_COLOR);
+}
 
-    self->sampler_linear = create_sampler(gl, GL_LINEAR);
-    self->sampler_nearest = create_sampler(gl, GL_NEAREST);
-
-    // No surface is created here: the host builds per-window targets via the surface seam, so the
-    // resolution-dependent resources are created in gpu_create_surface.
-
-    // The core's default scale.
-    self->last_ui_scale = 1.0f;
-
-    // The 3D tier is optional: if its program fails to build, the seam below stays unbound and the core draws
-    // a placeholder for every viewport rather than the backend failing to construct.
-    bool has_3d = gpu_viewport3d_create(self);
-
+static FlRenderBackend backend_vtable(GpuShared* self, bool has_3d) {
     return (FlRenderBackend) {
         .user_data = self,
         .create_surface = gpu_create_surface,
@@ -641,4 +661,41 @@ FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
         // main/render thread instead of running in the job worker.
         .prepare_image_on_job = false,
     };
+}
+
+FlRenderBackend create_gpu_renderer(struct FlArena* arena) {
+    GpuShared* self = arena_alloc_zero(arena, GpuShared);
+    self->perm_arena = arena;
+
+    if (!gpu_gl_load(&self->gl) || !gl_version_supported()) {
+        return (FlRenderBackend) { 0 };
+    }
+    if (!compile_compute_programs(self)) {
+        return (FlRenderBackend) { 0 };
+    }
+
+    const GpuGl* gl = &self->gl;
+    resolve_uniform_locations(self);
+    bind_raster_texture_units(self);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &self->max_texture_size);
+
+    self->frame_arena = arena_new();
+
+    create_shared_ssbos(self);
+    create_atlases(self, arena);
+
+    self->sampler_linear = create_sampler(gl, GL_LINEAR);
+    self->sampler_nearest = create_sampler(gl, GL_NEAREST);
+
+    // No surface is created here: the host builds per-window targets via the surface seam, so the
+    // resolution-dependent resources are created in gpu_create_surface.
+
+    // The core's default scale.
+    self->last_ui_scale = 1.0f;
+
+    // The 3D tier is optional: if its program fails to build, the seam below stays unbound and the core draws
+    // a placeholder for every viewport rather than the backend failing to construct.
+    bool has_3d = gpu_viewport3d_create(self);
+
+    return backend_vtable(self, has_3d);
 }

@@ -6,6 +6,29 @@
 #include <core/string.h>
 #include <string.h>
 
+static void expect_text(int* utest_result, FlString got, const char* want) {
+    ASSERT_EQ((u64)strlen(want), (u64)got.length);
+    ASSERT_EQ(0, memcmp(got.data, want, got.length));
+}
+
+static FlString current_directory_name_with_absolute_parent(FlArena* arena) {
+    FlString current_dir = path_get_current_directory(arena);
+    if (current_dir.length == 0) {
+        return (FlString) { 0 };
+    }
+
+    FlString current_name = fl_path_get_filename(current_dir);
+    if (current_name.length == 0) {
+        return (FlString) { 0 };
+    }
+
+    FlString parent_dir = fl_path_get_parent(arena, current_dir);
+    if (parent_dir.length == 0 || !fl_path_is_absolute(parent_dir)) {
+        return (FlString) { 0 };
+    }
+    return current_name;
+}
+
 UTEST(path, normalize_empty) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlString result = fl_path_normalize(arena, (FlString) { 0 });
@@ -97,12 +120,9 @@ UTEST(path, split_multiple) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     StringArray result = path_split(arena, FL_S("path/to/file.txt"));
     ASSERT_EQ(3, result.count);
-    ASSERT_EQ(4UL, (u64)result.items[0].length);
-    ASSERT_EQ(0, memcmp(result.items[0].data, "path", 4));
-    ASSERT_EQ(2UL, (u64)result.items[1].length);
-    ASSERT_EQ(0, memcmp(result.items[1].data, "to", 2));
-    ASSERT_EQ(8UL, (u64)result.items[2].length);
-    ASSERT_EQ(0, memcmp(result.items[2].data, "file.txt", 8));
+    expect_text(utest_result, result.items[0], "path");
+    expect_text(utest_result, result.items[1], "to");
+    expect_text(utest_result, result.items[2], "file.txt");
     fl_arena_destroy(arena);
 }
 
@@ -110,12 +130,9 @@ UTEST(path, split_absolute) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     StringArray result = path_split(arena, FL_S("/path/to/file"));
     ASSERT_EQ(3, result.count);
-    ASSERT_EQ(4UL, (u64)result.items[0].length);
-    ASSERT_EQ(0, memcmp(result.items[0].data, "path", 4));
-    ASSERT_EQ(2UL, (u64)result.items[1].length);
-    ASSERT_EQ(0, memcmp(result.items[1].data, "to", 2));
-    ASSERT_EQ(4UL, (u64)result.items[2].length);
-    ASSERT_EQ(0, memcmp(result.items[2].data, "file", 4));
+    expect_text(utest_result, result.items[0], "path");
+    expect_text(utest_result, result.items[1], "to");
+    expect_text(utest_result, result.items[2], "file");
     fl_arena_destroy(arena);
 }
 
@@ -123,10 +140,8 @@ UTEST(path, split_trailing_slash) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     StringArray result = path_split(arena, FL_S("path/to/"));
     ASSERT_EQ(2, result.count);
-    ASSERT_EQ(4UL, (u64)result.items[0].length);
-    ASSERT_EQ(0, memcmp(result.items[0].data, "path", 4));
-    ASSERT_EQ(2UL, (u64)result.items[1].length);
-    ASSERT_EQ(0, memcmp(result.items[1].data, "to", 2));
+    expect_text(utest_result, result.items[0], "path");
+    expect_text(utest_result, result.items[1], "to");
     fl_arena_destroy(arena);
 }
 
@@ -417,9 +432,10 @@ UTEST(path, is_absolute_url) {
 }
 
 UTEST(path, is_relative) {
-    ASSERT_TRUE(fl_path_is_relative(FL_S("path/to/file")));
-    ASSERT_TRUE(fl_path_is_relative(FL_S("./path")));
-    ASSERT_TRUE(fl_path_is_relative(FL_S("../path")));
+    const FlString relative[] = { FL_S("path/to/file"), FL_S("./path"), FL_S("../path") };
+    for_count(i, sizeof_array(relative)) {
+        ASSERT_TRUE(fl_path_is_relative(relative[i]));
+    }
     ASSERT_FALSE(fl_path_is_relative(FL_S("/absolute/path")));
 }
 
@@ -609,8 +625,7 @@ UTEST(path, edge_case_unicode) {
     ASSERT_GT((u64)normalized.length, 0UL);
 
     FlString ext = fl_path_get_extension(input);
-    ASSERT_EQ(3UL, (u64)ext.length);
-    ASSERT_EQ(0, memcmp(ext.data, "txt", 3));
+    expect_text(utest_result, ext, "txt");
     fl_arena_destroy(arena);
 }
 
@@ -621,8 +636,7 @@ UTEST(path, edge_case_special_chars) {
     ASSERT_EQ(20UL, (u64)normalized.length);
 
     FlString filename = fl_path_get_filename(input);
-    ASSERT_EQ(12UL, (u64)filename.length);
-    ASSERT_EQ(0, memcmp(filename.data, "file (1).txt", 12));
+    expect_text(utest_result, filename, "file (1).txt");
     fl_arena_destroy(arena);
 }
 
@@ -630,12 +644,10 @@ UTEST(path, edge_case_dots) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     FlString input = FL_S("path.with.dots/file.name.with.dots.txt");
     FlString ext = fl_path_get_extension(input);
-    ASSERT_EQ(3UL, (u64)ext.length);
-    ASSERT_EQ(0, memcmp(ext.data, "txt", 3));
+    expect_text(utest_result, ext, "txt");
 
     FlString basename = fl_path_get_basename(arena, input);
-    ASSERT_EQ(19UL, (u64)basename.length);
-    ASSERT_EQ(0, memcmp(basename.data, "file.name.with.dots", 19));
+    expect_text(utest_result, basename, "file.name.with.dots");
     fl_arena_destroy(arena);
 }
 
@@ -646,8 +658,7 @@ UTEST(path, edge_case_spaces) {
     ASSERT_EQ(30UL, (u64)normalized.length);
 
     FlString filename = fl_path_get_filename(input);
-    ASSERT_EQ(13UL, (u64)filename.length);
-    ASSERT_EQ(0, memcmp(filename.data, "file name.txt", 13));
+    expect_text(utest_result, filename, "file name.txt");
     fl_arena_destroy(arena);
 }
 
@@ -710,12 +721,9 @@ UTEST(path_utils, split_multiple_segments_with_mixed_separators) {
     FlString input = FL_S("path\\to//file.txt");
     StringArray result = path_split(arena, input);
     ASSERT_EQ(3, result.count);
-    ASSERT_EQ(4UL, (u64)result.items[0].length);
-    ASSERT_EQ(2UL, (u64)result.items[1].length);
-    ASSERT_EQ(8UL, (u64)result.items[2].length);
-    ASSERT_EQ(0, memcmp(result.items[0].data, "path", 4));
-    ASSERT_EQ(0, memcmp(result.items[1].data, "to", 2));
-    ASSERT_EQ(0, memcmp(result.items[2].data, "file.txt", 8));
+    expect_text(utest_result, result.items[0], "path");
+    expect_text(utest_result, result.items[1], "to");
+    expect_text(utest_result, result.items[2], "file.txt");
     fl_arena_destroy(arena);
 }
 
@@ -1056,21 +1064,13 @@ UTEST(path, find_directory_current_existing) {
 UTEST(path, find_directory_relative_vs_absolute) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    FlString current_dir = path_get_current_directory(arena);
-    if (current_dir.length > 0) {
-        FlString current_name = fl_path_get_filename(current_dir);
+    FlString current_name = current_directory_name_with_absolute_parent(arena);
+    if (current_name.length > 0) {
+        FlString result = path_find_directory(arena, current_name);
 
-        if (current_name.length > 0) {
-            FlString parent_dir = fl_path_get_parent(arena, current_dir);
-
-            if (parent_dir.length > 0 && fl_path_is_absolute(parent_dir)) {
-                FlString result = path_find_directory(arena, current_name);
-
-                // The result is either empty (not found) or an existing directory.
-                if (result.length > 0) {
-                    ASSERT_TRUE(file_directory_exists_os(result));
-                }
-            }
+        // The result is either empty (not found) or an existing directory.
+        if (result.length > 0) {
+            ASSERT_TRUE(file_directory_exists_os(result));
         }
     }
 

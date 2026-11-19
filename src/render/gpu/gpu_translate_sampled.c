@@ -156,8 +156,7 @@ static void translate_dynamic_image(GpuTranslate* tr, const FlCmdImage* im) {
         return;
     }
     const FlImageSource* src = &im->source;
-    int index = gpu_image_slots_touch_dynamic(tr->slots, src->dynamic.pixels, src->dynamic.w, src->dynamic.h,
-                                              src->dynamic.stride, im->mode == FlImageMode_AlphaCoverage);
+    int index = gpu_image_slots_touch_dynamic(tr->slots, (GpuDynamicImage) { src->dynamic.pixels, src->dynamic.w, src->dynamic.h, src->dynamic.stride, im->mode == FlImageMode_AlphaCoverage });
     if (index < 0) {
         return; // table full; diagnosed by the slots module
     }

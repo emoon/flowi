@@ -15,6 +15,41 @@ fn scratch_dir(name: &str) -> PathBuf {
     std::env::temp_dir().join(format!("flowi_watcher_{name}_{}", std::process::id()))
 }
 
+/// Scans one batch, appending every path to `seen`; the kind and directory flag of the last change named
+/// `file_name`, if any.
+fn scan_batch(
+    batch: &flowi::FileChanges,
+    file_name: &str,
+    seen: &mut Vec<String>,
+) -> Option<(FileChangeType, bool)> {
+    let mut found = None;
+    for change in batch.iter() {
+        seen.push(change.path().to_owned());
+        if change.path().ends_with(file_name) {
+            found = Some((change.change_types(), change.is_directory()));
+        }
+    }
+    found
+}
+
+/// Collects batches until a change named `file_name` shows up (the platform may split one write across
+/// several); the paths seen so far when the deadline passes.
+fn await_change(watcher: &FileWatcher, file_name: &str) -> Result<(FileChangeType, bool), Vec<String>> {
+    let started = Instant::now();
+    let mut seen = Vec::new();
+    while started.elapsed() < DEADLINE {
+        if !watcher.has_changes() {
+            std::thread::sleep(Duration::from_millis(5));
+            continue;
+        }
+        let batch = watcher.take_changes();
+        if let Some(found) = scan_batch(&batch, file_name, &mut seen) {
+            return Ok(found);
+        }
+    }
+    Err(seen)
+}
+
 #[test]
 fn starting_on_a_missing_directory_returns_none() {
     let _arena = flowi::init(1);
@@ -52,26 +87,8 @@ fn a_created_file_is_reported_with_its_path() {
 
     std::fs::write(dir.join("created.txt"), b"payload").expect("a writable temp directory");
 
-    // Collect batches until the creation shows up: the platform may split one write across several.
-    let started = Instant::now();
-    let mut seen = Vec::new();
-    let mut created = None;
-    while created.is_none() && started.elapsed() < DEADLINE {
-        if watcher.has_changes() {
-            let batch = watcher.take_changes();
-            for change in batch.iter() {
-                seen.push(change.path().to_owned());
-                if change.path().ends_with("created.txt") {
-                    created = Some((change.change_types(), change.is_directory()));
-                }
-            }
-        } else {
-            std::thread::sleep(Duration::from_millis(5));
-        }
-    }
-
-    let (change_types, is_directory) =
-        created.unwrap_or_else(|| panic!("no change named created.txt arrived; saw {seen:?}"));
+    let (change_types, is_directory) = await_change(&watcher, "created.txt")
+        .unwrap_or_else(|seen| panic!("no change named created.txt arrived; saw {seen:?}"));
     assert!(
         change_types.contains(FileChangeType::CREATED),
         "got {change_types:?}"

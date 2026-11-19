@@ -4,6 +4,31 @@
 #include <core/hash.h>
 #include <string.h>
 
+#define FOX_MESSAGE "The quick brown fox jumps over the lazy dog"
+
+static void expect_bytes_equal(int* utest_result, const u8* got, const u8* want, size_t length) {
+    ASSERT_EQ(memcmp(got, want, length), 0);
+}
+
+// Feeds the message in three chunks of 10, 20 and the remaining bytes.
+static void md5_in_chunks(const char* msg, size_t len, u8* out) {
+    Md5Context ctx;
+    hash_md5_init(&ctx);
+    hash_md5_update(&ctx, (const u8*)msg, 10);
+    hash_md5_update(&ctx, (const u8*)(msg + 10), 20);
+    hash_md5_update(&ctx, (const u8*)(msg + 30), len - 30);
+    hash_md5_final(&ctx, out);
+}
+
+static void sha256_in_chunks(const char* msg, u64 len, u8* out) {
+    Sha256Context ctx;
+    fl_hash_sha256_init(&ctx);
+    fl_hash_sha256_update(&ctx, (const u8*)msg, 10);
+    fl_hash_sha256_update(&ctx, (const u8*)(msg + 10), 20);
+    fl_hash_sha256_update(&ctx, (const u8*)(msg + 30), len - 30);
+    fl_hash_sha256_final(&ctx, out);
+}
+
 UTEST(hash, crc32_empty) {
     u32 crc = fl_hash_crc32(nullptr, 0);
     ASSERT_EQ(crc, 0U);
@@ -96,22 +121,16 @@ UTEST(hash, md5_longer_message) {
 }
 
 UTEST(hash, md5_incremental) {
-    const char* msg = "The quick brown fox jumps over the lazy dog";
+    const char* msg = FOX_MESSAGE;
     size_t len = strlen(msg);
 
-    Md5Context ctx;
-    hash_md5_init(&ctx);
-    hash_md5_update(&ctx, (const u8*)msg, 10);
-    hash_md5_update(&ctx, (const u8*)(msg + 10), 20);
-    hash_md5_update(&ctx, (const u8*)(msg + 30), len - 30);
-
     u8 md5[16];
-    hash_md5_final(&ctx, md5);
+    md5_in_chunks(msg, len, md5);
 
     u8 expected[16];
     fl_hash_md5((const u8*)msg, len, expected);
 
-    ASSERT_EQ(memcmp(md5, expected, 16), 0);
+    expect_bytes_equal(utest_result, md5, expected, sizeof(md5));
 }
 
 UTEST(hash, sha256_empty) {
@@ -151,20 +170,14 @@ UTEST(hash, sha256_longer_message) {
 }
 
 UTEST(hash, sha256_incremental) {
-    const char* msg = "The quick brown fox jumps over the lazy dog";
+    const char* msg = FOX_MESSAGE;
     u64 len = strlen(msg);
 
-    Sha256Context ctx;
-    fl_hash_sha256_init(&ctx);
-    fl_hash_sha256_update(&ctx, (const u8*)msg, 10);
-    fl_hash_sha256_update(&ctx, (const u8*)(msg + 10), 20);
-    fl_hash_sha256_update(&ctx, (const u8*)(msg + 30), len - 30);
-
     u8 sha256[32];
-    fl_hash_sha256_final(&ctx, sha256);
+    sha256_in_chunks(msg, len, sha256);
 
     u8 expected[32];
     hash_sha256((const u8*)msg, len, expected);
 
-    ASSERT_EQ(memcmp(sha256, expected, 32), 0);
+    expect_bytes_equal(utest_result, sha256, expected, sizeof(sha256));
 }

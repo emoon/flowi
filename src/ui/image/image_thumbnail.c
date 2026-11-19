@@ -2,6 +2,7 @@
 #include <core/arena.h>
 #include <core/core.h>
 #include <core/log.h>
+#include <core/math.h>
 #include <core/simd.h>
 #include "stb_image_resize2.h"
 
@@ -45,39 +46,68 @@ typedef struct BorderInsets {
     int top, bottom, left, right;
 } BorderInsets;
 
+static bool image_row_all_black(const FlImageDecodeResult* image, int row) {
+    return image_region_all_black(image, (PixelRect) { row, row + 1, 0, image->width });
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static int count_black_rows_from_top(const FlImageDecodeResult* image) {
+    int rows = 0;
+    while (rows < image->height && image_row_all_black(image, rows)) {
+        rows++;
+    }
+    return rows;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static int count_black_rows_from_bottom(const FlImageDecodeResult* image, int top) {
+    int rows = 0;
+    while (image->height - 1 - rows >= top && image_row_all_black(image, image->height - 1 - rows)) {
+        rows++;
+    }
+    return rows;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Some content row has a non-black pixel, so both column scans stop inside the image.
+static int count_black_cols_from_left(const FlImageDecodeResult* image, int row_start, int row_end) {
+    int cols = 0;
+    while (image_region_all_black(image, (PixelRect) { row_start, row_end, cols, cols + 1 })) {
+        cols++;
+    }
+    return cols;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static int count_black_cols_from_right(const FlImageDecodeResult* image, int row_start, int row_end) {
+    int cols = 0;
+    while (image_region_all_black(image, (PixelRect) { row_start, row_end, image->width - 1 - cols,
+                                                       image->width - cols })) {
+        cols++;
+    }
+    return cols;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Measures the black margin on each side. Returns false when the image has no content at all.
 static bool measure_black_border(const FlImageDecodeResult* image, BorderInsets* out) {
-    const int width = image->width;
-    const int height = image->height;
     BorderInsets border = { 0 };
 
-    while (border.top < height && image_region_all_black(image, (PixelRect) { border.top, border.top + 1, 0, width })) {
-        border.top++;
-    }
-    if (border.top >= height) {
+    border.top = count_black_rows_from_top(image);
+    if (border.top >= image->height) {
         return false;
     }
-
-    while (height - 1 - border.bottom >= border.top) {
-        const int row = height - 1 - border.bottom;
-        if (!image_region_all_black(image, (PixelRect) { row, row + 1, 0, width })) {
-            break;
-        }
-        border.bottom++;
-    }
+    border.bottom = count_black_rows_from_bottom(image, border.top);
 
     // The columns only need checking between the content rows; the black rows above and below already cover the rest.
-    const int content_start = border.top;
-    const int content_end = height - border.bottom;
-
-    // Some content row has a non-black pixel, so both column scans stop inside the image.
-    while (image_region_all_black(image, (PixelRect) { content_start, content_end, border.left, border.left + 1 })) {
-        border.left++;
-    }
-    while (image_region_all_black(image, (PixelRect) { content_start, content_end, width - 1 - border.right,
-                                                       width - border.right })) {
-        border.right++;
-    }
+    const int content_end = image->height - border.bottom;
+    border.left = count_black_cols_from_left(image, border.top, content_end);
+    border.right = count_black_cols_from_right(image, border.top, content_end);
 
     *out = border;
     return true;
@@ -185,6 +215,34 @@ static inline u8x16 premul_channel_x16(u8x16 c, i16x8x2 alpha) {
     return i16x8x2_pack_to_u8x16_narrow_shr(t, 8);
 }
 
+static void premultiply_row_simd(u8* row_data, int simd_pixels) {
+    for (int i = 0; i < simd_pixels; i += 16) {
+        u8x16_rgba_result rgba = u8x16_load_deinterleaved_4(row_data, i * 4);
+
+        i16x8x2 alpha = u8x16_unpack_to_i16x8_low(rgba.a);
+
+        u8x16 final_r = premul_channel_x16(rgba.r, alpha);
+        u8x16 final_g = premul_channel_x16(rgba.g, alpha);
+        u8x16 final_b = premul_channel_x16(rgba.b, alpha);
+
+        u8x16_store_interleaved_4(row_data, final_r, final_g, final_b, rgba.a, i * 4);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void premultiply_row_scalar(u8* row_data, int first_pixel, int width) {
+    for (int i = first_pixel; i < width; i++) {
+        const int a = row_data[i * 4 + 3];
+
+        row_data[i * 4 + 0] = image_premul_channel(row_data[i * 4 + 0], a);
+        row_data[i * 4 + 1] = image_premul_channel(row_data[i * 4 + 1], a);
+        row_data[i * 4 + 2] = image_premul_channel(row_data[i * 4 + 2], a);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 static void premultiply_alpha(FlImageDecodeResult* image) {
     if (image->channels != 4) {
         return;
@@ -194,26 +252,8 @@ static void premultiply_alpha(FlImageDecodeResult* image) {
 
     for (int row = 0; row < image->height; row++) {
         u8* row_data = image->pixels + row * image->stride;
-
-        for (int i = 0; i < simd_pixels; i += 16) {
-            u8x16_rgba_result rgba = u8x16_load_deinterleaved_4(row_data, i * 4);
-
-            i16x8x2 alpha = u8x16_unpack_to_i16x8_low(rgba.a);
-
-            u8x16 final_r = premul_channel_x16(rgba.r, alpha);
-            u8x16 final_g = premul_channel_x16(rgba.g, alpha);
-            u8x16 final_b = premul_channel_x16(rgba.b, alpha);
-
-            u8x16_store_interleaved_4(row_data, final_r, final_g, final_b, rgba.a, i * 4);
-        }
-
-        for (int i = simd_pixels; i < image->width; i++) {
-            const int a = row_data[i * 4 + 3];
-
-            row_data[i * 4 + 0] = image_premul_channel(row_data[i * 4 + 0], a);
-            row_data[i * 4 + 1] = image_premul_channel(row_data[i * 4 + 1], a);
-            row_data[i * 4 + 2] = image_premul_channel(row_data[i * 4 + 2], a);
-        }
+        premultiply_row_simd(row_data, simd_pixels);
+        premultiply_row_scalar(row_data, simd_pixels, image->width);
     }
 
     image->premultiplied = true;
@@ -262,7 +302,7 @@ static void apply_tint_gradient_rgb(FlImageDecodeResult* image, int image_start_
         return;
     }
 
-    const int gradient_width = (image_width / 4 < 2) ? 2 : image_width / 4;
+    const int gradient_width = max(2, image_width / 4);
     const int gradient_end_x = image_start_x + gradient_width;
 
     // Weight per gradient column. Past the gradient the weight is BLEND_ONE, which leaves the pixel as it is.
@@ -287,6 +327,22 @@ static void apply_tint_gradient_rgb(FlImageDecodeResult* image, int image_start_
     }
 }
 
+static void fade_row_rgb(u8* row, int width, Rgb8 target, i16 t) {
+    const int simd_pixels = (width / 16) * 16;
+    const i16x8 t_vec = i16x8_new_splat(t);
+    const i16x8x2 t_pair = { t_vec, t_vec };
+
+    for (int x = 0; x < simd_pixels; x += 16) {
+        blend_toward_rgb_x16(row, x, target, t_pair);
+    }
+
+    for (int x = simd_pixels; x < width; x++) {
+        blend_toward_rgb(row + x * 3, target, t);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Vertical fade: from fade_start (0.0 = top, 1.0 = bottom) each row blends from the original toward target.
 static void apply_vertical_fade_rgb(FlImageDecodeResult* image, f32 fade_start, Rgb8 target) {
     const int height = image->height;
@@ -294,30 +350,16 @@ static void apply_vertical_fade_rgb(FlImageDecodeResult* image, f32 fade_start, 
         return;
     }
 
-    int fade_start_row = (int)(height * fade_start);
-    if (fade_start_row < 0) {
-        fade_start_row = 0;
-    }
+    const int fade_start_row = max(0, (int)(height * fade_start));
     if (fade_start_row >= height - 1) {
         return;
     }
 
     const int fade_height = height - fade_start_row;
-    const int simd_pixels = (image->width / 16) * 16;
 
     for (int y = fade_start_row; y < height; y++) {
-        u8* row = image->pixels + y * image->stride;
         const i16 t = (i16)(BLEND_ONE - ((y - fade_start_row) * BLEND_ONE) / (fade_height - 1));
-        const i16x8 t_vec = i16x8_new_splat(t);
-        const i16x8x2 t_pair = { t_vec, t_vec };
-
-        for (int x = 0; x < simd_pixels; x += 16) {
-            blend_toward_rgb_x16(row, x, target, t_pair);
-        }
-
-        for (int x = simd_pixels; x < image->width; x++) {
-            blend_toward_rgb(row + x * 3, target, t);
-        }
+        fade_row_rgb(image->pixels + y * image->stride, image->width, target, t);
     }
 }
 
@@ -333,11 +375,12 @@ static void blit_row_rgb(const FlImageDecodeResult* image, int y, const ImageCan
         }
 
         const u8* src = src_row + x * src_channels;
-        const u8 r = src[0];
 
-        dst_row[dst_x * 3 + 0] = r;
-        dst_row[dst_x * 3 + 1] = (src_channels >= 3) ? src[1] : r;
-        dst_row[dst_x * 3 + 2] = (src_channels >= 3) ? src[2] : r;
+        dst_row[dst_x * 3 + 0] = src[0];
+        const int color_step = src_channels >= 3;
+
+        dst_row[dst_x * 3 + 1] = src[color_step];
+        dst_row[dst_x * 3 + 2] = src[color_step * 2];
     }
 }
 
@@ -384,10 +427,6 @@ static bool composite_on_canvas_rgb(FlImageDecodeResult* image, ImageCanvas canv
     return true;
 }
 
-static int max_zero(int value) {
-    return (value < 0) ? 0 : value;
-}
-
 // Places the image on a canvas of the target size per the background mode. Tint right-aligns it and fades the tint
 // into its left edge; Center letterboxes it. An overhanging source gets offset 0 and is cropped by the blit.
 static void apply_background(FlImageDecodeResult* image, ImageSize canvas_size, const ImageThumbnailOptions* tb,
@@ -401,14 +440,14 @@ static void apply_background(FlImageDecodeResult* image, ImageSize canvas_size, 
 
     switch (tb->background_mode) {
         case ImageDecodeBackgroundMode_Tint:
-            canvas.offset_x = max_zero(canvas.width - image->width);
+            canvas.offset_x = max(0, canvas.width - image->width);
             if (composite_on_canvas_rgb(image, canvas, arena)) {
                 apply_tint_gradient_rgb(image, canvas.offset_x, tint, arena);
             }
             break;
         case ImageDecodeBackgroundMode_Center:
-            canvas.offset_x = max_zero((canvas.width - image->width) / 2);
-            canvas.offset_y = max_zero((canvas.height - image->height) / 2);
+            canvas.offset_x = max(0, (canvas.width - image->width) / 2);
+            canvas.offset_y = max(0, (canvas.height - image->height) / 2);
             composite_on_canvas_rgb(image, canvas, arena);
             break;
         case ImageDecodeBackgroundMode_Regular:

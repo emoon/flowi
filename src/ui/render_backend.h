@@ -67,6 +67,26 @@ typedef struct FlViewport3dDraw {
     bool depth_test;
 } FlViewport3dDraw;
 
+// Geometry a backend retains for a mesh: vertices plus indices that group into primitives per topology.
+typedef struct FlMeshDesc {
+    const FlMeshVertex* vertices;
+    uint32_t vertex_count;
+    const uint16_t* indices;
+    uint32_t index_count;
+    FlMeshTopology topology;
+} FlMeshDesc;
+
+// One viewport's frame of work for viewport3d_submit. view_projection is 16 column-major floats.
+typedef struct FlViewport3dSubmit {
+    uint32_t viewport;
+    FlImageHandle color;
+    uint32_t width;
+    uint32_t height;
+    const float* view_projection;
+    const FlViewport3dDraw* draws;
+    uint32_t draw_count;
+} FlViewport3dSubmit;
+
 // Render backend interface: one object a host implements to turn the neutral
 // render-command IR into pixels. Covers surface lifecycle plus the renderer,
 // image, and glyph seams; presentation is excluded.
@@ -111,7 +131,7 @@ typedef struct FlRenderBackend {
     // Retained mesh lifecycle. Buffers are backend-shared, never owned by a
     // viewport, so one mesh draws from any of them. topology fixes how the
     // indices group into primitives for the mesh's whole life.
-    FlMeshHandle (*mesh_create)(void* ud, const FlMeshVertex* vertices, uint32_t vertex_count, const uint16_t* indices, uint32_t index_count, FlMeshTopology topology);
+    FlMeshHandle (*mesh_create)(void* ud, const FlMeshDesc* mesh);
     void (*mesh_destroy)(void* ud, FlMeshHandle mesh);
     // Render one viewport's draw list into the color+depth target it owns for
     // viewport, (re)creating that target at width x height when the size
@@ -119,7 +139,7 @@ typedef struct FlRenderBackend {
     // handle the core minted, so the UI samples the result through the normal
     // image path. Runs during the frame callback, ahead of the UI raster pass.
     // view_projection is 16 column-major floats.
-    void (*viewport3d_submit)(void* ud, uint32_t viewport, FlImageHandle color, uint32_t width, uint32_t height, const float* view_projection, const FlViewport3dDraw* draws, uint32_t draw_count);
+    void (*viewport3d_submit)(void* ud, const FlViewport3dSubmit* submit);
     // Threading capability for the image-preparation seam. Set (SW): prepare_image
     // runs in the job worker. Unset (default): deferred to the begin-frame pump
     // on the main/render thread (GL/D3D).

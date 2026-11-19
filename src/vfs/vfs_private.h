@@ -22,6 +22,13 @@ typedef struct {
     int path_index;
 } DriverHandle;
 
+// A file inside the container driver's handle.
+typedef struct {
+    DriverHandle container;
+    FlString path; // Empty when the container handle is itself the file
+    i64 size;
+} ArchiveFile;
+
 typedef struct {
     int error;
     int path_split_offset;
@@ -42,11 +49,11 @@ extern VfsState* g_vfs_state;
 // path (a.zip/inner.lha). The caller owns the returned handle.
 FinalDriver vfs_resolve_mount_path(VfsState* self, FlString path, FlArena* scratch);
 
-// Consumes root_handle and every container handle it opens while descending. On success exactly one
+// Consumes root.handle and every container handle it opens while descending. On success exactly one
 // handle is live, the one returned in FinalDriver.handle, and the caller owns it; on error no handle is
-// live. root_handle is only left open when it is itself the returned handle.
-FinalDriver vfs_resolve_from_root(VfsState* self, VfsPluginEntry* root_entry, void* root_handle,
-                                  PathComponents* components, int path_start, FlArena* scratch);
+// live. root.handle is only left open when it is itself the returned handle.
+// root.path_index is the first segment of components the root handle has not consumed.
+FinalDriver vfs_resolve_from_root(VfsState* self, DriverHandle root, PathComponents* components, FlArena* scratch);
 
 // Returns a freshly opened handle the caller owns, or a zeroed DriverHandle when no plugin matched.
 DriverHandle vfs_resolve_find_root_driver(VfsState* self, FlArena* temp, const PathComponents* comp, int start);
@@ -61,10 +68,9 @@ DriverHandle vfs_resolve_find_memory_driver(VfsState* self, FlString org_path, u
 // archive before it, so it never gets the leading '/' of an absolute path.
 FlString vfs_path_range(const PathComponents* components, int start, u32 end, FlArena* arena);
 
-// Opens the file at path below parent_handle, size bytes long, as an archive: in place when it is a file on disk,
+// Opens file as an archive: in place when it is a file on disk,
 // otherwise from a copy in memory. Returns a zeroed DriverHandle when it is not an archive or is corrupt.
-DriverHandle vfs_resolve_open_archive(VfsState* self, VfsPluginEntry* parent, void* parent_handle, FlString path,
-                                      i64 size, FlArena* scratch);
+DriverHandle vfs_resolve_open_archive(VfsState* self, const ArchiveFile* file, FlArena* scratch);
 
 // True when an archive driver claims the name. LocalFS, which claims everything, does not count.
 bool vfs_name_is_archive(VfsState* self, FlString name);
@@ -86,10 +92,8 @@ VfsTreeNode* vfs_tree_create_node(FlVfsMount* mount, VfsTreeNode* parent, FlStri
 // entered (a listing) or its last segment is a file (an open) that stays with the node before it.
 VfsLocation vfs_tree_locate(VfsState* self, FlVfsMount* mount, FlString path, bool is_directory, FlArena* scratch);
 
-// Opens the file at path below parent_handle as an archive and makes it the driver of node. False, with the node
-// untouched, when it does not open.
-bool vfs_tree_try_load_as_archive(VfsState* self, VfsTreeNode* node, VfsPluginEntry* parent, void* parent_handle,
-                                  FlString path, i64 size, FlArena* scratch);
+// Opens file as an archive and makes it the driver of node. False, with the node untouched, when it does not open.
+bool vfs_tree_try_load_as_archive(VfsState* self, VfsTreeNode* node, const ArchiveFile* file, FlArena* scratch);
 
 // Closes the node's handle, then every child's, children first.
 void vfs_tree_cleanup_node(VfsTreeNode* node);

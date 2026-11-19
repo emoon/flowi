@@ -78,20 +78,8 @@ fn frame(p: &mut Probe) {
     p.in_frame_size = (state.size.x, state.size.y);
 }
 
-#[test]
-fn element_id_and_state_read_the_same_element_outside_a_frame() {
-    let mut app = Application::new(200, 120, true);
-    let mut probe = Probe::default();
-
-    // The rect is the previous frame's resolved layout, so settle before reading.
-    app.inject_mouse_move(150, 100);
-    common::tick_n(&mut app, &mut probe, frame, 4, "settle");
-    assert!(
-        probe.in_frame_found,
-        "the scroll-target region should be registered by now"
-    );
-
-    // Everything below runs between ticks, with no frame open.
+/// Everything here runs between ticks, with no frame open.
+fn assert_frame_free_reads_match(probe: &Probe) -> ElementId {
     assert_eq!(
         probe.round_tripped_name, REGION_ID,
         "LayoutId::name reports the name it was built from"
@@ -127,18 +115,10 @@ fn element_id_and_state_read_the_same_element_outside_a_frame() {
         "a never-registered id reports found = false"
     );
 
-    set_focus_id(out_of_frame);
-    // The nav snapshot is taken when a frame opens, so the focus set between ticks shows up in the next one.
-    assert!(
-        app.tick(&mut probe, frame),
-        "focus tick should keep running"
-    );
-    assert_eq!(
-        nav_frame().focused_id,
-        out_of_frame.0,
-        "set_focus_id lands the frame-free id in the nav snapshot"
-    );
+    out_of_frame
+}
 
+fn assert_escaped_id_survives(probe: &mut Probe, app: Application) {
     // A LayoutId stashed during a frame stays readable after its arena is reused and its application is gone.
     assert_eq!(
         probe.stale_found,
@@ -162,4 +142,34 @@ fn element_id_and_state_read_the_same_element_outside_a_frame() {
         element_id(ESCAPED_ID, 0),
         "hashed_id() must equal the frame-free hash after the frame and application are gone"
     );
+}
+
+#[test]
+fn element_id_and_state_read_the_same_element_outside_a_frame() {
+    let mut app = Application::new(200, 120, true);
+    let mut probe = Probe::default();
+
+    // The rect is the previous frame's resolved layout, so settle before reading.
+    app.inject_mouse_move(150, 100);
+    common::tick_n(&mut app, &mut probe, frame, 4, "settle");
+    assert!(
+        probe.in_frame_found,
+        "the scroll-target region should be registered by now"
+    );
+
+    let out_of_frame = assert_frame_free_reads_match(&probe);
+
+    set_focus_id(out_of_frame);
+    // The nav snapshot is taken when a frame opens, so the focus set between ticks shows up in the next one.
+    assert!(
+        app.tick(&mut probe, frame),
+        "focus tick should keep running"
+    );
+    assert_eq!(
+        nav_frame().focused_id,
+        out_of_frame.0,
+        "set_focus_id lands the frame-free id in the nav snapshot"
+    );
+
+    assert_escaped_id_survives(&mut probe, app);
 }

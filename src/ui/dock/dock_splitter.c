@@ -18,42 +18,57 @@ f32 dock_splitter_ratio_at(f32 cursor_rel_px, f32 extent_px) {
     return clamp(r, FL_DOCK_MIN_RATIO, 1.0f - FL_DOCK_MIN_RATIO);
 }
 
-void dock_splitter_handle_drag(FlDockTree* tree, FlDockNodeId split_id, FlDockAxis axis) {
-    FlUiCtx* self = g_ui_ctx;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // draggable yields hover and the drag latch; FlItem_DragThreshold ignores sub-threshold movement.
-    FlSignal sig = ui_item_behavior(divider_layout_id(split_id), FlItemFlags_draggable | FlItem_DragThreshold,
-                                    (FlWidgetConfig) { 0 });
-
+static void splitter_set_resize_cursor(FlSignal sig, FlDockAxis axis) {
     if (sig.hovered || sig.dragging) {
         fl_cursor_set((FlCursor) {
             .shape = (axis == FlDockAxis_X) ? FlCursorShape_ResizeH : FlCursorShape_ResizeV,
         });
     }
+}
 
-    if (!sig.dragging) {
-        return;
-    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Map the cursor into the split's last-frame rect and turn the offset along the axis into the new child[0]
-    // fraction. The ratio comes from the cursor position alone, so there is no per-divider drag state.
+// Map the cursor into the split's last-frame rect and turn the offset along the axis into the new child[0]
+// fraction. The ratio comes from the cursor position alone, so there is no per-divider drag state.
+static bool splitter_drag_ratio(FlDockNodeId split_id, FlDockAxis axis, f32* out_ratio) {
     Clay_ElementData data = Clay_GetElementData((Clay_ElementId) { .id = dock_layout_node_element_id(split_id) });
     if (!data.found) {
-        return;
+        return false;
     }
-    f32 extent = (axis == FlDockAxis_X) ? data.boundingBox.width : data.boundingBox.height;
-    f32 cursor_rel = (axis == FlDockAxis_X) ? self->input_state.mouse.x - data.boundingBox.x
-                                            : self->input_state.mouse.y - data.boundingBox.y;
+    const FlUiCtx* self = g_ui_ctx;
+    const bool along_x = axis == FlDockAxis_X;
+    const f32 extent = along_x ? data.boundingBox.width : data.boundingBox.height;
+    const f32 cursor_rel = along_x ? self->input_state.mouse.x - data.boundingBox.x
+                                   : self->input_state.mouse.y - data.boundingBox.y;
     if (extent <= 0.0f) {
-        return;
+        return false;
     }
 
     // The drag is the one place a floor gets written into the tree. It stops at the same pixel floor the emit walk
     // clamps to, on top of the fractional floor the op re-applies.
+    *out_ratio = dock_layout_clamp_ratio(dock_splitter_ratio_at(cursor_rel, extent), axis, extent, nullptr);
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void dock_splitter_handle_drag(FlDockTree* tree, FlDockNodeId split_id, FlDockAxis axis) {
+    // draggable yields hover and the drag latch; FlItem_DragThreshold ignores sub-threshold movement.
+    FlSignal sig = ui_item_behavior(divider_layout_id(split_id), FlItemFlags_draggable | FlItem_DragThreshold,
+                                    (FlWidgetConfig) { 0 });
+    splitter_set_resize_cursor(sig, axis);
+
+    f32 ratio = 0.0f;
+    if (!sig.dragging || !splitter_drag_ratio(split_id, axis, &ratio)) {
+        return;
+    }
+
     FlDockRequest req = {
         .kind = FlDockRequest_SplitterResize,
         .target_node = split_id,
-        .ratio = dock_layout_clamp_ratio(dock_splitter_ratio_at(cursor_rel, extent), axis, extent, nullptr),
+        .ratio = ratio,
     };
     dock_tree_apply(tree, &req);
 }

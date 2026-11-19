@@ -48,22 +48,41 @@ extern "C" fn map_trampoline<T>(
     // read, and the VFS frees it (map_release) only after this callback has run.
     let slot = unsafe { &*user_data.cast::<MapSlot<T>>() };
 
-    // The closure is taken out before running so user code never runs under the lock.
-    let Ok(mut guard) = slot.state.lock() else {
+    let Some(transform) = slot.take_transform() else {
         return failed(false);
     };
-    let MapState::Pending(transform) = core::mem::replace(&mut *guard, MapState::Taken) else {
-        return failed(false);
-    };
-    drop(guard);
+    let stored = run_transform(transform, data, size).is_some_and(|value| slot.store(value));
+    failed(stored)
+}
 
+impl<T> MapSlot<T> {
+    /// The closure is taken out before it runs so user code never runs under the lock.
+    fn take_transform(&self) -> Option<MapFn<T>> {
+        let mut guard = self.state.lock().ok()?;
+        match core::mem::replace(&mut *guard, MapState::Taken) {
+            MapState::Pending(transform) => Some(transform),
+            _ => None,
+        }
+    }
+
+    fn store(&self, value: T) -> bool {
+        let Ok(mut guard) = self.state.lock() else {
+            return false;
+        };
+        *guard = MapState::Done(value);
+        true
+    }
+}
+
+/// Runs the transform over the read's bytes; [`None`] for a failed read or a panicking transform.
+fn run_transform<T>(transform: MapFn<T>, data: *mut c_void, size: i64) -> Option<T> {
     // A null data pointer means the read failed; an empty file still has a pointer.
     if data.is_null() {
         // The closure may capture a panicking Drop; it must not unwind out of here.
         if catch_unwind(AssertUnwindSafe(move || drop(transform))).is_err() {
             log::error!("VFS read transform panicked while dropping; reporting the read as failed");
         }
-        return failed(false);
+        return None;
     }
     let bytes = if size <= 0 {
         &[][..]
@@ -72,16 +91,11 @@ extern "C" fn map_trampoline<T>(
         unsafe { std::slice::from_raw_parts(data.cast::<u8>(), size as usize) }
     };
     // A panicking transform is reported as a failed read.
-    let Ok(value) = catch_unwind(AssertUnwindSafe(|| transform(bytes))) else {
+    let result = catch_unwind(AssertUnwindSafe(|| transform(bytes)));
+    if result.is_err() {
         log::error!("VFS read transform panicked; reporting the read as failed");
-        return failed(false);
-    };
-
-    let Ok(mut guard) = slot.state.lock() else {
-        return failed(false);
-    };
-    *guard = MapState::Done(value);
-    failed(true)
+    }
+    result.ok()
 }
 
 /// The VfsReleaseCallback [`Mount::read_with`] installs: the VFS runs it exactly

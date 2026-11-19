@@ -94,8 +94,7 @@ GpuGlyphRaster gpu_prepare_glyph_place(GpuGlyphAtlas* atlas, FlArena* arena, Gpu
     }
 
     GpuGlyphCell cell = gpu_prepare_glyph_cell(outline);
-    const GpuGlyphEntry* entry = gpu_glyph_atlas_place(atlas, key.font, key.size, key.glyph_index, cell.pw, cell.ph,
-                                                       cell.left, cell.top, outline->advance);
+    const GpuGlyphEntry* entry = gpu_glyph_atlas_place(atlas, (GpuGlyphKey) { key.font, key.size, key.glyph_index }, (GpuGlyphMetrics) { cell.pw, cell.ph, cell.left, cell.top, outline->advance });
     if (cell.empty) {
         return none;
     }

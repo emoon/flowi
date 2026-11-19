@@ -29,7 +29,7 @@
       ]
     },
     {
-      "matching_content_path": "{src/core/file_watcher.c,src/render/software/sw_glyph_cache.c,src/render/gpu/gl/gpu_viewport3d.c,src/render/gpu/gpu_atlas_pack.c,src/render/gpu/gl/gpu_renderer.c,src/render/gpu/gpu_image_atlas.c,src/render/gpu/gpu_image_slots.c,src/render/gpu/gl/gpu_resource_prepare.c,src/render/gpu/gpu_svg_translate.c,src/render/software/sr_image_backend.c,src/render/software/calculate_edge_rounding.h,src/ui/ui_inspector.c,src/ui/viewport3d.c,src/ui/ui_hit_test.c,src/ui/image/image_dedup.c,src/ui/ui_private.h,src/ui/ui_text_buffer.h,src/ui/ui_widget_common.c,src/ui/image/image_system.c,src/vfs/vfs_tree.c,src/vfs/drivers/localfs.c,src/vfs/drivers/archive/lhasa.c,src/vfs/drivers/archive/unlzx.c,src/vfs/drivers/archive/libarchive.c,src/platform/backend_headless_window.c}",
+      "matching_content_path": "{src/core/file_watcher.c,src/render/software/sw_glyph_cache.c,src/render/gpu/gl/gpu_viewport3d.c,src/render/gpu/gpu_atlas_pack.c,src/render/gpu/gl/gpu_renderer.c,src/render/gpu/gpu_image_atlas.c,src/render/gpu/gpu_image_slots.c,src/render/gpu/gl/gpu_resource_prepare.c,src/render/gpu/gpu_svg_translate.c,src/render/software/sr_image_backend.c,src/render/software/sr_render_fill.c,src/render/software/sr_render_image.c,src/render/software/calculate_edge_rounding.h,src/ui/ui_inspector.c,src/ui/viewport3d.c,src/ui/ui_hit_test.c,src/ui/image/image_dedup.c,src/ui/ui_private.h,src/ui/ui_text_buffer.h,src/ui/ui_widget_common.c,src/ui/image/image_system.c,src/vfs/vfs_tree.c,src/vfs/drivers/localfs.c,src/vfs/drivers/archive/lhasa.c,src/vfs/drivers/archive/unlzx.c,src/vfs/drivers/archive/libarchive.c,src/platform/backend_headless_window.c}",
       "thresholds": [
         {
           "name": "function_max_arguments",

@@ -77,11 +77,13 @@ void gpu_debug_set_mode(void* renderer_user_data, GpuDebugMode mode);
 // plus the placement lookup. The atlas texture is never cleared, so texels outside prepared cells are undefined;
 // a prepared cell is fully written by its dispatch, padding ring included.
 
-typedef struct GpuGlyphAtlasReadback {
-    const u8* texels;
+typedef struct GpuAtlasReadback {
+    const u8* texels; // width * height texels of the atlas's format, tightly packed
     u32 width;
     u32 height;
-} GpuGlyphAtlasReadback;
+} GpuAtlasReadback;
+
+typedef GpuAtlasReadback GpuGlyphAtlasReadback;
 
 bool gpu_debug_read_glyph_atlas(void* renderer_user_data, struct FlArena* arena, GpuGlyphAtlasReadback* out);
 
@@ -92,11 +94,7 @@ const GpuGlyphEntry* gpu_debug_find_glyph(void* renderer_user_data, FlFontId fon
 // SVG vector-icon atlas readback: the R8 coverage texels as one width * height byte buffer (row 0 = texel row 0),
 // plus the placement lookup. Texels outside prepared cells are undefined, as in the glyph atlas above.
 
-typedef struct GpuSvgAtlasReadback {
-    const u8* texels;
-    u32 width;
-    u32 height;
-} GpuSvgAtlasReadback;
+typedef GpuAtlasReadback GpuSvgAtlasReadback;
 
 bool gpu_debug_read_svg_atlas(void* renderer_user_data, struct FlArena* arena, GpuSvgAtlasReadback* out);
 
@@ -143,11 +141,8 @@ GpuViewport3dTarget gpu_debug_viewport3d_target(void* renderer_user_data, u32 vi
 // premultiplied RGBA (row 0 = texel row 0), plus the placement lookup. Texels outside prepared cells are undefined,
 // as in the glyph atlas above; a prepared cell's padding ring composites to transparent.
 
-typedef struct GpuColorSvgAtlasReadback {
-    const u8* texels; // interleaved RGBA8, width * height * 4 bytes
-    u32 width;
-    u32 height;
-} GpuColorSvgAtlasReadback;
+// texels are interleaved RGBA8, width * height * 4 bytes.
+typedef GpuAtlasReadback GpuColorSvgAtlasReadback;
 
 bool gpu_debug_read_color_svg_atlas(void* renderer_user_data, struct FlArena* arena, GpuColorSvgAtlasReadback* out);
 

@@ -75,11 +75,20 @@ int gpu_image_slots_find_static(const GpuImageSlots* slots, FlImageHandle handle
 // never registered is a no-op.
 void gpu_image_slots_release_static(GpuImageSlots* slots, FlImageHandle handle);
 
+// The caller-owned buffer a dynamic image entry mirrors: its address identifies the entry.
+typedef struct GpuDynamicImage {
+    const void* pixels;
+    u32 w;
+    u32 h;
+    u32 stride;
+    bool alpha_only;
+} GpuDynamicImage;
+
 // Find-or-create the dynamic entry for a buffer and mark it referenced this frame (dirty + last_ref). A
 // storage-shape change (dims or mode) queues the old texture on the dead list and resets tex so the
 // renderer recreates it. Returns the entry index, or -1 when the table is full (logged once per frame).
 // Idempotent within a frame: repeat references to the same buffer touch identically.
-int gpu_image_slots_touch_dynamic(GpuImageSlots* slots, const void* pixels, u32 w, u32 h, u32 stride, bool alpha_only);
+int gpu_image_slots_touch_dynamic(GpuImageSlots* slots, GpuDynamicImage image);
 
 // Claim this frame's slot for an entry (repeat references return the existing slot). Returns the slot
 // index, or -1 when every slot is taken; the caller drops the command and overflow counts it.

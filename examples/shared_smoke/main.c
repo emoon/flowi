@@ -22,6 +22,10 @@ static void frame(void* user_data) {
     }
 }
 
+static bool readback_has_surface(const FlPixelReadback* pixels) {
+    return pixels->pixels != NULL && pixels->width != 0 && pixels->height != 0;
+}
+
 int main(void) {
     fl_init(1); // one job worker thread for async image decode
 
@@ -41,7 +45,7 @@ int main(void) {
     fl_app_tick(app, NULL, frame);
 
     FlPixelReadback pixels = { 0 };
-    if (!fl_app_read_pixels(app, &pixels) || pixels.pixels == NULL || pixels.width == 0 || pixels.height == 0) {
+    if (!fl_app_read_pixels(app, &pixels) || !readback_has_surface(&pixels)) {
         fprintf(stderr, "shared_smoke: fl_app_read_pixels returned no surface\n");
         fl_app_destroy(app);
         return 1;

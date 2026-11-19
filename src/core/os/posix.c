@@ -137,8 +137,15 @@ i64 file_open_write_os(FlString path, bool append) {
     return fd >= 0 ? fd : -1;
 }
 
+static bool write_args_valid(i64 fd, const u8* data, i64 size) {
+    if (fd < 0 || size <= 0) {
+        return false;
+    }
+    return data != nullptr;
+}
+
 i64 file_write_to_handle_os(i64 fd, const u8* data, i64 size) {
-    if (fd < 0 || data == nullptr || size <= 0) {
+    if (!write_args_valid(fd, data, size)) {
         return -1;
     }
 
@@ -318,6 +325,30 @@ bool file_create_directory_os(FlString path) {
     return success;
 }
 
+static char* path_copy_cstr(struct FlArena* arena, FlString path) {
+    char* copy = arena_alloc_array(arena, char, path.length + 1);
+    memcpy(copy, path.data, path.length);
+    copy[path.length] = '\0';
+    return copy;
+}
+
+static char* skip_to_separator(char* p) {
+    while (*p != '\0' && *p != '/') {
+        p++;
+    }
+    return p;
+}
+
+// A concurrent creator can make the component between the existence check and the create
+// call; the component existing is the desired outcome, so only a create failure with the
+// directory still absent is an error.
+static bool ensure_directory_os(FlString path) {
+    if (file_directory_exists_os(path)) {
+        return true;
+    }
+    return file_create_directory_os(path) || file_directory_exists_os(path);
+}
+
 bool file_create_directory_recursive_os(FlString path) {
     if (string_is_empty(path)) {
         return false;
@@ -329,10 +360,7 @@ bool file_create_directory_recursive_os(FlString path) {
 
     arena_scratch_auto(temp);
 
-    char* path_copy = arena_alloc_array(temp.arena, char, path.length + 1);
-    memcpy(path_copy, path.data, path.length);
-    path_copy[path.length] = '\0';
-
+    char* path_copy = path_copy_cstr(temp.arena, path);
     char* p = path_copy;
 
     if (*p == '/') {
@@ -340,21 +368,14 @@ bool file_create_directory_recursive_os(FlString path) {
     }
 
     while (*p != '\0') {
-        while (*p != '\0' && *p != '/') {
-            p++;
-        }
+        p = skip_to_separator(p);
 
         char saved = *p;
         *p = '\0';
 
-        // A concurrent creator can make the component between the existence check and the create
-        // call; the component existing is the desired outcome, so only a create failure with the
-        // directory still absent is an error.
         FlString component = (FlString) { .data = path_copy, .length = (u64)(p - path_copy) };
-        if (!file_directory_exists_os(component)) {
-            if (!file_create_directory_os(component) && !file_directory_exists_os(component)) {
-                return false;
-            }
+        if (!ensure_directory_os(component)) {
+            return false;
         }
 
         *p = saved;
@@ -448,58 +469,65 @@ DirHandle dir_open_os(FlArena* arena, FlString path) {
     return handle;
 }
 
-FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
-    FileStat result = { 0 };
-    result.is_valid = false;
+static bool is_dot_entry(const char* name) {
+    if (name[0] != '.') {
+        return false;
+    }
+    return name[1] == '\0' || (name[1] == '.' && name[2] == '\0');
+}
 
+static DIR* dir_handle_stream(const DirHandle* dir_handle) {
     if (!dir_handle || !dir_handle->is_valid) {
-        return result;
+        return nullptr;
     }
 
     DIR** dir_ptr = (DIR**)dir_handle->platform_data;
-    DIR* dir = *dir_ptr;
+    return *dir_ptr;
+}
+
+static FileStat dir_entry_stat(FlArena* arena, const DirHandle* dir_handle, const struct dirent* entry) {
+    FileStat result = { 0 };
+
+    // The scratch must not alias the caller's arena: the copied name below lives on arena
+    // and would be released by the scratch pop if they shared the same underlying arena.
+    arena_scratch_auto_conflict(temp, arena);
+    // Copy the name out of readdir's internal dirent: that buffer is reused/invalidated
+    // by the next readdir/closedir on the same stream.
+    result.name = fl_string_copy(arena, string_from_cstr(entry->d_name));
+    result.is_valid = true;
+
+    FlString full_path = file_build_path_os(temp.arena, dir_handle->base_path, result.name);
+    FileStat stat_result = file_stat_os(full_path);
+    if (stat_result.is_valid) {
+        result.size = stat_result.size;
+        result.modification_time = stat_result.modification_time;
+        result.is_directory = stat_result.is_directory;
+        result.is_regular_file = stat_result.is_regular_file;
+        result.is_symlink = stat_result.is_symlink;
+        result.mode = stat_result.mode;
+    } else {
+        result.is_directory = (entry->d_type == DT_DIR);
+        result.is_regular_file = (entry->d_type == DT_REG);
+        result.is_symlink = (entry->d_type == DT_LNK);
+    }
+
+    return result;
+}
+
+FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
+    DIR* dir = dir_handle_stream(dir_handle);
     if (!dir) {
-        return result;
+        return (FileStat) { 0 };
     }
 
     struct dirent* entry;
     while ((entry = readdir(dir)) != nullptr) {
-        // Skip . and ..
-        if ((entry->d_name[0] == '.' && entry->d_name[1] == '\0')
-            || (entry->d_name[0] == '.' && entry->d_name[1] == '.' && entry->d_name[2] == '\0')) {
-            continue;
+        if (!is_dot_entry(entry->d_name)) {
+            return dir_entry_stat(arena, dir_handle, entry);
         }
-
-        // The scratch must not alias the caller's arena: the copied name below lives on arena
-        // and would be released by the scratch pop if they shared the same underlying arena.
-        arena_scratch_auto_conflict(temp, arena);
-        // Copy the name out of readdir's internal dirent: that buffer is reused/invalidated
-        // by the next readdir/closedir on the same stream.
-        result.name = fl_string_copy(arena, string_from_cstr(entry->d_name));
-        result.is_valid = true;
-
-        FlString full_path = file_build_path_os(temp.arena, dir_handle->base_path, result.name);
-        FileStat stat_result = file_stat_os(full_path);
-        if (stat_result.is_valid) {
-            result.size = stat_result.size;
-            result.modification_time = stat_result.modification_time;
-            result.is_directory = stat_result.is_directory;
-            result.is_regular_file = stat_result.is_regular_file;
-            result.is_symlink = stat_result.is_symlink;
-            result.mode = stat_result.mode;
-        } else {
-            result.size = 0;
-            result.modification_time = 0;
-            result.is_directory = (entry->d_type == DT_DIR);
-            result.is_regular_file = (entry->d_type == DT_REG);
-            result.is_symlink = (entry->d_type == DT_LNK);
-            result.mode = 0;
-        }
-
-        break; // Found valid entry
     }
 
-    return result;
+    return (FileStat) { 0 };
 }
 
 void dir_close_os(DirHandle* dir_handle) {
@@ -714,42 +742,50 @@ void os_disk_space_test_force_statvfs_failure(bool enable) {
     g_force_statvfs_failure = enable;
 }
 
+static bool query_disk_space(const char* path, DiskSpaceInfo* out) {
+    struct statvfs stat_buf;
+    if (g_force_statvfs_failure || statvfs(path, &stat_buf) != 0) {
+        return false;
+    }
+
+    u64 block_size = stat_buf.f_frsize;
+    out->bytes_available = (u64)stat_buf.f_bavail * block_size;
+    out->bytes_total = (u64)stat_buf.f_blocks * block_size;
+    out->bytes_free = (u64)stat_buf.f_bfree * block_size;
+    out->is_valid = true;
+    return true;
+}
+
+// Returns false once the root "/" itself has been reached.
+static bool truncate_to_parent(char* path) {
+    char* last_sep = strrchr(path, '/');
+    if (last_sep == nullptr) {
+        return false;
+    }
+
+    if (last_sep != path) {
+        *last_sep = '\0';
+        return true;
+    }
+
+    if (path[1] == '\0') {
+        return false;
+    }
+
+    path[1] = '\0';
+    return true;
+}
+
 DiskSpaceInfo get_disk_space_os(FlString path) {
     DiskSpaceInfo result = { 0 };
 
     arena_scratch_auto(temp);
-
-    char* path_copy = arena_alloc_array(temp.arena, char, path.length + 1);
-    memcpy(path_copy, path.data, path.length);
-    path_copy[path.length] = '\0';
-
-    struct statvfs stat_buf;
+    char* path_copy = path_copy_cstr(temp.arena, path);
 
     // Walk up the directory tree until an existing path is found: the target file may not exist yet
-    while (path_copy[0] != '\0') {
-        if (!g_force_statvfs_failure && statvfs(path_copy, &stat_buf) == 0) {
-            u64 block_size = stat_buf.f_frsize;
-
-            result.bytes_available = (u64)stat_buf.f_bavail * block_size;
-            result.bytes_total = (u64)stat_buf.f_blocks * block_size;
-            result.bytes_free = (u64)stat_buf.f_bfree * block_size;
-            result.is_valid = true;
+    while (path_copy[0] != '\0' && !query_disk_space(path_copy, &result)) {
+        if (!truncate_to_parent(path_copy)) {
             break;
-        }
-
-        char* last_sep = strrchr(path_copy, '/');
-        if (last_sep == nullptr) {
-            break;
-        }
-
-        if (last_sep == path_copy) {
-            if (path_copy[1] == '\0') {
-                break; // The root "/" itself was just tried and failed
-            }
-            // Truncate to root "/" for one final attempt
-            path_copy[1] = '\0';
-        } else {
-            *last_sep = '\0';
         }
     }
 

@@ -9,6 +9,55 @@ static inline bool is_var_char(char c) {
     return isalnum((unsigned char)c) || c == '_';
 }
 
+typedef struct VarRef {
+    FlString name;
+    u64 next;
+} VarRef;
+
+static VarRef scan_var_ref(FlString input, u64 dollar_pos) {
+    u64 start = dollar_pos + 1;
+    bool has_braces = start < input.length && input.data[start] == '{';
+
+    if (has_braces) {
+        start++;
+        i64 close = fl_string_find_char_from(input, '}', start);
+
+        if (close == -1) {
+            return (VarRef){ fl_string_substr(input, input.length, 0), input.length };
+        }
+
+        return (VarRef){ fl_string_substr(input, start, (u64)close - start), (u64)close + 1 };
+    }
+
+    u64 end = start;
+
+    while (end < input.length && is_var_char(input.data[end])) {
+        end++;
+    }
+
+    return (VarRef){ fl_string_substr(input, start, end - start), end };
+}
+
+static const char* lookup_env(FlArena* arena, FlString name) {
+    if (name.length == 0) {
+        return nullptr;
+    }
+
+    // The conflict-aware variant returns a scratch arena disjoint from the caller's
+    // arena, which backs the string builder. Otherwise this scope's rewind would free
+    // bytes sb appended inside it.
+    arena_scratch_auto_conflict(temp, arena);
+    return getenv(fl_string_to_cstr(temp.arena, name));
+}
+
+static FlStringBuilder append_range(FlStringBuilder sb, FlString input, u64 from, u64 to) {
+    if (to <= from) {
+        return sb;
+    }
+
+    return fl_sb_append_string(sb, fl_string_substr(input, from, to - from));
+}
+
 FlString expand_env_vars(FlArena* arena, FlString input) {
     if (fl_string_find_char(input, '$') == -1) {
         return input;
@@ -21,77 +70,17 @@ FlString expand_env_vars(FlArena* arena, FlString input) {
         i64 dollar_pos = fl_string_find_char_from(input, '$', pos);
 
         if (dollar_pos == -1) {
-            sb = fl_sb_append_string(sb, fl_string_substr(input, pos, input.length - pos));
-            break;
+            return fl_sb_to_string(append_range(sb, input, pos, input.length));
         }
 
-        if (dollar_pos > (i64)pos) {
-            sb = fl_sb_append_string(sb, fl_string_substr(input, pos, dollar_pos - pos));
-        }
+        sb = append_range(sb, input, pos, (u64)dollar_pos);
 
-        u64 var_start = (u64)dollar_pos + 1;
+        VarRef ref = scan_var_ref(input, (u64)dollar_pos);
+        const char* value = lookup_env(arena, ref.name);
 
-        // Trailing '$'
-        if (var_start >= input.length) {
-            sb = fl_sb_append_char(sb, '$');
-            break;
-        }
-
-        bool has_braces = false;
-
-        if (input.data[var_start] == '{') {
-            has_braces = true;
-            var_start++;
-        }
-
-        u64 var_end = var_start;
-
-        if (has_braces) {
-            while (var_end < input.length && input.data[var_end] != '}') {
-                var_end++;
-            }
-
-            // No closing brace: keep the original text.
-            if (var_end >= input.length) {
-                sb = fl_sb_append_string(sb, fl_string_substr(input, (u64)dollar_pos, input.length - dollar_pos));
-                break;
-            }
-        } else {
-            while (var_end < input.length && is_var_char(input.data[var_end])) {
-                var_end++;
-            }
-        }
-
-        FlString var_name = fl_string_substr(input, var_start, var_end - var_start);
-
-        if (var_name.length > 0) {
-            // The conflict-aware variant returns a scratch arena disjoint from the caller's
-            // arena, which backs the string builder. Otherwise this scope's rewind would free
-            // bytes sb appended inside it.
-            arena_scratch_auto_conflict(temp, arena);
-            const char* var_name_cstr = fl_string_to_cstr(temp.arena, var_name);
-            const char* var_value = getenv(var_name_cstr);
-
-            if (var_value != nullptr) {
-                sb = fl_sb_append_cstr(sb, var_value);
-            } else {
-                // Variable not found: keep the original ${VAR} or $VAR.
-                if (has_braces) {
-                    sb = fl_sb_append_string(sb, fl_string_substr(input, (u64)dollar_pos, var_end - dollar_pos + 1));
-                } else {
-                    sb = fl_sb_append_string(sb, fl_string_substr(input, (u64)dollar_pos, var_end - dollar_pos));
-                }
-            }
-        } else {
-            // Empty variable name (${} or a bare $): keep the original.
-            if (has_braces) {
-                sb = fl_sb_append_cstr(sb, "${}");
-            } else {
-                sb = fl_sb_append_char(sb, '$');
-            }
-        }
-
-        pos = var_end + (has_braces ? 1 : 0);
+        // Unset, empty or unterminated references keep their original text.
+        sb = value != nullptr ? fl_sb_append_cstr(sb, value) : append_range(sb, input, (u64)dollar_pos, ref.next);
+        pos = ref.next;
     }
 
     return fl_sb_to_string(sb);

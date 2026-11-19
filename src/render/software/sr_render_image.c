@@ -7,247 +7,180 @@
 #include <core/simd.h>
 #include "software_renderer_internal.h"
 #include "sr_image_blend.h"
+#include "sr_tile_row.h"
 #include <ui/image/image.h>
 #include <math.h>
 
 // Nearest-neighbor (point-sampled) image rendering.
 
-static ALWAYS_INLINE SoaRgb process_8_pixels_nearest(const bool blend_with_background, const bool rounding,
-                                                     const int channel_count, CornerRoundingState* rounding_state,
-                                                     const u8* image_line_ptr, int image_r_plane, int image_g_plane,
-                                                     int image_b_plane, int image_a_plane, i16* line_output,
-                                                     int write_offset, SoaRgba in_color, i16x8 global_alpha) {
-    i16x8 r_res, g_res, b_res, a_res;
+typedef struct NearestMode {
+    bool blend_with_background;
+    bool rounding;
+    int channel_count;
+} NearestMode;
 
-    const int r_offset = write_offset;
-    const int g_offset = write_offset + PLANE_OFFSET_INCREMENT;
-    const int b_offset = write_offset + PLANE_OFFSET_INCREMENT * 2;
+typedef struct NearestState {
+    CornerRoundingState rounding_state;
+    SoaRgba tint;
+    i16x8 global_alpha;
+} NearestState;
 
-    if (channel_count == 1) {
-        // Single alpha channel: load one texel row (no vertical neighbor)
-        a_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_r_plane, 7);
-        a_res = i16x8_lerp(i16x8_new_splat(0), a_res, global_alpha);
+// Where the 8 source texels of each plane start for the current output pixel group.
+typedef struct NearestSource {
+    const u8* line;
+    int r_plane;
+    int g_plane;
+    int b_plane;
+    int a_plane;
+} NearestSource;
 
-        i16x8 bg_r = i16x8_load_unaligned(line_output, r_offset);
-        i16x8 bg_g = i16x8_load_unaligned(line_output, g_offset);
-        i16x8 bg_b = i16x8_load_unaligned(line_output, b_offset);
+static ALWAYS_INLINE i16x8 load_plane_8(const NearestSource* src, int plane) {
+    return u8x8_load_to_i16x8_wide_shl(src->line, plane, 7);
+}
 
-        return (SoaRgb) {
-            .r = i16x8_lerp(bg_r, in_color.r, a_res),
-            .g = i16x8_lerp(bg_g, in_color.g, a_res),
-            .b = i16x8_lerp(bg_b, in_color.b, a_res),
-        };
-    } else {
-        // RGB or RGBA: one texel load per pixel (no interpolation)
-        r_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_r_plane, 7);
-        g_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_g_plane, 7);
-        b_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_b_plane, 7);
+// Single alpha channel: coverage for the command tint, no vertical neighbor.
+static ALWAYS_INLINE SoaRgb nearest_1ch(const NearestState* state, const NearestSource* src, const PlaneRow* row) {
+    i16x8 coverage = i16x8_lerp(i16x8_new_splat(0), load_plane_8(src, src->r_plane), state->global_alpha);
+    SoaRgb tint = { .r = state->tint.r, .g = state->tint.g, .b = state->tint.b };
+    return lerp_over_background(tint, row, coverage);
+}
 
-        if (channel_count == 4) {
-            a_res = u8x8_load_to_i16x8_wide_shl(image_line_ptr, image_a_plane, 7);
-            // Modulate image alpha by global alpha for fade transitions
-            a_res = i16x8_lerp(i16x8_new_splat(0), a_res, global_alpha);
-        } else {
-            a_res = global_alpha;
-        }
+// Premultiplied RGBA, always composited over the background.
+static ALWAYS_INLINE SoaRgb nearest_4ch(const NearestMode mode, NearestState* state, const NearestSource* src,
+                                        const PlaneRow* row) {
+    SoaRgba texel = {
+        .r = load_plane_8(src, src->r_plane),
+        .g = load_plane_8(src, src->g_plane),
+        .b = load_plane_8(src, src->b_plane),
+        .a = i16x8_lerp(i16x8_new_splat(0), load_plane_8(src, src->a_plane), state->global_alpha),
+    };
+    const SoaRgb bg = plane_load_rgb(row);
+
+    if (mode.rounding) {
+        return premul_over_8_rounded(texel, state->global_alpha, bg, corner_rounding_step_8(&state->rounding_state));
+    }
+    return premul_over_8(texel, state->global_alpha, bg);
+}
+
+// RGB: one texel load per pixel (no interpolation), opaque unless faded by the global alpha.
+static ALWAYS_INLINE SoaRgb nearest_3ch(const NearestMode mode, NearestState* state, const NearestSource* src,
+                                        const PlaneRow* row) {
+    SoaRgb color = {
+        .r = load_plane_8(src, src->r_plane),
+        .g = load_plane_8(src, src->g_plane),
+        .b = load_plane_8(src, src->b_plane),
+    };
+
+    if (mode.rounding) {
+        color = lerp_over_background(color, row, corner_rounding_step_8(&state->rounding_state));
     }
 
-    SoaRgb color = (SoaRgb) { .r = r_res, .g = g_res, .b = b_res };
-
-    if (channel_count == 4) {
-        i16x8 bg_r = i16x8_load_unaligned(line_output, r_offset);
-        i16x8 bg_g = i16x8_load_unaligned(line_output, g_offset);
-        i16x8 bg_b = i16x8_load_unaligned(line_output, b_offset);
-        return premul_over_8(rounding, rounding_state, r_res, g_res, b_res, a_res, global_alpha, bg_r, bg_g, bg_b);
-    }
-
-    if (rounding) {
-        i16x8 corner_alpha = corner_rounding_step_8(rounding_state);
-
-        i16x8 bg_r = i16x8_load_unaligned(line_output, r_offset);
-        i16x8 bg_g = i16x8_load_unaligned(line_output, g_offset);
-        i16x8 bg_b = i16x8_load_unaligned(line_output, b_offset);
-
-        color.r = i16x8_lerp(bg_r, color.r, corner_alpha);
-        color.g = i16x8_lerp(bg_g, color.g, corner_alpha);
-        color.b = i16x8_lerp(bg_b, color.b, corner_alpha);
-    }
-
-    if (blend_with_background) {
-        i16x8 bg_r = i16x8_load_unaligned(line_output, r_offset);
-        i16x8 bg_g = i16x8_load_unaligned(line_output, g_offset);
-        i16x8 bg_b = i16x8_load_unaligned(line_output, b_offset);
-
-        color.r = i16x8_lerp(bg_r, color.r, a_res);
-        color.g = i16x8_lerp(bg_g, color.g, a_res);
-        color.b = i16x8_lerp(bg_b, color.b, a_res);
+    if (mode.blend_with_background) {
+        color = lerp_over_background(color, row, state->global_alpha);
     }
 
     return color;
 }
 
-static ALWAYS_INLINE void image_internal_nearest(const bool blend_with_background, const bool rounding,
-                                                 const int channel_count, i16* output, f32x4 scissor_rect,
-                                                 const TileInfo* tile_info, const RenderCommand* command) {
+static ALWAYS_INLINE SoaRgb process_8_pixels_nearest(const NearestMode mode, NearestState* state,
+                                                     const NearestSource* src, const PlaneRow* row) {
+    if (mode.channel_count == 1) {
+        return nearest_1ch(state, src, row);
+    }
+
+    if (mode.channel_count == 4) {
+        return nearest_4ch(mode, state, src, row);
+    }
+
+    return nearest_3ch(mode, state, src, row);
+}
+
+static ALWAYS_INLINE NearestSource nearest_source_new(const RenderCommand* command, const TileClip* clip) {
     const ImageData* image = command->image;
-    CornerRoundingState rounding_state;
+    const int texture_stride = image->padded_width;
+    const int plane_size = texture_stride * (int)image->padded_height;
 
-    SoaRgba color = splat_color(command->corner_colors);
+    const int u = command->image_src_x + i32x4_extract(clip->clip_diff, 0) + i16x8_extract(command->clip_adjust, 0);
+    const int v = command->image_src_y + i32x4_extract(clip->clip_diff, 1) + i16x8_extract(command->clip_adjust, 1);
 
-    i16x8 global_alpha = i16x8_new_splat((i16)((command->global_alpha * 0x7FFF) / 255));
+    return (NearestSource) {
+        .line = image->data + v * texture_stride + u,
+        .r_plane = 0,
+        .g_plane = plane_size,
+        .b_plane = plane_size * 2,
+        .a_plane = plane_size * 3,
+    };
+}
 
-    int texture_stride = image->padded_width;
-
-    f32x4 x0y0x1y1_adjust = f32x4_sub(command->aabb, tile_info->offsets);
-    x0y0x1y1_adjust = f32x4_add(x0y0x1y1_adjust, f32x4_new_splat(0.5f));
-    f32x4 x0y0x1y1 = f32x4_floor(x0y0x1y1_adjust);
-    i32x4 x0y0x1y1_int = f32x4_as_i32x4(x0y0x1y1);
-
-    i32x4 scissor_int = f32x4_as_i32x4(scissor_rect);
-    i32x4 min_box = i32x4_min(x0y0x1y1_int, scissor_int);
-    i32x4 max_box = i32x4_max(x0y0x1y1_int, scissor_int);
-
-    int32_t x0 = i32x4_extract(max_box, 0);
-    int32_t y0 = i32x4_extract(max_box, 1);
-    int32_t x1 = i32x4_extract(min_box, 2);
-    int32_t y1 = i32x4_extract(min_box, 3);
-
-    int ylen = (int)(y1 - y0);
-    int xlen = (int)(x1 - x0);
-
-    if (ylen <= 0 || xlen <= 0) {
+static ALWAYS_INLINE void image_internal_nearest(const NearestMode mode, i16* tile_output, const RenderCommand* command,
+                                                 f32x4 scissor_rect, const TileInfo* tile) {
+    const TileTarget target = { .output = tile_output, .scissor_rect = scissor_rect, .tile = tile };
+    TileClip clip;
+    if (!tile_clip_setup(command->aabb, &target, &clip)) {
         return;
     }
 
-    i32x4 clip_diff = i32x4_sub(x0y0x1y1_int, scissor_int);
-    clip_diff = i32x4_min(clip_diff, i32x4_new_splat(0));
-    clip_diff = i32x4_abs(clip_diff);
+    NearestState state;
+    state.tint = splat_color(command->corner_colors);
+    state.global_alpha = i16x8_new_splat((i16)((command->global_alpha * 0x7FFF) / 255));
 
-    int clip_x = (int)i32x4_extract(clip_diff, 0);
-    int clip_y = (int)i32x4_extract(clip_diff, 1);
-
-    int u = command->image_src_x + clip_x + i16x8_extract(command->clip_adjust, 0);
-    int v = command->image_src_y + clip_y + i16x8_extract(command->clip_adjust, 1);
-
-    int plane_size = texture_stride * (int)image->padded_height;
-
-    int offset = v * texture_stride + u;
-    const u8* image_ptr_offset = image->data + offset;
-    int image_r_plane = 0;
-    int image_g_plane = image_r_plane + plane_size;
-    int image_b_plane = image_g_plane + plane_size;
-    int image_a_plane = image_b_plane + plane_size;
-
-    if (rounding) {
-        const float corner_radius = command->radius;
+    if (mode.rounding) {
         const int corner_direction = render_mask_corner_of(command->mask) - 1;
-        const int y_diff = i32x4_extract(clip_diff, 1);
-
-        corner_rounding_init(&rounding_state, y_diff, corner_radius, corner_direction);
+        corner_rounding_init(&state.rounding_state, i32x4_extract(clip.clip_diff, 1), command->radius,
+                             corner_direction);
     }
 
-    int write_offset = (int)y0 * TILE_STRIDE + (int)x0;
+    const int texture_stride = command->image->padded_width;
+    const NearestSource first_line = nearest_source_new(command, &clip);
+    const i16x8 write_mask = i16x8_write_mask(clip.xlen);
 
-    i16* output_ptr = output;
-    i16x8 write_mask = i16x8_write_mask(xlen);
+    for_count(y, clip.ylen) {
+        NearestSource src = first_line;
+        src.line += y * texture_stride;
+        PlaneRow row = plane_row_new(tile_output + y * TILE_STRIDE, clip.write_offset);
 
-    for_count(y, ylen) {
-        const u8* image_line_ptr = image_ptr_offset + y * texture_stride;
-        i16* output_line_ptr = output_ptr + y * TILE_STRIDE;
-
-        if (rounding) {
-            corner_rounding_step_y(&rounding_state, clip_diff);
+        if (mode.rounding) {
+            corner_rounding_step_y(&state.rounding_state, clip.clip_diff);
         }
 
-        for_count(x, (xlen >> 3)) {
-            SoaRgb res = process_8_pixels_nearest(blend_with_background, rounding, channel_count, &rounding_state,
-                                                  image_line_ptr, image_r_plane, image_g_plane, image_b_plane,
-                                                  image_a_plane, output_line_ptr, write_offset, color, global_alpha);
-
-            i16x8_store_unaligned(res.r, output_line_ptr, write_offset);
-            i16x8_store_unaligned(res.g, output_line_ptr, write_offset + PLANE_OFFSET_INCREMENT);
-            i16x8_store_unaligned(res.b, output_line_ptr, write_offset + PLANE_OFFSET_INCREMENT * 2);
-
-            image_line_ptr += 8;
-            output_line_ptr += 8;
+        for_count(x, (clip.xlen >> 3)) {
+            store_rgb(process_8_pixels_nearest(mode, &state, &src, &row), &row);
+            src.line += 8;
+            row.line_output += 8;
         }
 
-        if ((xlen & 0x7) > 0) {
-            SoaRgb res = process_8_pixels_nearest(blend_with_background, rounding, channel_count, &rounding_state,
-                                                  image_line_ptr, image_r_plane, image_g_plane, image_b_plane,
-                                                  image_a_plane, output_line_ptr, write_offset, color, global_alpha);
-
-            i16x8 out_r = i16x8_load_unaligned(output_line_ptr, write_offset);
-            i16x8 out_g = i16x8_load_unaligned(output_line_ptr, write_offset + PLANE_OFFSET_INCREMENT);
-            i16x8 out_b = i16x8_load_unaligned(output_line_ptr, write_offset + PLANE_OFFSET_INCREMENT * 2);
-
-            out_r = i16x8_select(write_mask, res.r, out_r);
-            out_g = i16x8_select(write_mask, res.g, out_g);
-            out_b = i16x8_select(write_mask, res.b, out_b);
-
-            i16x8_store_unaligned(out_r, output_line_ptr, write_offset);
-            i16x8_store_unaligned(out_g, output_line_ptr, write_offset + PLANE_OFFSET_INCREMENT);
-            i16x8_store_unaligned(out_b, output_line_ptr, write_offset + PLANE_OFFSET_INCREMENT * 2);
+        if ((clip.xlen & 0x7) > 0) {
+            store_rgb_masked(process_8_pixels_nearest(mode, &state, &src, &row), write_mask, &row);
         }
     }
 }
+
+#define NEAREST_VARIANT(name, blend, round, channels)                                                               \
+    static ALWAYS_INLINE void name(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,              \
+                                   const TileInfo* tile) {                                                          \
+        image_internal_nearest((NearestMode) { blend, round, channels }, tile_output, command, scissor_rect, tile); \
+    }
 
 // 1-channel (alpha-only) permutations
-static ALWAYS_INLINE void render_image_nearest_solid_1ch(i16* tile_output, const RenderCommand* command,
-                                                         f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(false, false, 1, tile_output, scissor_rect, tile, command);
-}
-
-static ALWAYS_INLINE void render_image_nearest_blend_1ch(i16* tile_output, const RenderCommand* command,
-                                                         f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(true, false, 1, tile_output, scissor_rect, tile, command);
-}
-
-static ALWAYS_INLINE void render_image_nearest_rounded_1ch(i16* tile_output, const RenderCommand* command,
-                                                           f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(false, true, 1, tile_output, scissor_rect, tile, command);
-}
-
-static ALWAYS_INLINE void render_image_nearest_blend_rounded_1ch(i16* tile_output, const RenderCommand* command,
-                                                                 f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(true, true, 1, tile_output, scissor_rect, tile, command);
-}
+NEAREST_VARIANT(render_image_nearest_solid_1ch, false, false, 1)
+NEAREST_VARIANT(render_image_nearest_blend_1ch, true, false, 1)
+NEAREST_VARIANT(render_image_nearest_rounded_1ch, false, true, 1)
+NEAREST_VARIANT(render_image_nearest_blend_rounded_1ch, true, true, 1)
 
 // 3-channel (RGB) permutations
-static ALWAYS_INLINE void render_image_nearest_solid_3ch(i16* tile_output, const RenderCommand* command,
-                                                         f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(false, false, 3, tile_output, scissor_rect, tile, command);
-}
-
-static ALWAYS_INLINE void render_image_nearest_blend_3ch(i16* tile_output, const RenderCommand* command,
-                                                         f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(true, false, 3, tile_output, scissor_rect, tile, command);
-}
-
-static ALWAYS_INLINE void render_image_nearest_rounded_3ch(i16* tile_output, const RenderCommand* command,
-                                                           f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(false, true, 3, tile_output, scissor_rect, tile, command);
-}
-
-static ALWAYS_INLINE void render_image_nearest_blend_rounded_3ch(i16* tile_output, const RenderCommand* command,
-                                                                 f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(true, true, 3, tile_output, scissor_rect, tile, command);
-}
+NEAREST_VARIANT(render_image_nearest_solid_3ch, false, false, 3)
+NEAREST_VARIANT(render_image_nearest_blend_3ch, true, false, 3)
+NEAREST_VARIANT(render_image_nearest_rounded_3ch, false, true, 3)
+NEAREST_VARIANT(render_image_nearest_blend_rounded_3ch, true, true, 3)
 
 // 4-channel (RGBA) permutations: always blend with background because of the alpha channel
-static ALWAYS_INLINE void render_image_nearest_blend_4ch(i16* tile_output, const RenderCommand* command,
-                                                         f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(true, false, 4, tile_output, scissor_rect, tile, command);
-}
+NEAREST_VARIANT(render_image_nearest_blend_4ch, true, false, 4)
+NEAREST_VARIANT(render_image_nearest_blend_rounded_4ch, true, true, 4)
 
-static ALWAYS_INLINE void render_image_nearest_blend_rounded_4ch(i16* tile_output, const RenderCommand* command,
-                                                                 f32x4 scissor_rect, const TileInfo* tile) {
-    image_internal_nearest(true, true, 4, tile_output, scissor_rect, tile, command);
-}
+typedef void (*nearest_func_t)(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                               const TileInfo* tile);
 
-typedef void (*fill_func_t)(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile);
-
-static const fill_func_t image_nearest_dispatch_table[2][2][3] = {
+static const nearest_func_t image_nearest_dispatch_table[2][2][3] = {
     {
         // No rounding
         { render_image_nearest_solid_1ch, render_image_nearest_solid_3ch,

@@ -57,18 +57,23 @@ void image_system_begin_frame(ImageSystem* sys);
 // not run yet. Lets pollers report such a load as pending rather than failed.
 bool image_system_prepare_pending(ImageSystem* sys, FlImageLoadRequestId request_id);
 
+// What to load: a path on a mount, how to decode it, and the caller's user_data for the completion callback.
+typedef struct ImageLoadSource {
+    FlVfsMount* mount;
+    FlString relative_path;
+    const ImageDecodeOptions* options;
+    const ImageThumbnailOptions* thumb_options;
+    void* user_data;
+} ImageLoadSource;
+
 // Start an image load; returns FL_IMAGE_LOAD_REQUEST_ID_INVALID on failure.
 // Pass reuse_handle to reuse an existing VFS handle (for evicted cache reload).
-FlImageLoadRequestId image_system_load(ImageSystem* sys, FlVfsMount* mount, FlString relative_path,
-                                       const ImageDecodeOptions* options, const ImageThumbnailOptions* thumb_options,
-                                       void* user_data, FlImageLoadRequestId reuse_handle);
+FlImageLoadRequestId image_system_load(ImageSystem* sys, const ImageLoadSource* source,
+                                       FlImageLoadRequestId reuse_handle);
 
 // Dedup-aware load: returns the existing request ID if the same mount instance + path + options was already
 // loaded, setting *was_cached (no new load started).
-FlImageLoadRequestId image_system_load_dedup(ImageSystem* sys, FlVfsMount* mount, FlString relative_path,
-                                             const ImageDecodeOptions* options,
-                                             const ImageThumbnailOptions* thumb_options, void* user_data,
-                                             bool* was_cached);
+FlImageLoadRequestId image_system_load_dedup(ImageSystem* sys, const ImageLoadSource* source, bool* was_cached);
 
 // Drop every dedup entry that resolves to request_id, so the next dedup load of that image starts a new request.
 void image_system_forget_dedup(ImageSystem* sys, FlImageLoadRequestId request_id);
