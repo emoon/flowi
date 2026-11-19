@@ -80,16 +80,20 @@ static bool is_lha_archive_data(const uint8_t* data, size_t size) {
         return false;
     }
 
-    if (data[2] == '-' && data[3] == 'l' && (data[4] == 'h' || data[4] == 'z') && data[6] == '-') {
-        return true;
+    if (data[2] != '-' || data[3] != 'l') {
+        return false;
     }
 
-    return false;
+    if (data[6] != '-') {
+        return false;
+    }
+
+    return data[4] == 'h' || data[4] == 'z';
 }
 
 // Joins the header's path and filename, without a trailing slash
 
-static size_t build_full_path(char* dest, size_t dest_size, LHAFileHeader* header) {
+static size_t build_full_path(char* dest, size_t dest_size, const LHAFileHeader* header) {
     const char* filename = header->filename ? header->filename : "";
     const char* path = header->path ? header->path : "";
 
@@ -211,6 +215,21 @@ static LHAFileHeader* find_lha_entry(LhasaHandle* handle, FlString target_path) 
     return nullptr;
 }
 
+static void cache_lha_header(LhasaHandle* handle, const LHAFileHeader* header) {
+    if (lha_reader_current_is_fake(handle->reader)) {
+        return;
+    }
+
+    char full_path[1024];
+    size_t full_len = build_full_path(full_path, sizeof(full_path), header);
+    if (full_len == 0) {
+        return;
+    }
+
+    vfs_entry_cache_add(&handle->base.entries, string_from_cstr(full_path), (int64_t)header->length,
+                        strcmp(header->compress_method, LHA_COMPRESS_TYPE_DIR) == 0);
+}
+
 static void build_entry_cache(LhasaHandle* handle) {
     if (handle->base.entries.arena || !handle->base.memory_buffer) {
         return;
@@ -224,18 +243,7 @@ static void build_entry_cache(LhasaHandle* handle) {
 
     LHAFileHeader* header;
     while ((header = lha_reader_next_file(handle->reader)) != nullptr) {
-        if (lha_reader_current_is_fake(handle->reader)) {
-            continue;
-        }
-
-        char full_path[1024];
-        size_t full_len = build_full_path(full_path, sizeof(full_path), header);
-        if (full_len == 0) {
-            continue;
-        }
-
-        vfs_entry_cache_add(&handle->base.entries, string_from_cstr(full_path), (int64_t)header->length,
-                            strcmp(header->compress_method, LHA_COMPRESS_TYPE_DIR) == 0);
+        cache_lha_header(handle, header);
     }
 }
 
@@ -282,24 +290,41 @@ static bool lhasa_is_directory(void* driver_instance, void* handle) {
     return h ? h->base.is_directory : false;
 }
 
-// Continue reading the handle's own entry from where the last read stopped, 0 bytes at its end
+// Reads until the buffer is full or the entry ends
 
-static FlVfsReadResult lhasa_read_next(LhasaHandle* handle, uint8_t* buffer, int64_t size) {
-    if (!handle->positioned) {
-        if (!find_lha_entry(handle, handle->base.target_path)) {
-            return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_FileNotFound } };
-        }
-        handle->positioned = true;
-    }
-
+static size_t lhasa_read_entry(LHAReader* reader, uint8_t* buffer, size_t size) {
     size_t total_read = 0;
-    while (total_read < (size_t)size) {
-        size_t chunk = lha_reader_read(handle->reader, buffer + total_read, (size_t)size - total_read);
+    while (total_read < size) {
+        size_t chunk = lha_reader_read(reader, buffer + total_read, size - total_read);
         if (chunk == 0) {
             break;
         }
         total_read += chunk;
     }
+    return total_read;
+}
+
+static bool lhasa_ensure_positioned(LhasaHandle* handle) {
+    if (handle->positioned) {
+        return true;
+    }
+
+    if (!find_lha_entry(handle, handle->base.target_path)) {
+        return false;
+    }
+
+    handle->positioned = true;
+    return true;
+}
+
+// Continue reading the handle's own entry from where the last read stopped, 0 bytes at its end
+
+static FlVfsReadResult lhasa_read_next(LhasaHandle* handle, uint8_t* buffer, int64_t size) {
+    if (!lhasa_ensure_positioned(handle)) {
+        return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_FileNotFound } };
+    }
+
+    size_t total_read = lhasa_read_entry(handle->reader, buffer, (size_t)size);
 
     return (FlVfsReadResult) { .bytes_read = (int64_t)total_read, .error = { .vfs_status = FlVfsStatus_Success } };
 }
@@ -340,16 +365,7 @@ static FlVfsReadResult lhasa_read(void* driver_instance, void* handle_ptr, FlStr
         return (FlVfsReadResult) { .bytes_read = -1, .error = { .vfs_status = FlVfsStatus_GenericError } };
     }
 
-    size_t total_read = 0;
-    size_t to_read = (size_t)size;
-
-    while (total_read < to_read) {
-        size_t chunk = lha_reader_read(handle->reader, buffer + total_read, to_read - total_read);
-        if (chunk == 0) {
-            break;
-        }
-        total_read += chunk;
-    }
+    size_t total_read = lhasa_read_entry(handle->reader, buffer, (size_t)size);
 
     return (FlVfsReadResult) { .bytes_read = (int64_t)total_read, .error = { .vfs_status = FlVfsStatus_Success } };
 }

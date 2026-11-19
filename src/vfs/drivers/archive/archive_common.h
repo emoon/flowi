@@ -106,6 +106,21 @@ static inline FlString vfs_archive_resolve_target_path(const VfsArchiveHandle* b
     return path.length > 0 ? path : base->target_path;
 }
 
+// True when longer is shorter plus one trailing slash
+
+static inline bool vfs_archive_is_slash_variant(const char* longer, size_t longer_len, const char* shorter,
+                                                size_t shorter_len) {
+    if (longer_len != shorter_len + 1) {
+        return false;
+    }
+
+    if (longer[longer_len - 1] != '/') {
+        return false;
+    }
+
+    return strncmp(longer, shorter, shorter_len) == 0;
+}
+
 // True when the two paths name the same entry, ignoring one trailing slash
 
 static inline bool vfs_archive_entry_path_matches(const char* entry_path, const char* target_cstr, size_t target_len) {
@@ -117,21 +132,87 @@ static inline bool vfs_archive_entry_path_matches(const char* entry_path, const 
         return true;
     }
 
-    size_t entry_len = strlen(entry_path);
+    const size_t entry_len = strlen(entry_path);
 
-    // "foo/" matches "foo"
-    if (entry_len == target_len + 1 && entry_path[entry_len - 1] == '/'
-        && strncmp(entry_path, target_cstr, target_len) == 0) {
+    return vfs_archive_is_slash_variant(entry_path, entry_len, target_cstr, target_len)
+           || vfs_archive_is_slash_variant(target_cstr, target_len, entry_path, entry_len);
+}
+
+static inline uint64_t vfs_cached_entry_count(const VfsCachedEntry* entries) {
+    uint64_t count = 0;
+    for (const VfsCachedEntry* cached = entries; cached; cached = cached->next) {
+        count++;
+    }
+    return count;
+}
+
+// Sets relative to full_path below dir (an empty dir is the root). False when full_path is not strictly below dir.
+
+static inline bool vfs_archive_relative_to(FlString full_path, FlString dir, FlString* relative) {
+    if (dir.length == 0) {
+        *relative = full_path;
         return true;
     }
 
-    // "foo" matches "foo/"
-    if (target_len > 0 && target_cstr[target_len - 1] == '/' && entry_len == target_len - 1
-        && strncmp(entry_path, target_cstr, target_len - 1) == 0) {
-        return true;
+    if (!fl_string_begins_with(full_path, dir)) {
+        return false;
     }
 
-    return false;
+    if (full_path.length == dir.length) {
+        return false;
+    }
+
+    if (full_path.data[dir.length] != '/') {
+        return false;
+    }
+
+    *relative = fl_string_substr(full_path, dir.length + 1, full_path.length - dir.length - 1);
+    return true;
+}
+
+// The first segment of relative is the child; one with more segments below it is a directory.
+
+static inline FlString vfs_archive_child_name(FlString relative, bool entry_is_directory, bool* is_directory) {
+    int64_t slash_idx = fl_string_find_char(relative, '/');
+
+    if (slash_idx >= 0) {
+        *is_directory = true;
+        return fl_string_substr(relative, 0, (uint64_t)slash_idx);
+    }
+
+    *is_directory = entry_is_directory;
+    return relative;
+}
+
+// The child of dir that cached lies under. False when it is not below dir or names no child.
+
+static inline bool vfs_archive_child_of(const VfsCachedEntry* cached, FlString dir, FlString* name,
+                                        bool* is_directory) {
+    FlString relative;
+    if (!vfs_archive_relative_to(cached->path, dir, &relative)) {
+        return false;
+    }
+
+    *name = vfs_archive_child_name(relative, cached->is_directory, is_directory);
+    return name->length > 0;
+}
+
+typedef struct VfsSeenNames {
+    FlString* names;
+    uint64_t count;
+} VfsSeenNames;
+
+// Records a copy of name; false when it was already recorded.
+
+static inline bool vfs_seen_names_add(VfsSeenNames* seen, FlArena* arena, FlString name) {
+    for (uint64_t i = 0; i < seen->count; i++) {
+        if (fl_string_equals(seen->names[i], name)) {
+            return false;
+        }
+    }
+
+    seen->names[seen->count++] = fl_string_copy(arena, name);
+    return true;
 }
 
 // Calls callback once for each immediate child of path in a cached archive entry list, with shared
@@ -146,59 +227,16 @@ static inline void vfs_archive_list_children(VfsCachedEntry* entries, FlString p
 
     arena_scratch_auto(temp);
 
-    uint64_t entry_count = 0;
-    for (VfsCachedEntry* cached = entries; cached; cached = cached->next) {
-        entry_count++;
-    }
-
-    FlString* seen_names = arena_alloc_array(temp.arena, FlString, entry_count);
-    uint64_t seen_count = 0;
+    VfsSeenNames seen = { .names = arena_alloc_array(temp.arena, FlString, vfs_cached_entry_count(entries)) };
 
     for (VfsCachedEntry* cached = entries; cached; cached = cached->next) {
-        FlString full_path = cached->path;
-
-        if (path.length > 0) {
-            if (!fl_string_begins_with(full_path, path)) {
-                continue;
-            }
-            if (full_path.length == path.length) {
-                continue;
-            }
-            if (full_path.data[path.length] != '/') {
-                continue;
-            }
-            full_path = fl_string_substr(full_path, path.length + 1, full_path.length - path.length - 1);
-        }
-
-        int64_t slash_idx = fl_string_find_char(full_path, '/');
         FlString child_name;
         bool is_dir;
 
-        if (slash_idx >= 0) {
-            child_name = fl_string_substr(full_path, 0, (uint64_t)slash_idx);
-            is_dir = true;
-        } else {
-            child_name = full_path;
-            is_dir = cached->is_directory;
-        }
-
-        if (child_name.length == 0) {
+        if (!vfs_archive_child_of(cached, path, &child_name, &is_dir)
+            || !vfs_seen_names_add(&seen, temp.arena, child_name)) {
             continue;
         }
-
-        bool already_seen = false;
-        for (uint64_t j = 0; j < seen_count; j++) {
-            if (fl_string_equals(seen_names[j], child_name)) {
-                already_seen = true;
-                break;
-            }
-        }
-
-        if (already_seen) {
-            continue;
-        }
-
-        seen_names[seen_count++] = fl_string_copy(temp.arena, child_name);
 
         FlVfsEntry vfs_entry = {
             .name = child_name,

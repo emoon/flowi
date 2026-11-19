@@ -49,31 +49,33 @@ static FlString localfs_resolve(FlArena* arena, const LocalFsHandle* parent, FlS
 // Allocate a handle for os_path, opening an OS fd according to flags. Directories and flag-less opens get no
 // fd. Returns nullptr on OOM or open failure.
 
-static LocalFsHandle* localfs_make_handle(FlString os_path, bool is_dir, u32 flags) {
-    i64 fd = -1;
-    if (!is_dir) {
-        if (flags & FlVfsOpenFlags_Read) {
-            fd = file_open_os(os_path, 0);
-            if (fd < 0) {
-                return nullptr;
-            }
-        }
-    }
+static bool localfs_wants_fd(bool is_dir, u32 flags) {
+    return !is_dir && (flags & FlVfsOpenFlags_Read);
+}
 
-    LocalFsHandle* h = mi_alloc(LocalFsHandle);
-    if (!h) {
-        if (fd >= 0) {
-            file_close_handle_os(fd);
-        }
+static void localfs_discard_partial(LocalFsHandle* h, i64 fd) {
+    if (fd >= 0) {
+        file_close_handle_os(fd);
+    }
+    if (h) {
+        mi_free(h);
+    }
+}
+
+static LocalFsHandle* localfs_make_handle(FlString os_path, bool is_dir, u32 flags) {
+    const bool wants_fd = localfs_wants_fd(is_dir, flags);
+    i64 fd = wants_fd ? file_open_os(os_path, 0) : -1;
+    if (wants_fd && fd < 0) {
         return nullptr;
     }
 
-    h->path = localfs_persist_path(os_path);
-    if (!h->path.data) {
-        if (fd >= 0) {
-            file_close_handle_os(fd);
-        }
-        mi_free(h);
+    LocalFsHandle* h = mi_alloc(LocalFsHandle);
+    if (h) {
+        h->path = localfs_persist_path(os_path);
+    }
+
+    if (!h || !h->path.data) {
+        localfs_discard_partial(h, fd);
         return nullptr;
     }
 
@@ -146,51 +148,73 @@ static FlVfsSizeResult localfs_get_size(void* instance, void* handle, FlString r
     return (FlVfsSizeResult) { .size = (i64)st.size, .error = localfs_ok() };
 }
 
-static FlVfsReadResult localfs_read(void* instance, void* handle, FlString relative_path, uint8_t* buffer,
-                                    int64_t size) {
-    UNUSED(instance);
-    LocalFsHandle* h = (LocalFsHandle*)handle;
-    if (!h || !buffer || size < 0) {
-        return (FlVfsReadResult) { .bytes_read = -1, .error = localfs_fail() };
-    }
+typedef struct {
+    i64 fd; // < 0 when there is nothing to read from
+    bool owns_fd;
+} ReadFd;
 
-    // A non-empty relative path names a file under this handle and is read from its own fd starting at offset 0;
-    // an empty one continues from the handle's current read offset. Flag-less handles carry no fd, so those open
-    // one for the duration of the read too.
-    i64 fd = h->fd;
-    bool owns_fd = false;
+// A non-empty relative path names a file under this handle and is read from its own fd starting at offset 0;
+// an empty one continues from the handle's current read offset. Flag-less handles carry no fd, so those open
+// one for the duration of the read too.
+static ReadFd localfs_read_fd(const LocalFsHandle* h, FlString relative_path) {
     if (relative_path.length != 0) {
         arena_scratch_auto(temp);
-        fd = file_open_os(localfs_resolve(temp.arena, h, relative_path), 0);
-        owns_fd = true;
-    } else if (h->is_dir) {
-        return (FlVfsReadResult) { .bytes_read = -1, .error = localfs_fail() };
-    } else if (fd < 0) {
-        fd = file_open_os(h->path, 0);
-        owns_fd = true;
-    }
-    if (fd < 0) {
-        return (FlVfsReadResult) { .bytes_read = -1, .error = localfs_fail() };
+        FlString full = localfs_resolve(temp.arena, h, relative_path);
+        return (ReadFd) { .fd = file_open_os(full, 0), .owns_fd = true };
     }
 
-    // Loops until the buffer is full or EOF; one read(2) may return short.
+    if (h->is_dir) {
+        return (ReadFd) { .fd = -1 };
+    }
+
+    if (h->fd >= 0) {
+        return (ReadFd) { .fd = h->fd };
+    }
+
+    return (ReadFd) { .fd = file_open_os(h->path, 0), .owns_fd = true };
+}
+
+// Loops until the buffer is full or EOF; one read(2) may return short. Returns -1 on a read error.
+static i64 localfs_read_fully(i64 fd, uint8_t* buffer, i64 size) {
     i64 total = 0;
     while (total < size) {
         i64 remaining = size - total;
         i64 n = file_read_from_handle_os(buffer + total, fd, remaining, remaining);
         if (n < 0) {
-            if (owns_fd) {
-                file_close_handle_os(fd);
-            }
-            return (FlVfsReadResult) { .bytes_read = -1, .error = localfs_fail() };
+            return -1;
         }
         if (n == 0) {
             break; // EOF
         }
         total += n;
     }
-    if (owns_fd) {
-        file_close_handle_os(fd);
+    return total;
+}
+
+static bool localfs_read_args_valid(const LocalFsHandle* h, const uint8_t* buffer, int64_t size) {
+    return h && buffer && size >= 0;
+}
+
+static FlVfsReadResult localfs_read(void* instance, void* handle, FlString relative_path, uint8_t* buffer,
+                                    int64_t size) {
+    UNUSED(instance);
+    LocalFsHandle* h = (LocalFsHandle*)handle;
+    if (!localfs_read_args_valid(h, buffer, size)) {
+        return (FlVfsReadResult) { .bytes_read = -1, .error = localfs_fail() };
+    }
+
+    ReadFd source = localfs_read_fd(h, relative_path);
+    if (source.fd < 0) {
+        return (FlVfsReadResult) { .bytes_read = -1, .error = localfs_fail() };
+    }
+
+    i64 total = localfs_read_fully(source.fd, buffer, size);
+    if (source.owns_fd) {
+        file_close_handle_os(source.fd);
+    }
+
+    if (total < 0) {
+        return (FlVfsReadResult) { .bytes_read = -1, .error = localfs_fail() };
     }
     return (FlVfsReadResult) { .bytes_read = total, .error = localfs_ok() };
 }

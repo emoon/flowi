@@ -135,6 +135,46 @@ FlScrollContainerExtent ui_get_scroll_container_extent(u32 element_id) {
     };
 }
 
+static bool ui_border_has_width(const FlBorderWidthConfig* width) {
+    const bool sides = width->left > 0 || width->right > 0 || width->top > 0 || width->bottom > 0;
+    return sides || width->between_children > 0;
+}
+
+static void ui_apply_border(Clay_BorderElementConfig* out, const FlLayoutBorder* border, float scale) {
+    if (!ui_border_has_width(&border->width)) {
+        return;
+    }
+    out->color = (Clay_Color) { border->color.r, border->color.g, border->color.b, border->color.a };
+    out->width.left = (u16)ui_scale_and_snap(border->width.left, scale);
+    out->width.right = (u16)ui_scale_and_snap(border->width.right, scale);
+    out->width.top = (u16)ui_scale_and_snap(border->width.top, scale);
+    out->width.bottom = (u16)ui_scale_and_snap(border->width.bottom, scale);
+    out->width.betweenChildren = (u16)ui_scale_and_snap(border->width.between_children, scale);
+    // Dash lengths scale but do not snap.
+    out->dashLen = border->stroke.dash_len * scale;
+    out->gapLen = border->stroke.gap_len * scale;
+}
+
+static void ui_apply_clip(Clay_ClipElementConfig* out, const FlLayoutClip* clip) {
+    out->horizontal = clip->horizontal;
+    out->vertical = clip->vertical;
+
+    // The caller sets manual_scroll when it owns scroll_pos; an offset of exactly zero is then still honored as
+    // a manual offset. Scroll positions are in screen coordinates and do not scale.
+    if (clip->manual_scroll) {
+        out->childOffset.x = clip->scroll_pos.x;
+        out->childOffset.y = clip->scroll_pos.y;
+    } else if (clip->horizontal || clip->vertical) {
+        // Clay-managed scrolling: the scroll position from the previous frame.
+        Clay_Vector2 scroll_offset = Clay_GetScrollOffset();
+        out->childOffset.x = scroll_offset.x;
+        out->childOffset.y = scroll_offset.y;
+    } else {
+        out->childOffset.x = 0.0f;
+        out->childOffset.y = 0.0f;
+    }
+}
+
 void fl_layout_configure(FlLayoutConfig config) {
     float scale = g_ui_ctx->ui_scale;
 
@@ -158,37 +198,9 @@ void fl_layout_configure(FlLayoutConfig config) {
     temp.layout.layoutDirection = (Clay_LayoutDirection)config.direction;
     temp.backgroundColor = (Clay_Color) { config.color.r, config.color.g, config.color.b, config.color.a };
 
-    if (config.border.width.left > 0 || config.border.width.right > 0 || config.border.width.top > 0
-        || config.border.width.bottom > 0 || config.border.width.between_children > 0) {
-        temp.border.color = (Clay_Color) { config.border.color.r, config.border.color.g, config.border.color.b,
-                                           config.border.color.a };
-        temp.border.width.left = (u16)ui_scale_and_snap(config.border.width.left, scale);
-        temp.border.width.right = (u16)ui_scale_and_snap(config.border.width.right, scale);
-        temp.border.width.top = (u16)ui_scale_and_snap(config.border.width.top, scale);
-        temp.border.width.bottom = (u16)ui_scale_and_snap(config.border.width.bottom, scale);
-        temp.border.width.betweenChildren = (u16)ui_scale_and_snap(config.border.width.between_children, scale);
-        // Dash lengths scale but do not snap.
-        temp.border.dashLen = config.border.stroke.dash_len * scale;
-        temp.border.gapLen = config.border.stroke.gap_len * scale;
-    }
+    ui_apply_border(&temp.border, &config.border, scale);
 
-    temp.clip.horizontal = config.clip.horizontal;
-    temp.clip.vertical = config.clip.vertical;
-
-    // The caller sets manual_scroll when it owns scroll_pos; an offset of exactly zero is then still honored as
-    // a manual offset. Scroll positions are in screen coordinates and do not scale.
-    if (config.clip.manual_scroll) {
-        temp.clip.childOffset.x = config.clip.scroll_pos.x;
-        temp.clip.childOffset.y = config.clip.scroll_pos.y;
-    } else if (config.clip.horizontal || config.clip.vertical) {
-        // Clay-managed scrolling: the scroll position from the previous frame.
-        Clay_Vector2 scroll_offset = Clay_GetScrollOffset();
-        temp.clip.childOffset.x = scroll_offset.x;
-        temp.clip.childOffset.y = scroll_offset.y;
-    } else {
-        temp.clip.childOffset.x = 0.0f;
-        temp.clip.childOffset.y = 0.0f;
-    }
+    ui_apply_clip(&temp.clip, &config.clip);
 
     // Placed child (flowi divergence): when enabled, the engine positions this child at an explicit
     // content-space offset (scrolling and clipping with its parent) instead of by flex flow. The offset is
