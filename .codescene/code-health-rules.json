@@ -27,6 +27,126 @@
           "value": 6
         }
       ]
+    },
+    {
+      "matching_content_path": "{src/core/file_watcher.c,src/render/software/sw_glyph_cache.c,src/render/gpu/gl/gpu_viewport3d.c,src/render/gpu/gpu_atlas_pack.c,src/render/gpu/gl/gpu_renderer.c,src/render/gpu/gpu_image_atlas.c,src/render/gpu/gpu_image_slots.c,src/render/gpu/gl/gpu_resource_prepare.c,src/render/gpu/gpu_svg_translate.c,src/render/software/sr_image_backend.c,src/render/software/calculate_edge_rounding.h,src/ui/ui_inspector.c,src/ui/viewport3d.c,src/ui/ui_hit_test.c,src/ui/image/image_dedup.c,src/ui/ui_private.h,src/ui/ui_text_buffer.h,src/ui/ui_widget_common.c,src/ui/image/image_system.c,src/vfs/vfs_tree.c,src/vfs/drivers/localfs.c,src/vfs/drivers/archive/lhasa.c,src/vfs/drivers/archive/unlzx.c,src/vfs/drivers/archive/libarchive.c,src/platform/backend_headless_window.c}",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/{core/log,core/os/file_watcher_macos,vfs/vfs}.c",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "matching_content_path": "rust/flowi/{src/slider.rs,tests/common/mod.rs,tests/layout.rs}",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ],
+      "rules": [
+        {
+          "name": "Primitive Obsession",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "matching_content_path": "tests/render/{common,image_load}.c",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "matching_content_path": "tests/gpu/{gpu_test_common.h,gpu_test_app.c,gpu_test_text.c}",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "matching_content_path": "tests/{unit_tests_common.c,loc_check_tests.c,unit_tests_common.h,vfs_test_support.h}",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "matching_content_path": "tests/vfs/{vfs,unlzx,archive_refused,driver_calls,mount_path,nested,resolve}.c",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "matching_content_path": "rust/flowi/src/vfs/{fake,executor}.rs",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 6
+        }
+      ],
+      "rules": [
+        {
+          "name": "Primitive Obsession",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "matching_content_path": "{rust/flowi/src/application.rs,rust/flowi/src/layout_ext.rs,rust/flowi/src/slider.rs,rust/flowi/src/vfs/fake.rs,tests/simd_test_support.h}",
+      "rules": [
+        {
+          "name": "Primitive Obsession",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "matching_content_path": "tests/probes/shared_library_smoke_probe.c",
+      "rules": [
+        {
+          "name": "String Heavy Function Arguments",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/ui/render_ir_build.h",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 10
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/core/simd.h",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 8
+        }
+      ]
     }
   ]
 }
