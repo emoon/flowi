@@ -1,20 +1,27 @@
 #include "app_identity.h"
+#include "arena.h"
 #include "string.h"
 
-// Zero-length means "not set". Overrides are malloc-copied and held until replaced or reset.
+// Overrides are copied into s_arena and live until app_identity_reset. Replacing an override leaves the
+// old copy in the arena; set is a startup call, so that waste is bounded.
 
-static FlString s_data_dir_name = { 0 };
-static FlString s_log_file_name = { 0 };
-static FlString s_file_watcher_queue = { 0 };
+#define DEFAULT_DATA_DIR_NAME FL_S_(".flowi")
+#define DEFAULT_LOG_FILE_NAME FL_S_("flowi.log")
+#define DEFAULT_FILE_WATCHER_QUEUE FL_S_("org.flowi.filewatcher")
+
+static FlArena* s_arena = nullptr;
+static FlString s_data_dir_name = DEFAULT_DATA_DIR_NAME;
+static FlString s_log_file_name = DEFAULT_LOG_FILE_NAME;
+static FlString s_file_watcher_queue = DEFAULT_FILE_WATCHER_QUEUE;
 
 static void set_field(FlString* field, FlString value) {
     if (value.length == 0) {
         return;
     }
-    if (field->length > 0) {
-        fl_string_free(*field);
+    if (s_arena == nullptr) {
+        s_arena = arena_new();
     }
-    *field = fl_string_copy_malloc(value);
+    *field = fl_string_copy(s_arena, value);
 }
 
 void fl_app_identity_set(const FlAppIdentity* identity) {
@@ -27,28 +34,22 @@ void fl_app_identity_set(const FlAppIdentity* identity) {
 }
 
 void app_identity_reset(void) {
-    if (s_data_dir_name.length > 0) {
-        fl_string_free(s_data_dir_name);
+    if (s_arena != nullptr) {
+        fl_arena_rewind(s_arena);
     }
-    if (s_log_file_name.length > 0) {
-        fl_string_free(s_log_file_name);
-    }
-    if (s_file_watcher_queue.length > 0) {
-        fl_string_free(s_file_watcher_queue);
-    }
-    s_data_dir_name = (FlString) { 0 };
-    s_log_file_name = (FlString) { 0 };
-    s_file_watcher_queue = (FlString) { 0 };
+    s_data_dir_name = (FlString) DEFAULT_DATA_DIR_NAME;
+    s_log_file_name = (FlString) DEFAULT_LOG_FILE_NAME;
+    s_file_watcher_queue = (FlString) DEFAULT_FILE_WATCHER_QUEUE;
 }
 
 FlString fl_app_identity_data_dir_name(void) {
-    return s_data_dir_name.length > 0 ? s_data_dir_name : FL_S(".flowi");
+    return s_data_dir_name;
 }
 
 FlString fl_app_identity_log_file_name(void) {
-    return s_log_file_name.length > 0 ? s_log_file_name : FL_S("flowi.log");
+    return s_log_file_name;
 }
 
 FlString fl_app_identity_file_watcher_queue(void) {
-    return s_file_watcher_queue.length > 0 ? s_file_watcher_queue : FL_S("org.flowi.filewatcher");
+    return s_file_watcher_queue;
 }
