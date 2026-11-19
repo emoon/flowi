@@ -91,27 +91,32 @@ fn emit_static_link(build_dir: &Path) {
     let mut archives = Vec::new();
     collect_archives(build_dir, &mut archives);
     archives.sort();
-    for dir in archives.iter().filter_map(|a| a.parent()).collect::<std::collections::BTreeSet<_>>() {
+    emit_archive_search_dirs(&archives);
+    println!("cargo:rustc-link-lib=static=flowi_static");
+    emit_archive_libs(&archives);
+    emit_system_libs(cfg!(feature = "windowed"));
+}
+
+fn emit_archive_search_dirs(archives: &[PathBuf]) {
+    let dirs: std::collections::BTreeSet<_> = archives.iter().filter_map(|a| a.parent()).collect();
+    for dir in dirs {
         println!("cargo:rustc-link-search=native={}", dir.display());
     }
-    println!("cargo:rustc-link-lib=static=flowi_static");
-    for archive in &archives {
+}
+
+fn emit_archive_libs(archives: &[PathBuf]) {
+    for archive in archives {
         let name = archive.file_stem().and_then(|n| n.to_str()).unwrap_or_default();
         let name = name.strip_prefix("lib").unwrap_or(name);
         if name != "flowi_static" {
             println!("cargo:rustc-link-lib=static={name}");
         }
     }
+}
 
-    let windowed = cfg!(feature = "windowed");
+fn emit_system_libs(windowed: bool) {
     if cfg!(target_os = "macos") {
-        for framework in ["CoreServices", "CoreFoundation", "Metal", "Foundation", "IOSurface"] {
-            println!("cargo:rustc-link-lib=framework={framework}");
-        }
-        if windowed {
-            println!("cargo:rustc-link-lib=framework=QuartzCore");
-        }
-        println!("cargo:rustc-link-lib=dylib=z");
+        emit_macos_system_libs(windowed);
     } else if cfg!(target_os = "linux") {
         for lib in ["m", "z", "EGL", "OpenGL"] {
             println!("cargo:rustc-link-lib=dylib={lib}");
@@ -120,6 +125,16 @@ fn emit_static_link(build_dir: &Path) {
     if windowed {
         println!("cargo:rustc-link-lib=dylib=SDL2");
     }
+}
+
+fn emit_macos_system_libs(windowed: bool) {
+    for framework in ["CoreServices", "CoreFoundation", "Metal", "Foundation", "IOSurface"] {
+        println!("cargo:rustc-link-lib=framework={framework}");
+    }
+    if windowed {
+        println!("cargo:rustc-link-lib=framework=QuartzCore");
+    }
+    println!("cargo:rustc-link-lib=dylib=z");
 }
 
 fn collect_archives(dir: &Path, out: &mut Vec<PathBuf>) {

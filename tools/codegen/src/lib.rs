@@ -24,89 +24,101 @@ pub struct Target {
     pub config: Config,
 }
 
+fn core_target(repo: &Path, out_root: &Path) -> Target {
+    Target {
+        name: "core API",
+        outputs: &[
+            "include/flowi/arena",
+            "include/flowi/core",
+            "include/flowi/heap",
+            "include/flowi/path",
+            "include/flowi/string",
+            "rust/flowi/src/sys/foundation",
+        ],
+        config: Config {
+            naming: Naming::new("Fl", "fl"),
+            api_dir: repo.join("api/core"),
+            c_include_root: Some(out_root.join("include/flowi")),
+            c_include_prefix: Some("flowi".to_owned()),
+            c_extern_c: true,
+            rust_dir: Some(out_root.join("rust/flowi/src/sys/foundation")),
+            rust_root: Some("crate::sys".to_owned()),
+            rust_allow_dead_code: true,
+            gen_script: Some("cargo regen".to_owned()),
+            ..Default::default()
+        },
+    }
+}
+
+fn vfs_target(repo: &Path, out_root: &Path) -> Target {
+    Target {
+        name: "VFS API",
+        outputs: &[
+            "include/flowi/vfs",
+            "rust/flowi/src/sys/vfs_abi",
+        ],
+        config: Config {
+            naming: Naming::new("Fl", "fl"),
+            api_dir: repo.join("api/vfs"),
+            reference_dirs: vec![repo.join("api/core")],
+            c_include_root: Some(out_root.join("include/flowi")),
+            c_include_prefix: Some("flowi".to_owned()),
+            c_extern_c: true,
+            rust_dir: Some(out_root.join("rust/flowi/src/sys/vfs_abi")),
+            rust_root: Some("crate::sys".to_owned()),
+            rust_allow_dead_code: true,
+            gen_script: Some("cargo regen".to_owned()),
+            ..Default::default()
+        },
+    }
+}
+
+fn toolkit_target(repo: &Path, out_root: &Path) -> Target {
+    Target {
+        name: "toolkit API",
+        outputs: &[
+            "include/flowi/app",
+            "include/flowi/platform",
+            "include/flowi/ui",
+            "rust/flowi/src/sys/toolkit",
+            "rust/flowi/src/generated",
+            "src/exports",
+        ],
+        config: Config {
+            naming: Naming::new("Fl", "fl"),
+            api_dir: repo.join("api"),
+            reference_dirs: vec![repo.join("api/core"), repo.join("api/vfs")],
+            c_include_root: Some(out_root.join("include/flowi")),
+            c_include_prefix: Some("flowi".to_owned()),
+            c_extern_c: true,
+            rust_dir: Some(out_root.join("rust/flowi/src/sys/toolkit")),
+            facade_dir: Some(out_root.join("rust/flowi/src/generated")),
+            facade_raw_path: Some("crate::sys".to_owned()),
+            facade_frame_guard: Some("crate::frame_thread::frame_thread_guard".to_owned()),
+            export_dir: Some(out_root.join("src/exports")),
+            // One libflowi exports the foundation and the VFS beside the toolkit, so
+            // their defs' symbols and the hand-written headers' share one list.
+            export_include_references: true,
+            export_extra_symbol_files: vec![
+                repo.join("tools/codegen/exports/handwritten.txt"),
+                repo.join("tools/codegen/exports/rust_facade.txt"),
+            ],
+            rust_root: Some("crate::sys".to_owned()),
+            rust_allow_dead_code: true,
+            gen_script: Some("cargo regen".to_owned()),
+            ..Default::default()
+        },
+    }
+}
+
 /// Every codegen target, with outputs rooted at `out_root`. The IDL always comes from
 /// `repo`; the two roots are the same tree for a real regeneration, and differ only for the
 /// drift test, which writes to a temp dir and compares.
 pub fn targets(repo: &Path, out_root: &Path) -> Vec<Target> {
     vec![
-        Target {
-            name: "core API",
-            outputs: &[
-                "include/flowi/arena",
-                "include/flowi/core",
-                "include/flowi/heap",
-                "include/flowi/path",
-                "include/flowi/string",
-                "rust/flowi/src/sys/foundation",
-            ],
-            config: Config {
-                naming: Naming::new("Fl", "fl"),
-                api_dir: repo.join("api/core"),
-                c_include_root: Some(out_root.join("include/flowi")),
-                c_include_prefix: Some("flowi".to_owned()),
-                c_extern_c: true,
-                rust_dir: Some(out_root.join("rust/flowi/src/sys/foundation")),
-                rust_root: Some("crate::sys".to_owned()),
-                rust_allow_dead_code: true,
-                gen_script: Some("cargo regen".to_owned()),
-                ..Default::default()
-            },
-        },
-        Target {
-            name: "VFS API",
-            outputs: &[
-                "include/flowi/vfs",
-                "rust/flowi/src/sys/vfs_abi",
-            ],
-            config: Config {
-                naming: Naming::new("Fl", "fl"),
-                api_dir: repo.join("api/vfs"),
-                reference_dirs: vec![repo.join("api/core")],
-                c_include_root: Some(out_root.join("include/flowi")),
-                c_include_prefix: Some("flowi".to_owned()),
-                c_extern_c: true,
-                rust_dir: Some(out_root.join("rust/flowi/src/sys/vfs_abi")),
-                rust_root: Some("crate::sys".to_owned()),
-                rust_allow_dead_code: true,
-                gen_script: Some("cargo regen".to_owned()),
-                ..Default::default()
-            },
-        },
-        Target {
-            name: "toolkit API",
-            outputs: &[
-                "include/flowi/app",
-                "include/flowi/platform",
-                "include/flowi/ui",
-                "rust/flowi/src/sys/toolkit",
-                "rust/flowi/src/generated",
-                "src/exports",
-            ],
-            config: Config {
-                naming: Naming::new("Fl", "fl"),
-                api_dir: repo.join("api"),
-                reference_dirs: vec![repo.join("api/core"), repo.join("api/vfs")],
-                c_include_root: Some(out_root.join("include/flowi")),
-                c_include_prefix: Some("flowi".to_owned()),
-                c_extern_c: true,
-                rust_dir: Some(out_root.join("rust/flowi/src/sys/toolkit")),
-                facade_dir: Some(out_root.join("rust/flowi/src/generated")),
-                facade_raw_path: Some("crate::sys".to_owned()),
-                facade_frame_guard: Some("crate::frame_thread::frame_thread_guard".to_owned()),
-                export_dir: Some(out_root.join("src/exports")),
-                // One libflowi exports the foundation and the VFS beside the toolkit, so
-                // their defs' symbols and the hand-written headers' share one list.
-                export_include_references: true,
-                export_extra_symbol_files: vec![
-                    repo.join("tools/codegen/exports/handwritten.txt"),
-                    repo.join("tools/codegen/exports/rust_facade.txt"),
-                ],
-                rust_root: Some("crate::sys".to_owned()),
-                rust_allow_dead_code: true,
-                gen_script: Some("cargo regen".to_owned()),
-                ..Default::default()
-            },
-        },
+        core_target(repo, out_root),
+        vfs_target(repo, out_root),
+        toolkit_target(repo, out_root),
     ]
 }
 

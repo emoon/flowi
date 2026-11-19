@@ -60,6 +60,82 @@ fn frame(p: &mut MenuProbe) {
     p.menu_open = Menu::is_open("ctx_menu");
 }
 
+fn click_row(app: &mut Application, probe: &mut MenuProbe, row: ElementState) {
+    let (x, y) = common::center(row);
+    common::click_at(app, probe, frame, x, y);
+}
+
+fn toggle_check_item(app: &mut Application, probe: &mut MenuProbe) {
+    assert!(!probe.bold, "the check item starts unchecked");
+    let bold = probe
+        .bold_row
+        .expect("frame populates the Bold row state every tick");
+    assert!(
+        bold.found && bold.size.x > 0.0,
+        "the Bold check item should be laid out while the menu is open"
+    );
+    click_row(app, probe, bold);
+    assert!(
+        probe.bold,
+        "clicking the check item flipped its &mut bool to true"
+    );
+    assert!(
+        probe.menu_open,
+        "the check item keeps the menu open by default"
+    );
+}
+
+fn select_radio_item(app: &mut Application, probe: &mut MenuProbe) {
+    assert_eq!(
+        probe.wave, 0,
+        "the radio group state starts at its default (0, no option selected)"
+    );
+    let wave = probe
+        .wave_row
+        .expect("frame populates the Wave row state every tick");
+    assert!(
+        wave.found && wave.size.x > 0.0,
+        "the Wave radio item should be laid out while the menu is open"
+    );
+    click_row(app, probe, wave);
+    assert_eq!(
+        probe.wave, WAVE_VALUE,
+        "clicking the radio item set its &mut i32 to the option value"
+    );
+    assert!(
+        probe.menu_open,
+        "the radio item keeps the menu open by default"
+    );
+}
+
+fn open_submenu_and_click_child(app: &mut Application, probe: &mut MenuProbe) {
+    let sub = probe
+        .sub_row
+        .expect("frame populates the Sub row state every tick");
+    assert!(
+        sub.found,
+        "the submenu parent row should be laid out while the menu is open"
+    );
+    click_row(app, probe, sub);
+    assert!(
+        app.tick(probe, frame),
+        "settle so the submenu child lays out beside the parent"
+    );
+
+    let child = probe
+        .child_row
+        .expect("frame populates the Child row state every tick");
+    assert!(
+        child.found && child.size.x > 0.0,
+        "the submenu child should be laid out while the submenu is open"
+    );
+    click_row(app, probe, child);
+    assert!(
+        probe.child_clicked,
+        "menu_item!(\"Child\").clicked should fire on a click over it"
+    );
+}
+
 #[test]
 fn headless_menu_check_radio_and_submenu() {
     let mut app = Application::new(WIN_W, WIN_H, true);
@@ -73,72 +149,7 @@ fn headless_menu_check_radio_and_submenu() {
         app.tick(&mut probe, frame),
         "settle so the menu items lay out"
     );
-    assert!(!probe.bold, "the check item starts unchecked");
-    let bold = probe
-        .bold_row
-        .expect("frame populates the Bold row state every tick");
-    assert!(
-        bold.found && bold.size.x > 0.0,
-        "the Bold check item should be laid out while the menu is open"
-    );
-    let (bx, by) = common::center(bold);
-    common::click_at(&mut app, &mut probe, frame, bx, by);
-    assert!(
-        probe.bold,
-        "clicking the check item flipped its &mut bool to true"
-    );
-    assert!(
-        probe.menu_open,
-        "the check item keeps the menu open by default"
-    );
-
-    assert_eq!(
-        probe.wave, 0,
-        "the radio group state starts at its default (0, no option selected)"
-    );
-    let wave = probe
-        .wave_row
-        .expect("frame populates the Wave row state every tick");
-    assert!(
-        wave.found && wave.size.x > 0.0,
-        "the Wave radio item should be laid out while the menu is open"
-    );
-    let (wx, wy) = common::center(wave);
-    common::click_at(&mut app, &mut probe, frame, wx, wy);
-    assert_eq!(
-        probe.wave, WAVE_VALUE,
-        "clicking the radio item set its &mut i32 to the option value"
-    );
-    assert!(
-        probe.menu_open,
-        "the radio item keeps the menu open by default"
-    );
-
-    let sub = probe
-        .sub_row
-        .expect("frame populates the Sub row state every tick");
-    assert!(
-        sub.found,
-        "the submenu parent row should be laid out while the menu is open"
-    );
-    let (sx, sy) = common::center(sub);
-    common::click_at(&mut app, &mut probe, frame, sx, sy);
-    assert!(
-        app.tick(&mut probe, frame),
-        "settle so the submenu child lays out beside the parent"
-    );
-
-    let child = probe
-        .child_row
-        .expect("frame populates the Child row state every tick");
-    assert!(
-        child.found && child.size.x > 0.0,
-        "the submenu child should be laid out while the submenu is open"
-    );
-    let (cx, cy) = common::center(child);
-    common::click_at(&mut app, &mut probe, frame, cx, cy);
-    assert!(
-        probe.child_clicked,
-        "menu_item!(\"Child\").clicked should fire on a click over it"
-    );
+    toggle_check_item(&mut app, &mut probe);
+    select_radio_item(&mut app, &mut probe);
+    open_submenu_and_click_child(&mut app, &mut probe);
 }

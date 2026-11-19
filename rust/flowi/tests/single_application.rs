@@ -24,6 +24,11 @@ fn panics<R>(needle: &str, f: impl FnOnce() -> R) -> bool {
     })
 }
 
+/// Whether every check reports a refusal, stopping at the first that does not.
+fn all_panic(checks: &[fn() -> bool]) -> bool {
+    checks.iter().all(|check| check())
+}
+
 extern "C" {
     /// Closes the innermost popup scope on the calling thread's UI context.
     fn fl_popup_end();
@@ -32,90 +37,7 @@ extern "C" {
 const ALIVE: &str = "already alive";
 const THREAD: &str = "must run on the thread that owns the live Application";
 
-#[test]
-fn one_application_per_process_and_its_thread_owns_the_frame() {
-    let mut first = Application::new(200, 150, true);
-    let palette = Theme::colors();
-
-    assert!(
-        panics(ALIVE, || Application::new(100, 100, true)),
-        "a second windowed Application must be refused while one is alive"
-    );
-    assert!(
-        panics(ALIVE, || Application::embedded(EmbeddedSettings::new(
-            64, 64
-        ))),
-        "an embedded Application must be refused while one is alive"
-    );
-    thread::scope(|scope| {
-        let other = scope.spawn(|| panics(ALIVE, || Application::new(100, 100, true)));
-        assert!(
-            other.join().unwrap(),
-            "a second Application on another thread must be refused"
-        );
-
-        let off_thread_input = scope.spawn(|| {
-            let mut input = TextInput::new();
-            panics(THREAD, || input.show_default("field"))
-        });
-        assert!(
-            off_thread_input.join().unwrap(),
-            "TextInput::show must refuse to run off the application's thread"
-        );
-
-        // Outside a frame, a frame-string copy asserts in C, so reaching one from this thread
-        // before the rejection would abort the process.
-        let off_thread_configured = scope.spawn(|| {
-            let mut input = TextInput::new();
-            let config = TextInputConfig {
-                allowed_chars: "0123456789",
-                placeholder: "digits",
-                widget: WidgetConfig {
-                    id_override: "digits_field",
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-            panics(THREAD, || input.show("field", config))
-        });
-        assert!(
-            off_thread_configured.join().unwrap(),
-            "a configured TextInput::show must be refused before it touches the frame"
-        );
-
-        let off_thread_reader = scope.spawn(|| panics(THREAD, Theme::colors));
-        assert!(
-            off_thread_reader.join().unwrap(),
-            "Theme::colors must refuse to run off the application's thread"
-        );
-
-        // A generated forwarder.
-        let off_thread_button =
-            scope.spawn(|| panics(THREAD, || Button::new("off thread", Default::default())));
-        assert!(
-            off_thread_button.join().unwrap(),
-            "a generated widget forwarder must refuse to run off the application's thread"
-        );
-
-        let off_thread_cursor = scope.spawn(|| panics(THREAD, || Cursor::set_visible(false)));
-        assert!(
-            off_thread_cursor.join().unwrap(),
-            "a generated Cursor forwarder must refuse to run off the application's thread"
-        );
-
-        let off_thread_pop = scope.spawn(|| panics(THREAD, Theme::pop));
-        assert!(
-            off_thread_pop.join().unwrap(),
-            "a generated Theme forwarder must refuse to run off the application's thread"
-        );
-
-        let off_thread_theme = scope.spawn(|| panics(THREAD, || Theme::update(&palette)));
-        assert!(
-            off_thread_theme.join().unwrap(),
-            "Theme::update must refuse to run off the application's thread"
-        );
-    });
-
+fn assert_widget_calls_refused_off_thread() {
     thread::scope(|scope| {
         let off_thread = |name: &str, f: fn() -> bool| {
             let refused = scope.spawn(f).join().unwrap();
@@ -165,31 +87,135 @@ fn one_application_per_process_and_its_thread_owns_the_frame() {
         off_thread("Menu::region_begin", || {
             panics(THREAD, || Menu::region_begin("region", "menu"))
         });
+    });
+}
+
+fn assert_queries_refused_off_thread() {
+    thread::scope(|scope| {
+        let off_thread = |name: &str, f: fn() -> bool| {
+            let refused = scope.spawn(f).join().unwrap();
+            assert!(
+                refused,
+                "{name} must refuse to run off the application's thread"
+            );
+        };
+
         off_thread("the element state queries", || {
-            panics(THREAD, || element_state("el"))
-                && panics(THREAD, || element_state_id(flowi::element_id("el", 0)))
-                && panics(THREAD, hot_element)
+            all_panic(&[
+                || panics(THREAD, || element_state("el")),
+                || panics(THREAD, || element_state_id(flowi::element_id("el", 0))),
+                || panics(THREAD, hot_element),
+            ])
         });
         off_thread("the nav queries", || {
-            panics(THREAD, nav_frame)
-                && panics(THREAD, || action_pressed(Action::None))
-                && panics(THREAD, nav_up_pressed)
-                && panics(THREAD, nav_down_pressed)
+            all_panic(&[
+                || panics(THREAD, nav_frame),
+                || panics(THREAD, || action_pressed(Action::None)),
+                || panics(THREAD, nav_up_pressed),
+                || panics(THREAD, nav_down_pressed),
+            ])
         });
         off_thread("the nav consumers", || {
-            panics(THREAD, consume_nav_up)
-                && panics(THREAD, consume_nav_down)
-                && panics(THREAD, consume_nav_left)
-                && panics(THREAD, consume_nav_right)
+            all_panic(&[
+                || panics(THREAD, consume_nav_up),
+                || panics(THREAD, consume_nav_down),
+                || panics(THREAD, consume_nav_left),
+                || panics(THREAD, consume_nav_right),
+            ])
         });
         off_thread("the focus setters", || {
-            panics(THREAD, || set_focus("el"))
-                && panics(THREAD, || set_focus_id(flowi::element_id("el", 0)))
+            all_panic(&[
+                || panics(THREAD, || set_focus("el")),
+                || panics(THREAD, || set_focus_id(flowi::element_id("el", 0))),
+            ])
         });
     });
+}
 
-    // A scope token dropped off the thread that opened it is refused before it closes the C scope,
-    // which the test then closes itself.
+fn assert_second_application_refused() {
+    assert!(
+        panics(ALIVE, || Application::new(100, 100, true)),
+        "a second windowed Application must be refused while one is alive"
+    );
+    assert!(
+        panics(ALIVE, || Application::embedded(EmbeddedSettings::new(
+            64, 64
+        ))),
+        "an embedded Application must be refused while one is alive"
+    );
+}
+
+/// Asserts `f`, run on another thread, reports the off-thread refusal.
+fn assert_refused_on_other_thread(what: &str, f: impl FnOnce() -> bool + Send) {
+    let refused = thread::scope(|scope| scope.spawn(f).join().unwrap());
+    assert!(refused, "{what}");
+}
+
+fn assert_text_input_refused_off_thread() {
+    assert_refused_on_other_thread(
+        "TextInput::show must refuse to run off the application's thread",
+        || {
+            let mut input = TextInput::new();
+            panics(THREAD, || input.show_default("field"))
+        },
+    );
+
+    // Outside a frame, a frame-string copy asserts in C, so reaching one from this thread
+    // before the rejection would abort the process.
+    assert_refused_on_other_thread(
+        "a configured TextInput::show must be refused before it touches the frame",
+        || {
+            let mut input = TextInput::new();
+            let config = TextInputConfig {
+                allowed_chars: "0123456789",
+                placeholder: "digits",
+                widget: WidgetConfig {
+                    id_override: "digits_field",
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            panics(THREAD, || input.show("field", config))
+        },
+    );
+}
+
+fn assert_theme_and_forwarders_refused_off_thread(palette: &flowi::ThemeColors) {
+    assert_refused_on_other_thread(
+        "Theme::colors must refuse to run off the application's thread",
+        || panics(THREAD, Theme::colors),
+    );
+    // A generated forwarder.
+    assert_refused_on_other_thread(
+        "a generated widget forwarder must refuse to run off the application's thread",
+        || panics(THREAD, || Button::new("off thread", Default::default())),
+    );
+    assert_refused_on_other_thread(
+        "a generated Cursor forwarder must refuse to run off the application's thread",
+        || panics(THREAD, || Cursor::set_visible(false)),
+    );
+    assert_refused_on_other_thread(
+        "a generated Theme forwarder must refuse to run off the application's thread",
+        || panics(THREAD, Theme::pop),
+    );
+    assert_refused_on_other_thread(
+        "Theme::update must refuse to run off the application's thread",
+        || panics(THREAD, || Theme::update(palette)),
+    );
+}
+
+fn assert_entry_points_refused_off_thread(palette: &flowi::ThemeColors) {
+    assert_refused_on_other_thread(
+        "a second Application on another thread must be refused",
+        || panics(ALIVE, || Application::new(100, 100, true)),
+    );
+    assert_text_input_refused_off_thread();
+    assert_theme_and_forwarders_refused_off_thread(palette);
+}
+
+/// A scope token dropped off the thread that opened it is refused before it closes the C scope,
+/// which this then closes itself.
+fn assert_popup_scope_refused_off_thread(first: &mut Application) {
     let mut scope_refused = false;
     assert!(first.tick(&mut scope_refused, |refused| {
         col! { "anchor", width: fixed!(20.0), height: fixed!(20.0) {}}
@@ -207,7 +233,9 @@ fn one_application_per_process_and_its_thread_owns_the_frame() {
         scope_refused,
         "a PopupScope must refuse to drop off the application's thread"
     );
+}
 
+fn assert_theme_update_reaches_c() {
     for red in [0x12, 0x34] {
         let mut changed = Theme::colors();
         changed.text.primary.r = red;
@@ -218,6 +246,19 @@ fn one_application_per_process_and_its_thread_owns_the_frame() {
             "the palette passed to update should be the one C reads"
         );
     }
+}
+
+#[test]
+fn one_application_per_process_and_its_thread_owns_the_frame() {
+    let mut first = Application::new(200, 150, true);
+    let palette = Theme::colors();
+
+    assert_second_application_refused();
+    assert_entry_points_refused_off_thread(&palette);
+    assert_widget_calls_refused_off_thread();
+    assert_queries_refused_off_thread();
+    assert_popup_scope_refused_off_thread(&mut first);
+    assert_theme_update_reaches_c();
 
     let window = first.open_window(WindowSettings::new("second", 100, 100), (), |_| {});
     first.close_window(window);

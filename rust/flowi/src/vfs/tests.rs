@@ -5,9 +5,32 @@ use super::mount::MOUNT_ERRORS;
 use super::*;
 use std::sync::Arc;
 
+/// Installs `state` as this thread's fake VFS.
+fn install_fake(state: FakeState) {
+    reset_fake(state);
+}
+
+/// Installs `state` in the fake and mounts it.
+fn mounted(state: FakeState) -> OwnedMount {
+    install_fake(state);
+    Vfs::mount("/data").expect("mount")
+}
+
+fn close_count() -> u32 {
+    with_fake(|f| f.close_count)
+}
+
+fn wait_count() -> u32 {
+    with_fake(|f| f.wait_count)
+}
+
+fn mount_close_count() -> u32 {
+    with_fake(|f| f.mount_close_count)
+}
+
 #[test]
 fn register_builtin_drivers_reaches_the_c_once_per_call() {
-    reset_fake(FakeState::default());
+    install_fake(FakeState::default());
     Vfs::register_builtin_drivers();
     assert_eq!(with_fake(|f| f.builtin_registrations), 1);
 }
@@ -17,7 +40,7 @@ fn register_builtin_drivers_reaches_the_c_once_per_call() {
 /// false the caller has to act on.
 #[test]
 fn init_forwards_the_arena_and_reports_refusal() {
-    reset_fake(FakeState::default());
+    install_fake(FakeState::default());
     let arena = crate::Arena::new(1 << 16);
     assert!(Vfs::init(&arena));
     assert_eq!(
@@ -26,7 +49,7 @@ fn init_forwards_the_arena_and_reports_refusal() {
         "the caller's arena must reach the C unchanged"
     );
 
-    reset_fake(FakeState {
+    install_fake(FakeState {
         fail: true,
         ..Default::default()
     });
@@ -40,7 +63,7 @@ fn mount_maps_every_error_status_to_its_own_variant() {
     // The same table MountError::from_status and its Display are generated from, so a
     // status that gained no mapping cannot pass here either.
     for (status, expected, text) in MOUNT_ERRORS {
-        reset_fake(FakeState {
+        install_fake(FakeState {
             mount_status: *status,
             ..Default::default()
         });
@@ -59,13 +82,13 @@ fn mount_maps_every_error_status_to_its_own_variant() {
 /// dependency".
 #[test]
 fn a_mount_reports_its_own_bring_up_job() {
-    reset_fake(FakeState {
+    install_fake(FakeState {
         mount_job_handle: 0x2a,
         ..Default::default()
     });
     assert_eq!(Vfs::mount("/data").expect("mount").job_handle().0, 0x2a);
 
-    reset_fake(FakeState::default());
+    install_fake(FakeState::default());
     assert_eq!(
         Vfs::mount("/data").expect("mount").job_handle(),
         crate::JobHandle::INVALID,
@@ -75,7 +98,7 @@ fn a_mount_reports_its_own_bring_up_job() {
 
 #[test]
 fn a_success_status_with_no_mount_is_a_failure_not_a_null_mount() {
-    reset_fake(FakeState {
+    install_fake(FakeState {
         mount_null: true,
         ..Default::default()
     });
@@ -84,36 +107,35 @@ fn a_success_status_with_no_mount_is_a_failure_not_a_null_mount() {
 
 #[test]
 fn a_successful_mount_closes_exactly_once_on_drop() {
-    reset_fake(FakeState::default());
+    install_fake(FakeState::default());
     {
         let mount = Vfs::mount("/data").expect("mount");
         assert_eq!(mount.source_path(), "/fake/source");
-        assert_eq!(
-            mount.info(),
-            MountInfo {
-                path: "/fake/source".to_string(),
-                is_ready: true
-            }
-        );
-        assert_eq!(mount.status(), MountStatus::Ready);
+        let expected = MountInfo {
+            path: "/fake/source".to_string(),
+            is_ready: true,
+        };
+        assert_eq!(mount.info(), expected);
+        let status = mount.status();
+        assert_eq!(status, MountStatus::Ready);
         assert!(mount.is_ready());
-        assert_eq!(with_fake(|f| f.mount_close_count), 0);
+        assert_eq!(mount_close_count(), 0);
     }
-    assert_eq!(with_fake(|f| f.mount_close_count), 1);
+    assert_eq!(mount_close_count(), 1);
 }
 
 #[test]
 fn a_leaked_mount_is_never_closed_and_is_shareable() {
-    reset_fake(FakeState::default());
+    install_fake(FakeState::default());
     let leaked: &'static Mount = Vfs::mount("/data").expect("mount").leak();
     let (first, second) = (leaked, leaked);
     assert_eq!(first.source_path(), second.source_path());
-    assert_eq!(with_fake(|f| f.mount_close_count), 0);
+    assert_eq!(mount_close_count(), 0);
 }
 
 #[test]
 fn mount_with_forwards_its_options() {
-    reset_fake(FakeState::default());
+    install_fake(FakeState::default());
     let options = MountOptions {
         cache_dir: "/tmp/cache",
         cache_validation: true,
@@ -128,12 +150,11 @@ fn mount_with_forwards_its_options() {
 
 #[test]
 fn read_polls_pending_then_completes() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         polls_until_ready: 2,
         data: b"hello".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
 
     let mut handle = mount.read("foo.txt").expect("launch");
     assert!(matches!(handle.poll(), Poll::Pending));
@@ -144,24 +165,22 @@ fn read_polls_pending_then_completes() {
     }
 
     drop(handle);
-    assert_eq!(with_fake(|f| f.close_count), 1);
+    assert_eq!(close_count(), 1);
 }
 
 #[test]
 fn read_failure_propagates() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         fail: true,
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let mut handle = mount.read("missing.txt").expect("launch");
     assert_eq!(handle.poll(), Poll::Ready(Err(FlError::GenericError)));
 }
 
 #[test]
 fn invalid_launch_is_none_not_sentinel() {
-    reset_fake(FakeState::default());
-    let mount = Vfs::mount("/data").expect("mount");
+    let mount = mounted(FakeState::default());
     with_fake(|f| f.launch_invalid = true);
     assert!(mount.read("foo.txt").is_none());
     assert!(mount.listing("/", 1).is_none());
@@ -171,11 +190,10 @@ fn invalid_launch_is_none_not_sentinel() {
 #[test]
 #[should_panic(expected = "handle polled after completion")]
 fn poll_after_ready_panics() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         data: b"x".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let mut handle = mount.read("foo.txt").expect("launch");
     assert!(matches!(handle.poll(), Poll::Ready(Ok(_))));
     let _ = handle.poll();
@@ -185,15 +203,14 @@ fn poll_after_ready_panics() {
 fn drop_before_completion_closes_without_blocking() {
     // is_ready would never fire (the op stays pending); if Drop join-spun on
     // completion this test would hang. It returns, and the ticket is closed.
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         polls_until_ready: i32::MAX,
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let mut handle = mount.read("slow.txt").expect("launch");
     assert!(matches!(handle.poll(), Poll::Pending));
     drop(handle);
-    assert_eq!(with_fake(|f| f.close_count), 1);
+    assert_eq!(close_count(), 1);
 }
 
 #[test]
@@ -201,8 +218,7 @@ fn read_empty_data_completes_without_dereferencing_null() {
     // Empty file: size == 0 (with a non-null dangling data pointer, as an
     // empty Vec yields). The poll must take the zero-length branch, without
     // calling from_raw_parts on that pointer, and yield an empty VfsData.
-    reset_fake(FakeState::default());
-    let mount = Vfs::mount("/data").expect("mount");
+    let mount = mounted(FakeState::default());
     let mut handle = mount.read("empty.txt").expect("launch");
     match handle.poll() {
         Poll::Ready(Ok(data)) => {
@@ -215,11 +231,10 @@ fn read_empty_data_completes_without_dereferencing_null() {
 
 #[test]
 fn a_listing_owns_its_entries_and_outlives_the_close() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         entries: vec![entry("sub", true), entry("game.zip", false)],
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
 
     let list = {
         let mut handle = mount.listing(".", 1).expect("launch");
@@ -230,9 +245,9 @@ fn a_listing_owns_its_entries_and_outlives_the_close() {
         // handle drops here: the C ticket is closed and its entry storage is
         // gone. The list below must still read cleanly.
     };
-    assert_eq!(with_fake(|f| f.close_count), 1);
+    assert_eq!(close_count(), 1);
     // Overwrite the fake's entry storage the way a recycled listing would.
-    reset_fake(FakeState {
+    install_fake(FakeState {
         entries: vec![entry("unrelated", false)],
         ..Default::default()
     });
@@ -241,18 +256,18 @@ fn a_listing_owns_its_entries_and_outlives_the_close() {
     assert!(!list.is_empty());
     let names: Vec<&str> = list.iter().map(|entry| entry.name()).collect();
     assert_eq!(names, ["sub", "game.zip"]);
+    assert!(list.iter().next().expect("first entry").is_directory());
     let second = list.iter().nth(1).expect("second entry");
     assert_eq!(second.size(), 42);
     assert_eq!(second.attributes(), 0x8000);
-    assert!(!second.is_directory());
+    let second_is_directory = second.is_directory();
+    assert!(!second_is_directory);
     assert!(second.is_archive());
-    assert!(list.iter().next().expect("first entry").is_directory());
 }
 
 #[test]
 fn an_empty_listing_succeeds_with_no_entries() {
-    reset_fake(FakeState::default());
-    let mount = Vfs::mount("/data").expect("mount");
+    let mount = mounted(FakeState::default());
     let mut handle = mount.listing(".", 1).expect("launch");
     match handle.poll() {
         Poll::Ready(Ok(list)) => {
@@ -266,36 +281,33 @@ fn an_empty_listing_succeeds_with_no_entries() {
 
 #[test]
 fn listing_failure_propagates() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         fail: true,
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let mut handle = mount.listing("/", 1).expect("launch");
     assert_eq!(handle.poll(), Poll::Ready(Err(FlError::GenericError)));
 }
 
 #[test]
 fn listing_drop_closes_ticket() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         entries: vec![entry("one", false)],
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let handle = mount.listing("/", 1).expect("launch");
     drop(handle);
-    assert_eq!(with_fake(|f| f.close_count), 1);
+    assert_eq!(close_count(), 1);
 }
 
 // The closure-transported read.
 
 #[test]
 fn read_with_runs_the_closure_on_the_read_bytes() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         data: b"one\ntwo\n".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
 
     // A transform that produces an owned, non-Copy value: what it hands back
     // has to survive the trip through the slot intact.
@@ -313,18 +325,17 @@ fn read_with_runs_the_closure_on_the_read_bytes() {
     }
     assert_eq!(with_fake(|f| f.last_callback_size), 8);
     drop(read);
-    assert_eq!(with_fake(|f| f.close_count), 1);
+    assert_eq!(close_count(), 1);
 }
 
 /// A completed read dropped without being polled still holds the value the
 /// transform produced; the close hands the slot back and frees it, value and all.
 #[test]
 fn a_completed_reads_slot_is_freed_at_its_close() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         data: b"x".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let witness = Arc::new(());
     let produced = Arc::clone(&witness);
     let read = mount
@@ -337,16 +348,15 @@ fn a_completed_reads_slot_is_freed_at_its_close() {
     );
     drop(read);
     assert_eq!(Arc::strong_count(&witness), 1, "the close freed the slot");
-    assert_eq!(with_fake(|f| f.close_count), 1);
+    assert_eq!(close_count(), 1);
 }
 
 #[test]
 fn read_with_reports_a_panicking_transform_as_a_failed_read() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         data: b"junk".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let mut read = mount
         .read_with("list.txt", |_bytes| -> u32 { panic!("transform blew up") })
         .expect("launch");
@@ -355,8 +365,7 @@ fn read_with_reports_a_panicking_transform_as_a_failed_read() {
 
 #[test]
 fn read_with_does_not_run_the_transform_on_a_failed_read() {
-    reset_fake(FakeState::default());
-    let mount = Vfs::mount("/data").expect("mount");
+    let mount = mounted(FakeState::default());
     let witness = Arc::new(());
     let captured = Arc::clone(&witness);
     let ran = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -381,8 +390,7 @@ fn read_with_does_not_run_the_transform_on_a_failed_read() {
 
 #[test]
 fn read_with_runs_the_transform_on_an_empty_file() {
-    reset_fake(FakeState::default());
-    let mount = Vfs::mount("/data").expect("mount");
+    let mount = mounted(FakeState::default());
     with_fake(|f| f.hold_callback = true);
     let mut read = mount
         .read_with("empty.txt", |bytes| bytes.len())
@@ -396,13 +404,12 @@ fn read_with_runs_the_transform_on_an_empty_file() {
 /// as the worker can still call back, and be freed by that callback.
 #[test]
 fn read_with_dropped_mid_flight_keeps_its_slot_until_the_worker_lets_go() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         polls_until_ready: i32::MAX,
         hold_callback: true,
         data: b"x".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     // The transform captures an Arc, so the strong count proves when the closure
     // (and with it the slot) is freed.
     let witness = Arc::new(());
@@ -416,7 +423,7 @@ fn read_with_dropped_mid_flight_keeps_its_slot_until_the_worker_lets_go() {
     assert_eq!(Arc::strong_count(&witness), 2);
 
     drop(read);
-    assert_eq!(with_fake(|f| f.close_count), 1);
+    assert_eq!(close_count(), 1);
     assert_eq!(
         Arc::strong_count(&witness),
         2,
@@ -434,12 +441,11 @@ fn read_with_dropped_mid_flight_keeps_its_slot_until_the_worker_lets_go() {
 /// no reader, and the slot is freed without being touched afterwards.
 #[test]
 fn read_with_dropped_mid_flight_survives_the_worker_completing_it() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         polls_until_ready: i32::MAX,
         hold_callback: true,
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let witness = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let captured = Arc::clone(&witness);
     let read = mount
@@ -463,12 +469,11 @@ fn read_with_dropped_mid_flight_survives_the_worker_completing_it() {
 /// the read must then poll Pending for good rather than reach the freed slot.
 #[test]
 fn a_mapped_read_outliving_its_mount_polls_pending_and_frees_its_slot_once() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         polls_until_ready: i32::MAX,
         hold_callback: true,
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let witness = Arc::new(());
     let captured = Arc::clone(&witness);
     let mut read = mount
@@ -488,18 +493,17 @@ fn a_mapped_read_outliving_its_mount_polls_pending_and_frees_its_slot_once() {
     assert!(matches!(read.poll(), Poll::Pending));
 
     drop(read);
-    assert_eq!(with_fake(|f| f.close_count), 1);
+    assert_eq!(close_count(), 1);
 }
 
 /// A launch the C side refuses never reaches the callback, so the reference
 /// handed to it has to come back rather than leak.
 #[test]
 fn read_with_refused_launch_frees_the_slot() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         launch_invalid: true,
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let witness = Arc::new(());
     let captured = Arc::clone(&witness);
     assert!(mount
@@ -513,11 +517,10 @@ fn read_with_refused_launch_frees_the_slot() {
 #[test]
 #[should_panic(expected = "handle polled after completion")]
 fn read_with_yields_its_value_exactly_once() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         data: b"x".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     let mut read = mount
         .read_with("list.txt", |bytes| bytes.len())
         .expect("launch");
@@ -529,7 +532,7 @@ fn read_with_yields_its_value_exactly_once() {
 
 #[test]
 fn a_worker_view_reads_blocking_on_the_thread_that_holds_it() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         // Never ready by polling: only the fake's wait flips it ready, which is
         // what makes this exercise the blocking surface rather than a poll.
         polls_until_ready: i32::MAX,
@@ -537,7 +540,6 @@ fn a_worker_view_reads_blocking_on_the_thread_that_holds_it() {
         entries: vec![entry("a", false), entry("b", true)],
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     // SAFETY: the mount outlives every use of the view below.
     let view = unsafe { mount.worker_view() };
 
@@ -545,11 +547,12 @@ fn a_worker_view_reads_blocking_on_the_thread_that_holds_it() {
     assert_eq!(data.as_slice(), b"payload");
     let list = view.listing(".", 1).expect("blocking listing");
     assert_eq!(list.len(), 2);
-    assert_eq!(with_fake(|f| f.wait_count), 2);
-    assert_eq!(with_fake(|f| f.close_count), 2);
+    assert_eq!(wait_count(), 2);
+    assert_eq!(close_count(), 2);
 
     // The queries reached through Deref are the same ones Mount carries.
-    assert_eq!(view.source_path(), "/fake/source");
+    let source = view.source_path();
+    assert_eq!(source, "/fake/source");
 
     // The view is Send, so a job body can own one. The next test moves it.
     fn assert_send<T: Send>(_: &T) {}
@@ -561,19 +564,18 @@ fn a_worker_view_reads_blocking_on_the_thread_that_holds_it() {
 #[test]
 fn a_worker_view_moved_to_another_thread_reads_through_it() {
     // The fake table is per-thread, so the spawned thread installs its own.
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         polls_until_ready: i32::MAX,
         data: b"from the worker".to_vec(),
         entries: vec![entry("a", false), entry("b", true)],
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     // SAFETY: the mount outlives the joined thread below, so it is open for
     // every use of the view.
     let view = unsafe { mount.worker_view() };
 
     let worker = std::thread::spawn(move || {
-        reset_fake(FakeState {
+        install_fake(FakeState {
             polls_until_ready: i32::MAX,
             data: b"from the worker".to_vec(),
             entries: vec![entry("a", false), entry("b", true)],
@@ -589,74 +591,70 @@ fn a_worker_view_moved_to_another_thread_reads_through_it() {
             data.into_bytes(),
             list.len(),
             source,
-            with_fake(|f| f.wait_count),
+            wait_count(),
         )
     });
 
     let (bytes, count, source, waits) = worker.join().expect("the worker thread panicked");
     assert_eq!(bytes, b"from the worker");
-    assert_eq!(count, 2);
-    assert_eq!(source, "/fake/source");
+    assert_eq!((count, source.as_str()), (2, "/fake/source"));
     // Both operations reached their wait on that thread rather than polling.
     assert_eq!(waits, 2);
 }
 
 #[test]
 fn a_blocking_read_of_a_missing_file_is_an_error_not_a_hang() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         launch_invalid: true,
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     // SAFETY: the mount outlives the view.
     let view = unsafe { mount.worker_view() };
-    assert_eq!(view.read("missing").unwrap_err(), FlError::GenericError);
-    assert_eq!(
+    let errors = [
+        view.read("missing").unwrap_err(),
         view.listing("missing", 1).unwrap_err(),
-        FlError::GenericError
-    );
-    assert_eq!(
         view.read_prefix("missing", 16).unwrap_err(),
-        FlError::GenericError
+    ];
+    assert_eq!(
+        errors,
+        [FlError::GenericError, FlError::GenericError, FlError::GenericError]
     );
     // Nothing was launched, so nothing was waited on or closed.
-    assert_eq!(with_fake(|f| f.wait_count), 0);
-    assert_eq!(with_fake(|f| f.close_count), 0);
+    assert_eq!(wait_count(), 0);
+    assert_eq!(close_count(), 0);
 }
 
 #[test]
 fn read_prefix_bounds_the_read_and_keeps_a_short_file_whole() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         prefix: b"0123456789".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     // SAFETY: the mount outlives the view.
     let view = unsafe { mount.worker_view() };
 
     // Asked for less than the file holds: exactly that many bytes come back.
-    assert_eq!(view.read_prefix("blob.bin", 4).expect("prefix"), b"0123");
+    let short = view.read_prefix("blob.bin", 4).expect("prefix");
+    assert_eq!(short, b"0123");
     assert_eq!(with_fake(|f| f.prefix_requested), 4);
     // Asked for more: the short read is the whole file, not an error.
-    assert_eq!(
-        view.read_prefix("blob.bin", 64).expect("prefix"),
-        b"0123456789"
-    );
+    let whole = view.read_prefix("blob.bin", 64).expect("prefix");
+    assert_eq!(whole, b"0123456789");
     // Both prefix reads open a file handle and chain a read onto it, so each
     // closes two tickets.
-    assert_eq!(with_fake(|f| f.close_count), 4);
+    assert_eq!(close_count(), 4);
     // A zero-byte request never reaches the VFS at all.
-    assert_eq!(view.read_prefix("blob.bin", 0).expect("prefix"), b"");
-    assert_eq!(with_fake(|f| f.close_count), 4);
+    let none = view.read_prefix("blob.bin", 0).expect("prefix");
+    assert_eq!(none, b"");
+    assert_eq!(close_count(), 4);
 }
 
 #[test]
 fn read_chunks_walks_the_file_in_order_and_closes_every_ticket() {
-    reset_fake(FakeState {
+    let mount = mounted(FakeState {
         prefix: b"0123456789".to_vec(),
         ..Default::default()
     });
-    let mount = Vfs::mount("/data").expect("mount");
     // SAFETY: the mount outlives the view.
     let view = unsafe { mount.worker_view() };
 
@@ -666,8 +664,9 @@ fn read_chunks_walks_the_file_in_order_and_closes_every_ticket() {
     // Full chunks, then the short tail; the empty read that ends the file is not handed on.
     assert_eq!(pieces, [b"0123".to_vec(), b"4567".to_vec(), b"89".to_vec()]);
     // Four reads (three with bytes, one at the end) and the file handle itself.
-    assert_eq!(with_fake(|f| f.close_count), 5);
+    assert_eq!(close_count(), 5);
     // A zero chunk size is refused before anything is opened.
-    assert!(view.read_chunks("blob.bin", 0, |_| {}).is_err());
-    assert_eq!(with_fake(|f| f.close_count), 5);
+    let refused = view.read_chunks("blob.bin", 0, |_| {});
+    assert!(refused.is_err());
+    assert_eq!(close_count(), 5);
 }

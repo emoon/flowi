@@ -102,6 +102,75 @@ fn panic_frame(_: &mut BarProbe) {
     assert!(r.is_err());
 }
 
+fn assert_laid_out(state: ElementState, found_msg: &str, rect_msg: &str) {
+    assert!(state.found, "{found_msg}");
+    assert!(state.size.x > 0.0 && state.size.y > 0.0, "{rect_msg}");
+}
+
+/// Clicks the File top, then the Open item in its dropdown.
+fn click_file_then_open(app: &mut Application, probe: &mut BarProbe) {
+    let file = probe
+        .file_top
+        .expect("frame populates the File top state every tick");
+    assert_laid_out(
+        file,
+        "File top should be laid out in the always-run strip",
+        "File top should have a non-empty rect",
+    );
+    let (fx, fy) = common::center(file);
+
+    common::click_at(app, probe, frame, fx, fy);
+    assert!(probe.bar_open, "clicking the File top opened its dropdown");
+
+    assert!(
+        app.tick(probe, frame),
+        "settle so the dropdown item lays out"
+    );
+    let open = probe
+        .open_item
+        .expect("frame populates the Open item state every tick");
+    assert_laid_out(
+        open,
+        "Open item should be laid out while the File dropdown is open",
+        "Open item should have a non-empty rect",
+    );
+    let (ox, oy) = common::center(open);
+
+    common::click_at(app, probe, frame, ox, oy);
+    assert!(
+        probe.open_clicked,
+        "menu_item!(\"Open\").clicked should fire on a click over it"
+    );
+    assert!(
+        !probe.bar_open,
+        "the default close policy closed the dropdown on activation"
+    );
+}
+
+/// Early exits from menu bodies must still close each level, so every frame ends balanced.
+fn exercise_early_exits(app: &mut Application, probe: &mut BarProbe) {
+    // Open the context menu first (region phase, no bar) so its body runs and returns early, then dismiss it.
+    probe.with_region = true;
+    common::right_click_at(app, probe, raii_frame, RAII_REGION_X, RAII_REGION_Y);
+    assert!(
+        probe.menu_body_ran,
+        "context menu body ran and returned early"
+    );
+    common::click_at(app, probe, raii_frame, 5, 5);
+
+    // Then open the File dropdown so its body runs and exits via `?`.
+    probe.with_region = false;
+    let file = probe.file_top.expect("frame populated File top");
+    let (fx, fy) = common::center(file);
+    common::click_at(app, probe, raii_frame, fx, fy);
+    assert!(
+        probe.file_body_ran,
+        "File dropdown body ran and exited via ?"
+    );
+    // Another tick would abort in the C core had any early exit left a level open.
+    assert!(app.tick(probe, raii_frame), "raii frame stays balanced");
+}
+
 #[test]
 fn headless_menu_bar_click() {
     let mut app = Application::new(WIN_W, WIN_H, true);
@@ -115,78 +184,8 @@ fn headless_menu_bar_click() {
         app.tick(&mut probe, frame),
         "settle so the strip tops lay out"
     );
-    let file = probe
-        .file_top
-        .expect("frame populates the File top state every tick");
-    assert!(
-        file.found,
-        "File top should be laid out in the always-run strip"
-    );
-    assert!(
-        file.size.x > 0.0 && file.size.y > 0.0,
-        "File top should have a non-empty rect"
-    );
-    let (fx, fy) = common::center(file);
-
-    common::click_at(&mut app, &mut probe, frame, fx, fy);
-    assert!(probe.bar_open, "clicking the File top opened its dropdown");
-
-    assert!(
-        app.tick(&mut probe, frame),
-        "settle so the dropdown item lays out"
-    );
-    let open = probe
-        .open_item
-        .expect("frame populates the Open item state every tick");
-    assert!(
-        open.found,
-        "Open item should be laid out while the File dropdown is open"
-    );
-    assert!(
-        open.size.x > 0.0 && open.size.y > 0.0,
-        "Open item should have a non-empty rect"
-    );
-    let (ox, oy) = common::center(open);
-
-    common::click_at(&mut app, &mut probe, frame, ox, oy);
-    assert!(
-        probe.open_clicked,
-        "menu_item!(\"Open\").clicked should fire on a click over it"
-    );
-    assert!(
-        !probe.bar_open,
-        "the default close policy closed the dropdown on activation"
-    );
-
-    // Open the context menu first (region phase, no bar) so its body runs and returns early, then dismiss it.
-    probe.with_region = true;
-    common::right_click_at(
-        &mut app,
-        &mut probe,
-        raii_frame,
-        RAII_REGION_X,
-        RAII_REGION_Y,
-    );
-    assert!(
-        probe.menu_body_ran,
-        "context menu body ran and returned early"
-    );
-    common::click_at(&mut app, &mut probe, raii_frame, 5, 5);
-
-    // Then open the File dropdown so its body runs and exits via `?`.
-    probe.with_region = false;
-    let file = probe.file_top.expect("frame populated File top");
-    let (fx, fy) = common::center(file);
-    common::click_at(&mut app, &mut probe, raii_frame, fx, fy);
-    assert!(
-        probe.file_body_ran,
-        "File dropdown body ran and exited via ?"
-    );
-    // Another tick would abort in the C core had any early exit left a level open.
-    assert!(
-        app.tick(&mut probe, raii_frame),
-        "raii frame stays balanced"
-    );
+    click_file_then_open(&mut app, &mut probe);
+    exercise_early_exits(&mut app, &mut probe);
 
     // A panic out of a body unwinds through the guard; the following tick would abort on an open level.
     assert!(app.tick(&mut probe, panic_frame), "panic frame");
