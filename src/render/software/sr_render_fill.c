@@ -59,12 +59,14 @@ static ALWAYS_INLINE SoaRgb process_8_pixels_border(bool blend_with_background, 
     return color;
 }
 
-static ALWAYS_INLINE void fill_internal(const FillMode mode, const TileTarget* target, const RenderCommand* command) {
-    i16* output = target->output;
+static ALWAYS_INLINE void fill_internal(const FillMode mode, i16* tile_output, const RenderCommand* command,
+                                        f32x4 scissor_rect, const TileInfo* tile) {
+    const TileTarget target = { .output = tile_output, .scissor_rect = scissor_rect, .tile = tile };
+    i16* output = tile_output;
     FillState state;
 
     TileClip clip;
-    if (!tile_clip_setup(command->aabb, target, &clip)) {
+    if (!tile_clip_setup(command->aabb, &target, &clip)) {
         return;
     }
 
@@ -108,13 +110,14 @@ static ALWAYS_INLINE void fill_internal(const FillMode mode, const TileTarget* t
     }
 }
 
-static ALWAYS_INLINE void fill_border_internal(const bool blend_with_background, const TileTarget* target,
-                                               const RenderCommand* command) {
-    i16* output = target->output;
+static ALWAYS_INLINE void fill_border_internal(const bool blend_with_background, i16* tile_output,
+                                               const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile) {
+    const TileTarget target = { .output = tile_output, .scissor_rect = scissor_rect, .tile = tile };
+    i16* output = tile_output;
     FillState state;
 
     TileClip clip;
-    if (!tile_clip_setup(command->aabb, target, &clip)) {
+    if (!tile_clip_setup(command->aabb, &target, &clip)) {
         return;
     }
 
@@ -144,47 +147,65 @@ static ALWAYS_INLINE void fill_border_internal(const bool blend_with_background,
     }
 }
 
-static ALWAYS_INLINE void fill_border(const TileTarget* target, const RenderCommand* command) {
-    fill_border_internal(false, target, command);
+static ALWAYS_INLINE void fill_border(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                      const TileInfo* tile) {
+    fill_border_internal(false, tile_output, command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_border_blend(const TileTarget* target, const RenderCommand* command) {
-    fill_border_internal(true, target, command);
+static ALWAYS_INLINE void fill_border_blend(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                            const TileInfo* tile) {
+    fill_border_internal(true, tile_output, command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_solid(const TileTarget* target, const RenderCommand* command) {
-    fill_internal((FillMode) { .gradient = false, .rounding = false, .blend_with_background = false }, target, command);
+static ALWAYS_INLINE void fill_solid(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                     const TileInfo* tile) {
+    fill_internal((FillMode) { .gradient = false, .rounding = false, .blend_with_background = false }, tile_output,
+                  command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_solid_rounded(const TileTarget* target, const RenderCommand* command) {
-    fill_internal((FillMode) { .gradient = false, .rounding = true, .blend_with_background = false }, target, command);
+static ALWAYS_INLINE void fill_solid_rounded(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                             const TileInfo* tile) {
+    fill_internal((FillMode) { .gradient = false, .rounding = true, .blend_with_background = false }, tile_output,
+                  command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_gradient(const TileTarget* target, const RenderCommand* command) {
-    fill_internal((FillMode) { .gradient = true, .rounding = false, .blend_with_background = false }, target, command);
+static ALWAYS_INLINE void fill_gradient(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                        const TileInfo* tile) {
+    fill_internal((FillMode) { .gradient = true, .rounding = false, .blend_with_background = false }, tile_output,
+                  command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_gradient_rounded(const TileTarget* target, const RenderCommand* command) {
-    fill_internal((FillMode) { .gradient = true, .rounding = true, .blend_with_background = false }, target, command);
+static ALWAYS_INLINE void fill_gradient_rounded(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                                const TileInfo* tile) {
+    fill_internal((FillMode) { .gradient = true, .rounding = true, .blend_with_background = false }, tile_output,
+                  command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_solid_blend(const TileTarget* target, const RenderCommand* command) {
-    fill_internal((FillMode) { .gradient = false, .rounding = false, .blend_with_background = true }, target, command);
+static ALWAYS_INLINE void fill_solid_blend(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                           const TileInfo* tile) {
+    fill_internal((FillMode) { .gradient = false, .rounding = false, .blend_with_background = true }, tile_output,
+                  command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_solid_rounded_blend(const TileTarget* target, const RenderCommand* command) {
-    fill_internal((FillMode) { .gradient = false, .rounding = true, .blend_with_background = true }, target, command);
+static ALWAYS_INLINE void fill_solid_rounded_blend(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                                   const TileInfo* tile) {
+    fill_internal((FillMode) { .gradient = false, .rounding = true, .blend_with_background = true }, tile_output,
+                  command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_gradient_blend(const TileTarget* target, const RenderCommand* command) {
-    fill_internal((FillMode) { .gradient = true, .rounding = false, .blend_with_background = true }, target, command);
+static ALWAYS_INLINE void fill_gradient_blend(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                                              const TileInfo* tile) {
+    fill_internal((FillMode) { .gradient = true, .rounding = false, .blend_with_background = true }, tile_output,
+                  command, scissor_rect, tile);
 }
 
-static ALWAYS_INLINE void fill_gradient_rounded_blend(const TileTarget* target, const RenderCommand* command) {
-    fill_internal((FillMode) { .gradient = true, .rounding = true, .blend_with_background = true }, target, command);
+static ALWAYS_INLINE void fill_gradient_rounded_blend(i16* tile_output, const RenderCommand* command,
+                                                      f32x4 scissor_rect, const TileInfo* tile) {
+    fill_internal((FillMode) { .gradient = true, .rounding = true, .blend_with_background = true }, tile_output,
+                  command, scissor_rect, tile);
 }
 
-typedef void (*fill_func_t)(const TileTarget* target, const RenderCommand* command);
+typedef void (*fill_func_t)(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile);
 
 // Lookup table for all 8 permutations: [blend_with_background][gradient][rounding]
 
@@ -211,8 +232,7 @@ void sr_render_fill(i16* tile_output, const RenderCommand* command, f32x4 scisso
     int gradient = !!(render_mask & RenderMask_ColorGradient);
     int blend_with_background = !!(render_mask & RenderMask_BlendWithBackground);
 
-    const TileTarget target = { .output = tile_output, .scissor_rect = scissor_rect, .tile = tile };
-    fill_dispatch_table[blend_with_background][gradient][rounding](&target, command);
+    fill_dispatch_table[blend_with_background][gradient][rounding](tile_output, command, scissor_rect, tile);
 }
 
 // Lookup table for border rendering: [blend_with_background]
@@ -226,6 +246,5 @@ static const fill_func_t border_dispatch_table[2] = {
 
 void sr_render_border(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect, const TileInfo* tile) {
     int blend_with_background = !!(command->mask & RenderMask_BlendWithBackground);
-    const TileTarget target = { .output = tile_output, .scissor_rect = scissor_rect, .tile = tile };
-    border_dispatch_table[blend_with_background](&target, command);
+    border_dispatch_table[blend_with_background](tile_output, command, scissor_rect, tile);
 }

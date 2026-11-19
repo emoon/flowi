@@ -112,10 +112,11 @@ static ALWAYS_INLINE NearestSource nearest_source_new(const RenderCommand* comma
     };
 }
 
-static ALWAYS_INLINE void image_internal_nearest(const NearestMode mode, const TileTarget* target,
-                                                 const RenderCommand* command) {
+static ALWAYS_INLINE void image_internal_nearest(const NearestMode mode, i16* tile_output, const RenderCommand* command,
+                                                 f32x4 scissor_rect, const TileInfo* tile) {
+    const TileTarget target = { .output = tile_output, .scissor_rect = scissor_rect, .tile = tile };
     TileClip clip;
-    if (!tile_clip_setup(command->aabb, target, &clip)) {
+    if (!tile_clip_setup(command->aabb, &target, &clip)) {
         return;
     }
 
@@ -136,7 +137,7 @@ static ALWAYS_INLINE void image_internal_nearest(const NearestMode mode, const T
     for_count(y, clip.ylen) {
         NearestSource src = first_line;
         src.line += y * texture_stride;
-        PlaneRow row = plane_row_new(target->output + y * TILE_STRIDE, clip.write_offset);
+        PlaneRow row = plane_row_new(tile_output + y * TILE_STRIDE, clip.write_offset);
 
         if (mode.rounding) {
             corner_rounding_step_y(&state.rounding_state, clip.clip_diff);
@@ -154,9 +155,10 @@ static ALWAYS_INLINE void image_internal_nearest(const NearestMode mode, const T
     }
 }
 
-#define NEAREST_VARIANT(name, blend, round, channels)                                        \
-    static ALWAYS_INLINE void name(const TileTarget* target, const RenderCommand* command) { \
-        image_internal_nearest((NearestMode) { blend, round, channels }, target, command);   \
+#define NEAREST_VARIANT(name, blend, round, channels)                                                               \
+    static ALWAYS_INLINE void name(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,              \
+                                   const TileInfo* tile) {                                                          \
+        image_internal_nearest((NearestMode) { blend, round, channels }, tile_output, command, scissor_rect, tile); \
     }
 
 // 1-channel (alpha-only) permutations
@@ -175,7 +177,8 @@ NEAREST_VARIANT(render_image_nearest_blend_rounded_3ch, true, true, 3)
 NEAREST_VARIANT(render_image_nearest_blend_4ch, true, false, 4)
 NEAREST_VARIANT(render_image_nearest_blend_rounded_4ch, true, true, 4)
 
-typedef void (*nearest_func_t)(const TileTarget* target, const RenderCommand* command);
+typedef void (*nearest_func_t)(i16* tile_output, const RenderCommand* command, f32x4 scissor_rect,
+                               const TileInfo* tile);
 
 static const nearest_func_t image_nearest_dispatch_table[2][2][3] = {
     {
@@ -209,6 +212,6 @@ void sr_render_image_nearest(i16* tile_output, const RenderCommand* command, f32
     if (command->global_alpha < 255)
         blend_with_background = 1;
 
-    const TileTarget target = { .output = tile_output, .scissor_rect = scissor_rect, .tile = tile };
-    image_nearest_dispatch_table[rounding][blend_with_background][channel_index](&target, command);
+    image_nearest_dispatch_table[rounding][blend_with_background][channel_index](tile_output, command, scissor_rect,
+                                                                                 tile);
 }
