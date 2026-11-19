@@ -1,0 +1,22 @@
+name: Install Linux build dependencies
+description: apt-get install with the downloaded .debs cached, so the mirror's download speed stops mattering.
+runs:
+  using: composite
+  steps:
+    - name: Read runner image version
+      id: image
+      shell: bash
+      run: echo "version=${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v4
+      with:
+        path: ~/.apt-cache
+        key: apt-${{ steps.image.outputs.version }}-${{ hashFiles('.github/actions/linux-deps/action.yml') }}
+    - name: apt-get install
+      shell: bash
+      run: |
+        mkdir -p ~/.apt-cache/partial
+        sudo apt-get update
+        sudo apt-get -o Dir::Cache::archives="$HOME/.apt-cache" install -y \
+          cmake ninja-build libsdl2-dev clang ccache \
+          libegl1-mesa-dev libgl1-mesa-dev libegl-mesa0 libgl1-mesa-dri
+        sudo chown -R "$USER" ~/.apt-cache

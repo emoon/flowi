@@ -22,10 +22,26 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install deps (Linux)
         if: runner.os == 'Linux'
+        uses: ./.github/actions/linux-deps
+      # Three build trees (debug, headless, release) share one ccache; the
+      # differing build directories are kept out of the cache key.
+      - name: Enable ccache (Linux)
+        if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libsdl2-dev clang \
-            libegl1-mesa-dev libgl1-mesa-dev libegl-mesa0 libgl1-mesa-dri
+          {
+            echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+            echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+            echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache"
+            echo "CCACHE_NOHASHDIR=1"
+            echo "CCACHE_MAXSIZE=500M"
+          } >> "$GITHUB_ENV"
+      - name: Restore ccache (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-c-build-${{ github.sha }}
+          restore-keys: ccache-c-build-
       - name: Install deps (macOS)
         if: runner.os == 'macOS'
         run: brew install cmake ninja sdl2
@@ -158,10 +174,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libsdl2-dev clang ccache \
-            libegl1-mesa-dev libgl1-mesa-dev
+        uses: ./.github/actions/linux-deps
       - uses: actions/cache@v4
         with:
           path: .ccache
