@@ -116,11 +116,14 @@ static int STB_TEXTEDIT_KEYTOTEXT(int key) {
     }
     return key;
 }
+#define STB_TEXTEDIT_KEYTOTEXT STB_TEXTEDIT_KEYTOTEXT // stb only calls the hook when it is a macro
 
 #define STB_TEXTEDIT_IMPLEMENTATION
-// Suppress unused-function warnings for the stb functions this widget does not call.
+// Suppress warnings from unmodified upstream stb code: unused functions/variables and the const-casting paste wrapper.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include "stb_textedit.h"
 #pragma GCC diagnostic pop
 
