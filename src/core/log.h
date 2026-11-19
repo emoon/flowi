@@ -55,9 +55,3 @@ DLL_EXPORT void fl_log_c_vmessage_loc(LogChannelId id, LogLevel level, const cha
 #define log_warning(fmt, ...) fl_log_message(LogLevel_Warning, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define log_error(fmt, ...) fl_log_message(LogLevel_Error, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define log_fatal(fmt, ...) fl_log_message(LogLevel_Fatal, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-// The log directory under $HOME (default ".flowi") and the log file base name (default "flowi.log") that
-// fl_log_file_init uses. Non-empty strings replace the current value and are copied. log_file_reset_names
-// restores both defaults.
-void log_file_set_names(FlString data_dir_name, FlString log_file_name);
-void log_file_reset_names(void);

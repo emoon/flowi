@@ -113,9 +113,6 @@ pub struct AppSettings {
     renderer: Renderer,
     fullscreen: bool,
     resizable: bool,
-    data_dir_name: &'static str,
-    log_file_name: &'static str,
-    file_watcher_queue: &'static str,
 }
 
 impl AppSettings {
@@ -130,9 +127,6 @@ impl AppSettings {
             renderer: Renderer::Software,
             fullscreen: false,
             resizable: true,
-            data_dir_name: "",
-            log_file_name: "",
-            file_watcher_queue: "",
         }
     }
 
@@ -169,21 +163,6 @@ impl AppSettings {
         self
     }
 
-    /// Name the app's log directory, log file and macOS file-watch queue. An empty string keeps the flowi
-    /// default (".flowi", "flowi.log" and "org.flowi.filewatcher"). The log names apply when you call
-    /// `Log::file_init` after creating the application.
-    pub fn with_identity(
-        mut self,
-        data_dir_name: &'static str,
-        log_file_name: &'static str,
-        file_watcher_queue: &'static str,
-    ) -> AppSettings {
-        self.data_dir_name = data_dir_name;
-        self.log_file_name = log_file_name;
-        self.file_watcher_queue = file_watcher_queue;
-        self
-    }
-
     fn to_sys(self) -> sys::AppSettings {
         sys::AppSettings {
             window_title: sys::RawStr::from_static(self.title),
@@ -193,9 +172,6 @@ impl AppSettings {
             renderer: self.renderer.to_sys(),
             fullscreen: self.fullscreen,
             fixed_size: !self.resizable,
-            data_dir_name: sys::RawStr::from_static(self.data_dir_name),
-            log_file_name: sys::RawStr::from_static(self.log_file_name),
-            file_watcher_queue: sys::RawStr::from_static(self.file_watcher_queue),
         }
     }
 }

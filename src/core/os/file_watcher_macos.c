@@ -141,7 +141,7 @@ FileWatcherError platform_start_watching(FileWatcherState* state) {
 
     MacOSWatcherData* data = arena_alloc(get_file_watcher_registry()->arena, MacOSWatcherData);
     data->stream = stream;
-    const char* queue_name = fl_string_to_cstr(temp.arena, get_file_watcher_registry()->queue_label);
+    const char* queue_name = fl_string_to_cstr(temp.arena, FL_S("org.flowi.filewatcher"));
     data->queue = dispatch_queue_create(queue_name, DISPATCH_QUEUE_SERIAL);
 
     if (!data->queue) {

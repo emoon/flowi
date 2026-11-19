@@ -271,33 +271,6 @@ static void input_lat_frame(void* user_data) {
     ui_layout_area(.sizing = { .width = sizing_grow(), .height = sizing_grow() }) {}
 }
 
-// fl_app_create hands the identity strings in FlAppSettings to the log file and the file watcher.
-UTEST(app, create_applies_identity_settings) {
-    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
-
-    FlAppSettings settings = { .window_title = FL_S("identity"),
-                               .width = 64,
-                               .height = 64,
-                               .headless = true,
-                               .log_file_name = FL_S("myapp.log"),
-                               .file_watcher_queue = FL_S("org.myapp.watcher") };
-    FlApp* app = fl_app_create(&settings);
-    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
-
-    ASSERT_TRUE(fl_string_equals(get_file_watcher_registry()->queue_label, FL_S("org.myapp.watcher")));
-
-    FlString dir = FL_S("/tmp/flowi_app_identity_test");
-    file_remove_directory_recursive_os(dir);
-    ASSERT_TRUE(fl_log_file_init(dir));
-    FlArena* path_arena = arena_new();
-    FlString expected = file_build_path_os(path_arena, dir, FL_S("myapp.log"));
-    ASSERT_TRUE(fl_string_equals(fl_log_file_get_path(), expected));
-    fl_arena_destroy(path_arena);
-    file_remove_directory_recursive_os(dir);
-
-    fl_app_destroy(app);
-}
-
 UTEST(app, input_edge_latency) {
     ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
 

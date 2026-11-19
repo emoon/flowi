@@ -280,47 +280,6 @@ UTEST(log_file, path_converts_to_valid_cstr) {
     file_remove_directory_recursive_os(dir);
 }
 
-// The log file name defaults to "flowi.log". An override replaces only the fields it sets, and fl_log_file_init
-// builds the log file from the overridden name.
-
-UTEST(log_file_names, override_routes_through_fl_log_file_init) {
-    log_file_set_names(string_empty(), FL_S("myapp.log"));
-
-    FlString dir = FL_S("/tmp/flowi_log_file_names_test");
-    file_remove_directory_recursive_os(dir);
-    ASSERT_TRUE(fl_log_file_init(dir));
-    FlArena* path_arena = arena_new();
-    FlString expected = file_build_path_os(path_arena, dir, FL_S("myapp.log"));
-    ASSERT_TRUE(fl_string_equals(fl_log_file_get_path(), expected));
-    fl_arena_destroy(path_arena);
-    file_remove_directory_recursive_os(dir);
-}
-
-UTEST(log_file_names, reset_restores_the_default) {
-    log_file_set_names(string_empty(), FL_S("other.log"));
-    log_file_reset_names();
-
-    FlString dir = FL_S("/tmp/flowi_log_file_names_default_test");
-    file_remove_directory_recursive_os(dir);
-    ASSERT_TRUE(fl_log_file_init(dir));
-    FlArena* path_arena = arena_new();
-    FlString expected = file_build_path_os(path_arena, dir, FL_S("flowi.log"));
-    ASSERT_TRUE(fl_string_equals(fl_log_file_get_path(), expected));
-    fl_arena_destroy(path_arena);
-    file_remove_directory_recursive_os(dir);
-}
-
-UTEST(file_watcher_queue_label, empty_keeps_the_current_label_and_non_empty_replaces_it) {
-    FileWatcherRegistry* registry = get_file_watcher_registry();
-    file_watcher_set_queue_label(FL_S("org.test.first"));
-
-    file_watcher_set_queue_label(string_empty());
-    ASSERT_TRUE(fl_string_equals(registry->queue_label, FL_S("org.test.first")));
-
-    file_watcher_set_queue_label(FL_S("org.test.second"));
-    ASSERT_TRUE(fl_string_equals(registry->queue_label, FL_S("org.test.second")));
-}
-
 // Stopping a watcher leaves every other watcher's state where it is. Platform layers (FSEvents on macOS) keep the
 // FileWatcherState* passed to platform_start_watching for the stream's lifetime, so removal tombstones the slot
 // in place and does not compact the array.

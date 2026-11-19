@@ -7,7 +7,6 @@
 #include <core/arena.h>
 #include <core/assert.h>
 #include <core/core.h>
-#include <core/file_watcher.h>
 #include <core/log.h>
 #include <core/memory.h>
 #include <core/os/os.h>
@@ -397,8 +396,6 @@ FlApp* fl_app_create(const FlAppSettings* settings) {
 
     // No-op when the host already brought the core services up with its own job_threads count.
     fl_init(1);
-    log_file_set_names(settings->data_dir_name, settings->log_file_name);
-    file_watcher_set_queue_label(settings->file_watcher_queue);
 
     FlArena* arena = arena_new();
     FlApp* app = arena_alloc(arena, FlApp);
