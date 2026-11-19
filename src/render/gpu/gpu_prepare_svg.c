@@ -114,8 +114,7 @@ GpuSvgCellGeometry gpu_prepare_svg_cell_geometry(FlArena* arena, const GpuSvgEnt
 
 static const GpuSvgEntry* place_cell(GpuSvgAtlas* atlas, GpuSvgKey key, const GpuSvgCellFit* fit,
                                      const FlVectorImage* vector) {
-    return gpu_svg_atlas_place(atlas, key.handle, key.size, fit->pw, fit->ph, vector->classification,
-                               vector->mono_color, vector);
+    return gpu_svg_atlas_place(atlas, &(GpuSvgPlaceRequest) { key.handle, key.size, fit->pw, fit->ph, vector->classification, vector->mono_color, vector });
 }
 
 static void reraster_survivors(const GpuSvgRaster* raster, const GpuSvgAtlas* atlas, bool color) {

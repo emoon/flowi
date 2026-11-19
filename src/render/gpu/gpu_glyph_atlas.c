@@ -21,46 +21,61 @@ void gpu_glyph_atlas_wipe_if_needed(GpuGlyphAtlas* atlas, struct FlArena* arena)
     }
 }
 
-static GpuGlyphEntry* find_entry(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index) {
+static bool entry_matches(const GpuGlyphEntry* e, GpuGlyphKey key) {
+    if (e->font != key.font || e->size != key.size) {
+        return false;
+    }
+    return e->glyph_index == key.glyph_index;
+}
+
+static GpuGlyphEntry* find_entry(GpuGlyphAtlas* atlas, GpuGlyphKey key) {
     for (u32 i = 0; i < atlas->entry_count; i++) {
-        GpuGlyphEntry* e = &atlas->entries[i];
-        if (e->font == font && e->size == size && e->glyph_index == glyph_index) {
-            return e;
+        if (entry_matches(&atlas->entries[i], key)) {
+            return &atlas->entries[i];
         }
     }
     return nullptr;
 }
 
 const GpuGlyphEntry* gpu_glyph_atlas_find(const GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index) {
-    return find_entry((GpuGlyphAtlas*)atlas, font, size, glyph_index);
+    return find_entry((GpuGlyphAtlas*)atlas, (GpuGlyphKey) { font, size, glyph_index });
 }
 
-const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index, u32 w, u32 h,
-                                           f32 left, f32 top, f32 advance) {
+// A zero-area glyph occupies no atlas space; otherwise the packer must have room.
+
+static bool reserve_cell(GpuGlyphAtlas* atlas, GpuGlyphMetrics m, GpuAtlasCell* cell) {
+    *cell = (GpuAtlasCell) { 0, 0, m.w, m.h };
+    if (m.w == 0 || m.h == 0) {
+        return true;
+    }
+    return gpu_atlas_pack_insert(&atlas->pack, m.w, m.h, &cell->x, &cell->y);
+}
+
+const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, GpuGlyphKey key, GpuGlyphMetrics metrics) {
     if (atlas->entry_count >= GPU_GLYPH_ATLAS_MAX_ENTRIES) {
         log_error("gpu backend: glyph atlas entry table full (%d)", GPU_GLYPH_ATLAS_MAX_ENTRIES);
         return nullptr;
     }
-    if (find_entry(atlas, font, size, glyph_index) != nullptr) {
-        log_error("gpu backend: glyph (font %u, size %u, glyph %u) placed twice", (unsigned)font, (unsigned)size,
-                  (unsigned)glyph_index);
+    if (find_entry(atlas, key) != nullptr) {
+        log_error("gpu backend: glyph (font %u, size %u, glyph %u) placed twice", (unsigned)key.font,
+                  (unsigned)key.size, (unsigned)key.glyph_index);
         return nullptr;
     }
 
-    GpuAtlasCell cell = { 0, 0, w, h };
-    if (w > 0 && h > 0 && !gpu_atlas_pack_insert(&atlas->pack, w, h, &cell.x, &cell.y)) {
+    GpuAtlasCell cell;
+    if (!reserve_cell(atlas, metrics, &cell)) {
         return nullptr;
     }
 
     GpuGlyphEntry* entry = &atlas->entries[atlas->entry_count++];
     *entry = (GpuGlyphEntry) {
-        .font = font,
-        .size = size,
-        .glyph_index = glyph_index,
+        .font = key.font,
+        .size = key.size,
+        .glyph_index = key.glyph_index,
         .cell = cell,
-        .left = left,
-        .top = top,
-        .advance = advance,
+        .left = metrics.left,
+        .top = metrics.top,
+        .advance = metrics.advance,
     };
     return entry;
 }

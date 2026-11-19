@@ -146,10 +146,22 @@ _Static_assert(offsetof(GpuShared, cpu) == 0, "cpu must be the first member");
 // (r, r, r, r); color sources are RGBA8, force_opaque swizzling alpha to 1 for dynamic color buffers.
 GLuint create_slot_texture(const GpuGl* gl, u32 w, u32 h, bool alpha_only, bool force_opaque);
 
+// A pixel rectangle to upload at (x, y) of the bound texture: w x h texels of bpp bytes each in format,
+// stride bytes between rows.
+typedef struct GpuTexUpload {
+    u32 x;
+    u32 y;
+    u32 w;
+    u32 h;
+    u32 stride;
+    u32 bpp;
+    GLenum format;
+    const u8* pixels;
+} GpuTexUpload;
+
 // Upload possibly-padded rows into the texture bound on the active unit. stride 0 means tightly packed; the
 // rare non-pixel-multiple stride repacks tight through arena.
-void tex_sub_image_strided(FlArena* arena, u32 x, u32 y, u32 w, u32 h, u32 stride, u32 bpp, GLenum format,
-                           const u8* pixels);
+void tex_sub_image_strided(FlArena* arena, const GpuTexUpload* upload);
 
 // Compile one shader stage from an assembled source array. Returns the shader name, or 0 (logged, with the
 // driver's info log) on failure.
@@ -160,11 +172,9 @@ GLuint gpu_compile_shader(const GpuGl* gl, GLenum stage, const char* const* sour
 bool gpu_viewport3d_create(GpuShared* self);
 void gpu_viewport3d_destroy(GpuShared* self);
 
-FlMeshHandle gpu_mesh_create(void* user_data, const FlMeshVertex* vertices, u32 vertex_count, const u16* indices,
-                             u32 index_count, FlMeshTopology topology);
+FlMeshHandle gpu_mesh_create(void* user_data, const FlMeshDesc* desc);
 void gpu_mesh_destroy(void* user_data, FlMeshHandle handle);
-void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color, u32 width, u32 height,
-                           const f32* view_projection, const FlViewport3dDraw* draws, u32 draw_count);
+void gpu_viewport3d_submit(void* user_data, const FlViewport3dSubmit* submit);
 
 // Resource-prepare seams (gpu_resource_prepare.c): image/glyph/SVG realization.
 

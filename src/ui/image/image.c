@@ -100,8 +100,11 @@ ImageHandle image_load_async_with_options(FlVfsMount* mount, FlString relative_p
     // Callers (e.g. custom list renderers) may load the same image every frame; the dedup cache returns the
     // existing request id for an identical mount instance + path + options.
     bool was_cached = false;
-    FlImageLoadRequestId request_id = image_system_load_dedup(s_image_system, mount, relative_path, &decode_opts,
-                                                              &thumb_opts, nullptr, &was_cached);
+    const ImageLoadSource source = { .mount = mount,
+                                     .relative_path = relative_path,
+                                     .options = &decode_opts,
+                                     .thumb_options = &thumb_opts };
+    FlImageLoadRequestId request_id = image_system_load_dedup(s_image_system, &source, &was_cached);
 
     if (!was_cached) {
         image_cache_record_initial_miss();
@@ -122,8 +125,11 @@ ImageHandle image_reload_evicted(FlVfsMount* mount, FlString relative_path, FlIm
 
     image_cache_record_initial_miss();
 
-    FlImageLoadRequestId request_id = image_system_load(s_image_system, mount, relative_path, &decode_opts, &thumb_opts,
-                                                        nullptr, (FlImageLoadRequestId)old_handle);
+    const ImageLoadSource source = { .mount = mount,
+                                     .relative_path = relative_path,
+                                     .options = &decode_opts,
+                                     .thumb_options = &thumb_opts };
+    FlImageLoadRequestId request_id = image_system_load(s_image_system, &source, (FlImageLoadRequestId)old_handle);
     return (ImageHandle)request_id;
 }
 
@@ -274,20 +280,28 @@ static bool dynamic_image_args_valid(int width, int height, const FlArena* arena
     return arena != nullptr && width > 0 && height > 0;
 }
 
-ImageData* image_create_dynamic(u8* buffer, int width, int height, int stride, FlImageFormat format, FlArena* arena) {
-    if (buffer == nullptr || stride <= 0 || !dynamic_image_args_valid(width, height, arena)) {
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool dynamic_source_valid(const DynamicImageSource* source) {
+    return source->buffer != nullptr && source->stride > 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ImageData* image_create_dynamic(const DynamicImageSource* source, FlArena* arena) {
+    if (!dynamic_source_valid(source) || !dynamic_image_args_valid(source->width, source->height, arena)) {
         return nullptr;
     }
 
     ImageData* image = arena_alloc_zero(arena, ImageData);
-    image->data = buffer;
-    image->width = width;
-    image->height = height;
-    image->padded_width = width;
-    image->padded_height = height;
-    image->stride = stride;
+    image->data = source->buffer;
+    image->width = source->width;
+    image->height = source->height;
+    image->padded_width = source->width;
+    image->padded_height = source->height;
+    image->stride = source->stride;
     image->channels = 4;
-    image->format = format;
+    image->format = source->format;
 
     return image;
 }

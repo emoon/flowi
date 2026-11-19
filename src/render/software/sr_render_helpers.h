@@ -24,5 +24,14 @@ static inline u8x16 sr_premultiply_rgba(u8x16 rgba) {
 
 // Emit a RenderCommand for a single glyph. Returns the advanced cursor_x.
 
-float sr_emit_glyph(struct FlArena* arena, const struct Glyph* glyph, float cursor_x, float baseline_y,
-                    u8x16 text_color, u8 global_alpha);
+typedef struct GlyphPen {
+    float cursor_x;
+    float baseline_y;
+} GlyphPen;
+
+typedef struct GlyphStyle {
+    u8x16 text_color;
+    u8 global_alpha;
+} GlyphStyle;
+
+float sr_emit_glyph(struct FlArena* arena, const struct Glyph* glyph, GlyphPen pen, GlyphStyle style);

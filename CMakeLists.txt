@@ -263,8 +263,9 @@ elseif(UNIX AND NOT APPLE)
         FLOWI_EXPORT_LIST_PATH="${ROOT}/src/exports/flowi.version")
 endif()
 
-file(GLOB TEST_SRC CONFIGURE_DEPENDS tests/*.c tests/probes/*_api_check.c)
+file(GLOB TEST_SRC CONFIGURE_DEPENDS tests/*.c tests/render_ir/*.c tests/render/*.c tests/core/*.c tests/dock/*.c tests/list/*.c tests/localization/*.c tests/menu/*.c tests/vfs/*.c tests/widgets/*.c tests/probes/*_api_check.c)
 add_executable(unit_tests ${TEST_SRC} ${LOC_CHECK_SRC})
+target_include_directories(unit_tests PRIVATE tests)
 target_link_libraries(unit_tests PRIVATE flowi_objects external_abi_probe shared_library_smoke_probe)
 target_compile_definitions(unit_tests PRIVATE FL_API_IMPLEMENTATION=1
     FLOWI_TEST_DATA_DIR="${ROOT}/examples/data" FLOWI_TEST_FIXTURE_DIR="${ROOT}/tests/fixtures"

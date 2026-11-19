@@ -36,6 +36,13 @@ static void release_targets(GpuShared* self, GpuViewport3d* viewport) {
     viewport->fbo = 0;
 }
 
+static bool is_stale_candidate(const GpuViewport3d* viewport, const GpuViewport3d* stale, u64 frame) {
+    if (viewport->last_frame + 1 >= frame) {
+        return false;
+    }
+    return stale == nullptr || viewport->last_frame < stale->last_frame;
+}
+
 // A full table gives up the viewport submitted least recently, provided it sat out at least one whole frame;
 // a viewport submitted this frame or the last is live and never displaced.
 static GpuViewport3d* find_viewport(GpuShared* self, u32 id) {
@@ -47,7 +54,7 @@ static GpuViewport3d* find_viewport(GpuShared* self, u32 id) {
             viewport->last_frame = frame;
             return viewport;
         }
-        if (viewport->last_frame + 1 < frame && (stale == nullptr || viewport->last_frame < stale->last_frame)) {
+        if (is_stale_candidate(viewport, stale, frame)) {
             stale = viewport;
         }
     }
@@ -128,8 +135,7 @@ static void setup_targets(GpuShared* self, GpuViewport3d* viewport, FlImageHandl
 
 // Retained meshes. The handle is the table index plus one, so zero stays the invalid handle.
 
-FlMeshHandle gpu_mesh_create(void* user_data, const FlMeshVertex* vertices, u32 vertex_count, const u16* indices,
-                             u32 index_count, FlMeshTopology topology) {
+FlMeshHandle gpu_mesh_create(void* user_data, const FlMeshDesc* desc) {
     GpuShared* self = user_data;
     const GpuGl* gl = &self->gl;
 
@@ -155,10 +161,12 @@ FlMeshHandle gpu_mesh_create(void* user_data, const FlMeshVertex* vertices, u32 
     mesh->ibo = buffers[1];
 
     gl->BindBuffer(GL_ARRAY_BUFFER, mesh->vbo);
-    gl->BufferData(GL_ARRAY_BUFFER, (GLsizeiptr)((size_t)vertex_count * sizeof(FlMeshVertex)), vertices,
+    gl->BufferData(GL_ARRAY_BUFFER, (GLsizeiptr)((size_t)desc->vertex_count * sizeof(FlMeshVertex)),
+                   desc->vertices,
                    GL_STATIC_DRAW);
     gl->BindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo);
-    gl->BufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)((size_t)index_count * sizeof(u16)), indices, GL_STATIC_DRAW);
+    gl->BufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)((size_t)desc->index_count * sizeof(u16)), desc->indices,
+                   GL_STATIC_DRAW);
 
     gl->EnableVertexAttribArray(MESH_ATTRIB_POS);
     gl->VertexAttribPointer(MESH_ATTRIB_POS, 3, GL_FLOAT, GL_FALSE, sizeof(FlMeshVertex), (const void*)0);
@@ -169,8 +177,8 @@ FlMeshHandle gpu_mesh_create(void* user_data, const FlMeshVertex* vertices, u32 
                             (const void*)MESH_COLOR_OFFSET);
 
     gl->BindVertexArray(0);
-    mesh->index_count = index_count;
-    mesh->primitive = topology == FlMeshTopology_Lines ? GL_LINES : GL_TRIANGLES;
+    mesh->index_count = desc->index_count;
+    mesh->primitive = desc->topology == FlMeshTopology_Lines ? GL_LINES : GL_TRIANGLES;
     return (FlMeshHandle)(slot + 1);
 }
 
@@ -199,26 +207,17 @@ void gpu_mesh_destroy(void* user_data, FlMeshHandle handle) {
 // depth-tested draws, so their submission order does not matter, and blending stays off. Draws that opt out of
 // the depth test are the exception: they land in submission order, over whatever is already there.
 
-void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color, u32 width, u32 height,
-                           const f32* view_projection, const FlViewport3dDraw* draws, u32 draw_count) {
-    GpuShared* self = user_data;
+static bool target_needs_setup(const GpuViewport3d* viewport, FlImageHandle color, u32 width, u32 height) {
+    if (viewport->fbo == 0 || viewport->color != color) {
+        return true;
+    }
+    return viewport->width != width || viewport->height != height;
+}
+
+static void begin_pass(GpuShared* self, const GpuViewport3d* viewport, const f32* view_projection) {
     const GpuGl* gl = &self->gl;
-
-    GpuViewport3d* viewport = find_viewport(self, viewport_id);
-    if (viewport == nullptr) {
-        return;
-    }
-    if (viewport->fbo == 0 || viewport->width != width || viewport->height != height || viewport->color != color) {
-        setup_targets(self, viewport, color, width, height);
-    }
-    if (viewport->fbo == 0) {
-        // The target could not be built (setup_targets logged why). Framebuffer 0 is the default framebuffer,
-        // so falling through would draw this viewport's scene over the window.
-        return;
-    }
-
     gl->BindFramebuffer(GL_FRAMEBUFFER, viewport->fbo);
-    glViewport(0, 0, (GLsizei)width, (GLsizei)height);
+    glViewport(0, 0, (GLsizei)viewport->width, (GLsizei)viewport->height);
     // Transparent clear: fragments the geometry never covers let the UI behind the viewport show through.
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClearDepth(1.0);
@@ -231,11 +230,72 @@ void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color
     gl->UseProgram(self->mesh3d_prog);
     gl->UniformMatrix4fv(self->u_mesh3d_view_projection, 1, GL_FALSE, view_projection);
     glActiveTexture(GL_TEXTURE0);
+    glDisable(GL_DEPTH_TEST);
+}
+
+static void set_depth_test(bool enabled) {
+    if (enabled) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+}
+
+// A mesh texture is always a dedicated (never atlased) image, so it resolves to a whole slot texture
+// and the mesh's UVs address it directly, with no atlas sub-rect transform.
+
+static void bind_mesh_texture(GpuShared* self, const FlViewport3dDraw* draw) {
+    const GpuGl* gl = &self->gl;
+    int slot_index = gpu_image_slots_find_static(&self->cpu.image_slots, draw->texture);
+    gl->Uniform1i(self->u_mesh3d_has_texture, slot_index >= 0 ? 1 : 0);
+    if (slot_index < 0) {
+        return;
+    }
+    glBindTexture(GL_TEXTURE_2D, (GLuint)self->cpu.image_slots.images[slot_index].tex);
+    // Nearest is what a lightmapper asks for: it wants to see the texels it baked, not a blend of them.
+    gl->BindSampler(0, draw->filter == FlImageFilter_Nearest ? self->sampler_nearest : self->sampler_linear);
+}
+
+static void draw_mesh(GpuShared* self, const GpuMesh* mesh, const FlViewport3dDraw* draw) {
+    bind_mesh_texture(self, draw);
+    self->gl.BindVertexArray(mesh->vao);
+    glDrawElements(mesh->primitive, (GLsizei)mesh->index_count, GL_UNSIGNED_SHORT, (const void*)0);
+}
+
+// Hand the context back as the compute passes expect it: default framebuffer, no depth test, no
+// bound VAO or sampler on the scratch unit.
+
+static void end_pass(const GpuGl* gl) {
+    gl->BindVertexArray(0);
+    gl->BindSampler(0, 0);
+    glDisable(GL_DEPTH_TEST);
+    gl->BindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // The color target is consumed by texture fetches in the UI raster pass later this frame.
+    gl->MemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+}
+
+void gpu_viewport3d_submit(void* user_data, const FlViewport3dSubmit* submit) {
+    GpuShared* self = user_data;
+
+    GpuViewport3d* viewport = find_viewport(self, submit->viewport);
+    if (viewport == nullptr) {
+        return;
+    }
+    if (target_needs_setup(viewport, submit->color, submit->width, submit->height)) {
+        setup_targets(self, viewport, submit->color, submit->width, submit->height);
+    }
+    if (viewport->fbo == 0) {
+        // The target could not be built (setup_targets logged why). Framebuffer 0 is the default framebuffer,
+        // so falling through would draw this viewport's scene over the window.
+        return;
+    }
+
+    begin_pass(self, viewport, submit->view_projection);
 
     bool depth_test = false; // matches the state the pass is entered and left in, so the first draw sets it
-    glDisable(GL_DEPTH_TEST);
-
-    for (u32 i = 0; i < draw_count; i++) {
+    const FlViewport3dDraw* draws = submit->draws;
+    for (u32 i = 0; i < submit->draw_count; i++) {
         GpuMesh* mesh = resolve_mesh(self, draws[i].mesh);
         if (mesh == nullptr) {
             continue; // destroyed between submission and render, or never created
@@ -245,36 +305,12 @@ void gpu_viewport3d_submit(void* user_data, u32 viewport_id, FlImageHandle color
         // wants: it stays visible through the geometry it annotates without occluding anything drawn after it.
         if (draws[i].depth_test != depth_test) {
             depth_test = draws[i].depth_test;
-            if (depth_test) {
-                glEnable(GL_DEPTH_TEST);
-            } else {
-                glDisable(GL_DEPTH_TEST);
-            }
+            set_depth_test(depth_test);
         }
-
-        // A mesh texture is always a dedicated (never atlased) image, so it resolves to a whole slot texture
-        // and the mesh's UVs address it directly, with no atlas sub-rect transform.
-        int slot_index = gpu_image_slots_find_static(&self->cpu.image_slots, draws[i].texture);
-        gl->Uniform1i(self->u_mesh3d_has_texture, slot_index >= 0 ? 1 : 0);
-        if (slot_index >= 0) {
-            glBindTexture(GL_TEXTURE_2D, (GLuint)self->cpu.image_slots.images[slot_index].tex);
-            // Nearest is what a lightmapper asks for: it wants to see the texels it baked, not a blend of them.
-            gl->BindSampler(0, draws[i].filter == FlImageFilter_Nearest ? self->sampler_nearest : self->sampler_linear);
-        }
-
-        gl->BindVertexArray(mesh->vao);
-        glDrawElements(mesh->primitive, (GLsizei)mesh->index_count, GL_UNSIGNED_SHORT, (const void*)0);
+        draw_mesh(self, mesh, &draws[i]);
     }
 
-    // Hand the context back as the compute passes expect it: default framebuffer, no depth test, no
-    // bound VAO or sampler on the scratch unit.
-    gl->BindVertexArray(0);
-    gl->BindSampler(0, 0);
-    glDisable(GL_DEPTH_TEST);
-    gl->BindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    // The color target is consumed by texture fetches in the UI raster pass later this frame.
-    gl->MemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+    end_pass(&self->gl);
 }
 
 // Compile the unlit program and resolve its uniforms. Returns false (logged) when either stage fails to

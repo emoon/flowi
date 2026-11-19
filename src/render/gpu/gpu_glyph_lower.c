@@ -21,8 +21,19 @@ static Vec2 vec2_mid(Vec2 a, Vec2 b) {
     return (Vec2) { (a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f };
 }
 
+typedef struct GlyphCubic {
+    Vec2 p0;
+    Vec2 c1;
+    Vec2 c2;
+    Vec2 p3;
+} GlyphCubic;
+
 // The single quadratic nearest a cubic: control = (3(c1 + c2) - p0 - p3) / 4.
-static void glyph_emit_cubic(GlyphQuadEmit* e, Vec2 p0, Vec2 c1, Vec2 c2, Vec2 p3, int depth) {
+static void glyph_emit_cubic(GlyphQuadEmit* e, GlyphCubic cubic, int depth) {
+    Vec2 p0 = cubic.p0;
+    Vec2 c1 = cubic.c1;
+    Vec2 c2 = cubic.c2;
+    Vec2 p3 = cubic.p3;
     if (depth == 0) {
         Vec2 c = { (3.0f * (c1.x + c2.x) - p0.x - p3.x) * 0.25f, (3.0f * (c1.y + c2.y) - p0.y - p3.y) * 0.25f };
         glyph_emit_quad(e, p0, c, p3);
@@ -34,8 +45,8 @@ static void glyph_emit_cubic(GlyphQuadEmit* e, Vec2 p0, Vec2 c1, Vec2 c2, Vec2 p
     Vec2 m012 = vec2_mid(m01, m12);
     Vec2 m123 = vec2_mid(m12, m23);
     Vec2 m = vec2_mid(m012, m123);
-    glyph_emit_cubic(e, p0, m01, m012, m, depth - 1);
-    glyph_emit_cubic(e, m, m123, m23, p3, depth - 1);
+    glyph_emit_cubic(e, (GlyphCubic) { p0, m01, m012, m }, depth - 1);
+    glyph_emit_cubic(e, (GlyphCubic) { m, m123, m23, p3 }, depth - 1);
 }
 
 // Outline space (pixels, y-up, pen-relative) -> padded-cell-local texel coordinates (y-down).
@@ -61,10 +72,12 @@ u32 gpu_glyph_lower_segments(const struct FlGlyphSegment* segments, u32 segment_
                                 glyph_cell_point(seg->pts[2], origin_x, origin_y));
                 break;
             case FlGlyphSegment_Cubic:
-                glyph_emit_cubic(&emit, glyph_cell_point(seg->pts[0], origin_x, origin_y),
-                                 glyph_cell_point(seg->pts[1], origin_x, origin_y),
-                                 glyph_cell_point(seg->pts[2], origin_x, origin_y),
-                                 glyph_cell_point(seg->pts[3], origin_x, origin_y), 2);
+                glyph_emit_cubic(&emit,
+                                 (GlyphCubic) { glyph_cell_point(seg->pts[0], origin_x, origin_y),
+                                                glyph_cell_point(seg->pts[1], origin_x, origin_y),
+                                                glyph_cell_point(seg->pts[2], origin_x, origin_y),
+                                                glyph_cell_point(seg->pts[3], origin_x, origin_y) },
+                                 2);
                 break;
         }
     }
