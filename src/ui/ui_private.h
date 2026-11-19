@@ -14,8 +14,8 @@
 #include <flowi/ui/theme.h>
 #include "input_actions.h"
 #include <ui/render_backend.h>
-#include <ui/list_api.h>
-#include <ui/list_uniform.h>
+#include <ui/list/list_api.h>
+#include <ui/list/list_uniform.h>
 #include <ui/ui_types.h>
 #include "type_ahead.h"
 #include "ui.h"

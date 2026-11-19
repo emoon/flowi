@@ -15,15 +15,15 @@
 // The candidate drop position is resolved arithmetically from content-space Y against model positions (uniform
 // stride), so it reaches rows virtualized away exactly like the marquee coverage does.
 
-#include "list/list_private.h"
+#include "list_private.h"
 #include <core/arena.h>
 #include <core/log.h>
 #include "list_uniform.h"
 #include <ui/ui_theme.h>
 #include <flowi/ui/item_behavior.h>
-#include "layout.h"
-#include "pixel_snap.h"
-#include "ui.h"
+#include "../layout.h"
+#include "../pixel_snap.h"
+#include "../ui.h"
 
 // Per-row interaction the scoped face opts into by default: clicks (also gates hover), double-click and
 // right-click.

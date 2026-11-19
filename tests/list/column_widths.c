@@ -1,7 +1,7 @@
 // list column width resolution tests
 
 #include "list/common.h"
-#include "ui/list_columns.h"
+#include "ui/list/list_columns.h"
 
 // Column width resolution (list_resolve_column_widths): a pure function from ColumnDefs and the available width
 // to one width per column. The cases use whole numbers, and the asserts allow a small tolerance anyway.

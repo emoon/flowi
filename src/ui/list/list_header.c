@@ -6,8 +6,8 @@
 
 #include "list_private.h"
 #include "../layout.h"
-#include "../list_columns.h"
-#include "../list_uniform.h"
+#include "list_columns.h"
+#include "list_uniform.h"
 #include "../pixel_snap.h"
 #include "../ui.h"
 #include <flowi/ui/cell.h>

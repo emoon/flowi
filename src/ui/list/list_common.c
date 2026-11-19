@@ -5,7 +5,7 @@
 #include "../pixel_snap.h"
 #include <core/math.h>
 #include "../layout.h"
-#include "../list_uniform.h"
+#include "list_uniform.h"
 
 #include <math.h>
 

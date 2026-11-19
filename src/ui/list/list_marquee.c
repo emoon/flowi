@@ -11,7 +11,7 @@
 
 #include "list_private.h"
 #include <core/math.h>
-#include "../list_uniform.h"
+#include "list_uniform.h"
 #include "../ui.h"
 #include "../ui_theme.h"
 

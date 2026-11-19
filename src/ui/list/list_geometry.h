@@ -3,7 +3,7 @@
 // Row Geometry (docs/CONTEXT.md "Lists"): where the rows of a uniform list are. The functions are pure: no
 // context, no layout, no input. Content Y is in physical pixels from the top of the first row.
 
-#include "scroll_core.h"
+#include "../scroll_core.h"
 #include <core/types.h>
 
 typedef struct ListRowGeometry {

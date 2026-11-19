@@ -1,5 +1,5 @@
 #include "list_geometry.h"
-#include "pixel_snap.h"
+#include "../pixel_snap.h"
 #include <math.h>
 
 #define LIST_ROW_DEFAULT_HEIGHT 32.0f // Row height when the caller leaves it unset (logical px)

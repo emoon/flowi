@@ -39,10 +39,10 @@
 #include <flowi/ui/ui_scroll.h>
 #include <flowi/ui/ui_selection.h>
 #include "image/image.h"
-#include "list_uniform.h"
+#include "list/list_uniform.h"
 #include "painter.h"
 #include <ui/render_backend.h>
-#include "ui_list.h"
+#include "list/ui_list.h"
 #include "menu/ui_menu.h"
 #include "ui_message_box.h"
 #include "ui_popup.h"
