@@ -332,10 +332,9 @@ void image_system_begin_frame(ImageSystem* sys) {
     }
 }
 
-FlImageLoadRequestId image_system_load(ImageSystem* sys, FlVfsMount* mount, FlString relative_path,
-                                       const ImageDecodeOptions* options, const ImageThumbnailOptions* thumb_options,
-                                       void* user_data, FlImageLoadRequestId reuse_handle) {
-    if (!sys || !mount) {
+FlImageLoadRequestId image_system_load(ImageSystem* sys, const ImageLoadSource* source,
+                                       FlImageLoadRequestId reuse_handle) {
+    if (!sys || !source->mount) {
         return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
     }
 
@@ -350,18 +349,18 @@ FlImageLoadRequestId image_system_load(ImageSystem* sys, FlVfsMount* mount, FlSt
     }
 
     ctx->sys = sys;
-    ctx->mount = mount;
+    ctx->mount = source->mount;
     // Copy the path. The worker-thread callback reads it after image_system_load returns, but the ui.h
     // contract lets the caller free/reuse its buffer immediately. fl_string_copy_malloc passes static strings
     // through untouched and heap-copies dynamic ones; the callback releases the copy with fl_string_free.
-    ctx->relative_path = fl_string_copy_malloc(relative_path);
-    ctx->user_data = user_data;
-    ctx->decode_options = resolve_decode_options(sys, options);
-    ctx->thumbnail_options = thumb_options ? *thumb_options : (ImageThumbnailOptions) { 0 };
+    ctx->relative_path = fl_string_copy_malloc(source->relative_path);
+    ctx->user_data = source->user_data;
+    ctx->decode_options = resolve_decode_options(sys, source->options);
+    ctx->thumbnail_options = source->thumb_options ? *source->thumb_options : (ImageThumbnailOptions) { 0 };
 
     // Two-phase VFS read: prepare the handle, store request_id, then dispatch; the worker reads request_id
     // only after it is stored.
-    FlVfsHandle vfs_handle = vfs_mount_read_all_prepare(mount, relative_path, image_system_vfs_callback, ctx, nullptr,
+    FlVfsHandle vfs_handle = vfs_mount_read_all_prepare(source->mount, source->relative_path, image_system_vfs_callback, ctx, nullptr,
                                                         (FlVfsHandle)reuse_handle);
 
     if (vfs_handle == FL_VFS_HANDLE_INVALID) {
@@ -380,24 +379,23 @@ FlImageLoadRequestId image_system_load(ImageSystem* sys, FlVfsMount* mount, FlSt
     return request_id;
 }
 
-FlImageLoadRequestId image_system_load_dedup(ImageSystem* sys, FlVfsMount* mount, FlString relative_path,
-                                             const ImageDecodeOptions* options,
-                                             const ImageThumbnailOptions* thumb_options, void* user_data,
-                                             bool* was_cached) {
+FlImageLoadRequestId image_system_load_dedup(ImageSystem* sys, const ImageLoadSource* source, bool* was_cached) {
     bool unused_was_cached;
     if (!was_cached) {
         was_cached = &unused_was_cached;
     }
     *was_cached = false;
 
-    if (!sys || !mount) {
+    if (!sys || !source->mount) {
         return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
     }
 
-    ImageThumbnailOptions thumb = thumb_options ? *thumb_options : (ImageThumbnailOptions) { 0 };
+    ImageThumbnailOptions thumb = source->thumb_options ? *source->thumb_options : (ImageThumbnailOptions) { 0 };
+    ImageLoadSource resolved = *source;
+    resolved.thumb_options = &thumb;
 
     arena_scratch_auto(scratch);
-    FlString cache_key = image_dedup_make_key(scratch.arena, mount, relative_path, options, &thumb);
+    FlString cache_key = image_dedup_make_key(scratch.arena, source->mount, source->relative_path, source->options, &thumb);
 
     const FlImageLoadRequestId* cached = image_dedup_get(&sys->dedup, cache_key);
     if (cached != nullptr) {
@@ -405,8 +403,7 @@ FlImageLoadRequestId image_system_load_dedup(ImageSystem* sys, FlVfsMount* mount
         return *cached;
     }
 
-    FlImageLoadRequestId request_id
-        = image_system_load(sys, mount, relative_path, options, &thumb, user_data, FL_IMAGE_LOAD_REQUEST_ID_INVALID);
+    FlImageLoadRequestId request_id = image_system_load(sys, &resolved, FL_IMAGE_LOAD_REQUEST_ID_INVALID);
 
     if (request_id != FL_IMAGE_LOAD_REQUEST_ID_INVALID) {
         image_dedup_insert(&sys->dedup, cache_key, request_id);
@@ -558,10 +555,25 @@ static FlImageLoadRequestId submit_memory_load(ImageSystem* sys, MemoryLoadConte
     return request_id;
 }
 
+static bool memory_load_args_valid(const ImageSystem* sys, const void* data, size_t size) {
+    return sys && data && size > 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static MemoryLoadContext* create_reserved_memory_load(ImageSystem* sys, const void* data, size_t size) {
+    if (!reserve_pending_job(sys)) {
+        return nullptr;
+    }
+    return memory_load_context_create(sys, data, size);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 FlImageLoadRequestId image_system_load_from_memory(ImageSystem* sys, const void* data, size_t size,
                                                    const ImageDecodeOptions* options,
                                                    const ImageThumbnailOptions* thumb_options) {
-    if (!sys || !data || size == 0) {
+    if (!memory_load_args_valid(sys, data, size)) {
         return FL_IMAGE_LOAD_REQUEST_ID_INVALID;
     }
 
@@ -570,7 +582,7 @@ FlImageLoadRequestId image_system_load_from_memory(ImageSystem* sys, const void*
     }
 
     drain_completed_jobs(sys);
-    MemoryLoadContext* ctx = reserve_pending_job(sys) ? memory_load_context_create(sys, data, size) : nullptr;
+    MemoryLoadContext* ctx = create_reserved_memory_load(sys, data, size);
     if (!ctx) {
         producer_end(sys);
         return FL_IMAGE_LOAD_REQUEST_ID_INVALID;

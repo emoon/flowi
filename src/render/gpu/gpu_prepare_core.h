@@ -61,12 +61,6 @@ typedef struct GpuGlyphCell {
 // not translated to 0.
 GpuGlyphCell gpu_prepare_glyph_cell(const struct FlGlyphOutline* outline);
 
-typedef struct GpuGlyphKey {
-    FlFontId font;
-    u16 size;
-    u32 glyph_index;
-} GpuGlyphKey;
-
 // A glyph placed in the atlas with its outline lowered to the curve buffer's quadratic wire format.
 typedef struct GpuGlyphRaster {
     const GpuGlyphEntry* entry;

@@ -105,8 +105,15 @@ void image_set_load_priority(ImageHandle handle, ImageLoadPriority priority);
 // The buffer stays caller-owned and must remain valid while the ImageData is used; the arena allocates only
 // the ImageData struct. Returns nullptr on error.
 
-ImageData* image_create_dynamic(u8* buffer, int width, int height, int stride, FlImageFormat format,
-                                struct FlArena* arena);
+typedef struct DynamicImageSource {
+    u8* buffer;
+    int width;
+    int height;
+    int stride;
+    FlImageFormat format;
+} DynamicImageSource;
+
+ImageData* image_create_dynamic(const DynamicImageSource* source, struct FlArena* arena);
 
 // Create a dynamic image with a pre-allocated interleaved RGBA buffer. Returns nullptr on error.
 

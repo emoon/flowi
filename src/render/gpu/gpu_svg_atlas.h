@@ -71,14 +71,25 @@ u16 svg_raster_size_for_dst(f32 dst_w, f32 dst_h, FlVectorClass cls);
 // comes from arena on first init and is reused after.
 void gpu_svg_atlas_init(GpuSvgAtlas* atlas, struct FlArena* arena, GpuSvgTexelFormat format);
 
+// What gpu_svg_atlas_place records for one icon: the raster size size, the w x h padded cell, the classification
+// cls, the authored fill mono_color and the retained geometry source vector.
+typedef struct GpuSvgPlaceRequest {
+    FlImageHandle handle;
+    u16 size;
+    u32 w;
+    u32 h;
+    FlVectorClass cls;
+    FlColor mono_color;
+    const FlVectorImage* vector;
+} GpuSvgPlaceRequest;
+
 // Place the icon handle at quantized raster size size occupying a w x h padded cell, recording its classification
 // cls, authored fill mono_color (the monochrome draw default; ignored for multi-color), and retained geometry
 // source vector. If the handle's current live cell already matches size, that cell is returned unchanged and the
 // recorded classification, color, and geometry stand. Otherwise a new cell is appended and any prior live cell for
 // the handle is orphaned. Returns nullptr when the entry table is full or the packer refuses. The returned entry is
 // valid until the next place call.
-const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle, u16 size, u32 w, u32 h,
-                                       FlVectorClass cls, FlColor mono_color, const FlVectorImage* vector);
+const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, const GpuSvgPlaceRequest* req);
 
 // Reclaim orphaned cells: repack only the currently-live cells into a fresh skyline, dropping every orphan. This
 // moves cells, never texels. Each surviving cell keeps its (handle, size, classification, color, geometry) and only

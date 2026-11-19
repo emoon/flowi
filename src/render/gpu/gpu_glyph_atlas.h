@@ -19,6 +19,21 @@ struct FlArena;
 
 #define GPU_GLYPH_ATLAS_MAX_ENTRIES 2048
 
+typedef struct GpuGlyphKey {
+    FlFontId font;
+    u16 size; // quarter-px fixed-point size key
+    u32 glyph_index;
+} GpuGlyphKey;
+
+// Raster extent and placement metrics of a glyph, as handed to gpu_glyph_atlas_place.
+typedef struct GpuGlyphMetrics {
+    u32 w; // padded cell width, texels
+    u32 h; // padded cell height, texels
+    f32 left;
+    f32 top;
+    f32 advance;
+} GpuGlyphMetrics;
+
 typedef struct GpuGlyphEntry {
     FlFontId font;
     u16 size; // quarter-px fixed-point size key the outline was fetched at (light hinting is size-dependent)
@@ -46,8 +61,7 @@ void gpu_glyph_atlas_init(GpuGlyphAtlas* atlas, struct FlArena* arena);
 // Place a glyph whose padded raster extent is w x h texels; 0 x 0 registers a metrics-only entry (an empty
 // glyph occupies no atlas space). Returns nullptr when the key is already placed, the entry table is full, or
 // the packer refuses (the atlas is full). The returned entry is valid until the next place call.
-const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, FlFontId font, u16 size, u32 glyph_index, u32 w, u32 h,
-                                           f32 left, f32 top, f32 advance);
+const GpuGlyphEntry* gpu_glyph_atlas_place(GpuGlyphAtlas* atlas, GpuGlyphKey key, GpuGlyphMetrics metrics);
 
 // Resolve a key to its placement. Returns nullptr when nothing was prepared for it. Valid until the next place
 // call.

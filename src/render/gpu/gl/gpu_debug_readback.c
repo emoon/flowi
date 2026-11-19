@@ -33,72 +33,47 @@ void gpu_debug_set_mode(void* renderer_user_data, GpuDebugMode mode) {
     self->debug_mode = mode;
 }
 
+typedef struct AtlasReadSpec {
+    GLuint tex;
+    u32 size;
+    GLenum format;
+    u32 bytes_per_texel;
+} AtlasReadSpec;
+
+// The atlas texels verbatim. The producing dispatch fences its image stores for shader fetches only; CPU
+// texture readback is a different access class.
+
+static GpuAtlasReadback read_atlas(const GpuShared* self, struct FlArena* arena, AtlasReadSpec spec) {
+    const GpuGl* gl = &self->gl;
+    u8* data = arena_alloc_array(arena, u8, (size_t)spec.size * spec.size * spec.bytes_per_texel);
+    gl->MemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
+    glBindTexture(GL_TEXTURE_2D, spec.tex);
+    glPixelStorei(GL_PACK_ALIGNMENT, (GLint)spec.bytes_per_texel);
+    glGetTexImage(GL_TEXTURE_2D, 0, spec.format, GL_UNSIGNED_BYTE, data);
+    return (GpuAtlasReadback) { .texels = data, .width = spec.size, .height = spec.size };
+}
+
 // Glyph-atlas debug seams (gpu_debug.h): the R8 coverage texels verbatim.
 
 bool gpu_debug_read_glyph_atlas(void* renderer_user_data, struct FlArena* arena, GpuGlyphAtlasReadback* out) {
-    GpuShared* self = renderer_user_data;
-    const GpuGl* gl = &self->gl;
-
-    u8* data = arena_alloc_array(arena, u8, (size_t)GPU_GLYPH_ATLAS_SIZE * GPU_GLYPH_ATLAS_SIZE);
-
-    // prepare_glyph fences its image stores for shader fetches only; CPU texture readback is a different
-    // access class.
-    gl->MemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-    glBindTexture(GL_TEXTURE_2D, self->glyph_atlas_tex);
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, data);
-
-    *out = (GpuGlyphAtlasReadback) {
-        .texels = data,
-        .width = GPU_GLYPH_ATLAS_SIZE,
-        .height = GPU_GLYPH_ATLAS_SIZE,
-    };
+    const GpuShared* self = renderer_user_data;
+    *out = read_atlas(self, arena, (AtlasReadSpec) { self->glyph_atlas_tex, GPU_GLYPH_ATLAS_SIZE, GL_RED, 1 });
     return true;
 }
 
 // SVG-atlas debug seams (gpu_debug.h): the R8 coverage texels verbatim.
 
 bool gpu_debug_read_svg_atlas(void* renderer_user_data, struct FlArena* arena, GpuSvgAtlasReadback* out) {
-    GpuShared* self = renderer_user_data;
-    const GpuGl* gl = &self->gl;
-
-    u8* data = arena_alloc_array(arena, u8, (size_t)GPU_SVG_ATLAS_SIZE_MONO * GPU_SVG_ATLAS_SIZE_MONO);
-
-    // prepare_vector fences its image stores for shader fetches only; CPU texture readback is a different
-    // access class.
-    gl->MemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-    glBindTexture(GL_TEXTURE_2D, self->svg_atlas_tex);
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, data);
-
-    *out = (GpuSvgAtlasReadback) {
-        .texels = data,
-        .width = GPU_SVG_ATLAS_SIZE_MONO,
-        .height = GPU_SVG_ATLAS_SIZE_MONO,
-    };
+    const GpuShared* self = renderer_user_data;
+    *out = read_atlas(self, arena, (AtlasReadSpec) { self->svg_atlas_tex, GPU_SVG_ATLAS_SIZE_MONO, GL_RED, 1 });
     return true;
 }
 
 // Multi-color SVG atlas debug seams: the RGBA8 color texels verbatim.
 
 bool gpu_debug_read_color_svg_atlas(void* renderer_user_data, struct FlArena* arena, GpuColorSvgAtlasReadback* out) {
-    GpuShared* self = renderer_user_data;
-    const GpuGl* gl = &self->gl;
-
-    u8* data = arena_alloc_array(arena, u8, (size_t)GPU_SVG_ATLAS_SIZE_COLOR * GPU_SVG_ATLAS_SIZE_COLOR * 4u);
-
-    // raster_svg_cell fences its image stores for shader fetches only; CPU texture readback is a different
-    // access class.
-    gl->MemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-    glBindTexture(GL_TEXTURE_2D, self->color_svg_atlas_tex);
-    glPixelStorei(GL_PACK_ALIGNMENT, 4);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-    *out = (GpuColorSvgAtlasReadback) {
-        .texels = data,
-        .width = GPU_SVG_ATLAS_SIZE_COLOR,
-        .height = GPU_SVG_ATLAS_SIZE_COLOR,
-    };
+    const GpuShared* self = renderer_user_data;
+    *out = read_atlas(self, arena, (AtlasReadSpec) { self->color_svg_atlas_tex, GPU_SVG_ATLAS_SIZE_COLOR, GL_RGBA, 4 });
     return true;
 }
 

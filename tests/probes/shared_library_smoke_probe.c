@@ -145,27 +145,34 @@ FLOWI_TEST_EXPORT int external_c_shared_library_smoke(const char* library_path, 
 }
 
 #if defined(FLOWI_EXPORT_LIST_PATH)
+static char* skip_space(char* text) {
+    while (isspace((unsigned char)*text)) {
+        text++;
+    }
+    return text;
+}
+
+static char* skip_identifier(char* text) {
+    while (isalnum((unsigned char)*text) || *text == '_') {
+        text++;
+    }
+    return text;
+}
+
 // Extracts the symbol name from one line of the export list, or returns 0 for a line that names none. A version script
 // line is "  name;" and a module-definition line is "    name"; the labels, braces, comments and the EXPORTS keyword
 // around them are not names.
 static int export_list_name(char* line, char** name) {
-    while (isspace((unsigned char)*line)) {
-        line++;
-    }
-    char* end = line;
-    if (!isalpha((unsigned char)*end) && *end != '_') {
+    line = skip_space(line);
+    if (!isalpha((unsigned char)*line) && *line != '_') {
         return 0;
     }
-    while (isalnum((unsigned char)*end) || *end == '_') {
-        end++;
-    }
-    char* name_end = end;
+    char* name_end = skip_identifier(line);
+    char* end = name_end;
     if (*end == ';') {
         end++;
     }
-    while (isspace((unsigned char)*end)) {
-        end++;
-    }
+    end = skip_space(end);
     if (*end != '\0') {
         return 0;
     }
@@ -175,6 +182,39 @@ static int export_list_name(char* line, char** name) {
     }
     *name = line;
     return 1;
+}
+
+typedef struct MissingNames {
+    char* text;
+    size_t capacity;
+    size_t used;
+    int count;
+} MissingNames;
+
+static void record_missing_name(MissingNames* missing, const char* name) {
+    missing->count++;
+    int written = snprintf(missing->text + missing->used, missing->capacity - missing->used, "%s%s",
+                           missing->used > 0 ? " " : "", name);
+    if (written > 0 && (size_t)written < missing->capacity - missing->used) {
+        missing->used += (size_t)written;
+    }
+}
+
+// Returns how many names the list holds and records each one the library does not export.
+static int scan_export_list(FILE* list, SharedLibraryHandle library, MissingNames* missing) {
+    int names = 0;
+    char line[256];
+    char* name;
+    while (fgets(line, sizeof(line), list) != NULL) {
+        if (!export_list_name(line, &name)) {
+            continue;
+        }
+        names++;
+        if (shared_library_symbol(library, name) == NULL) {
+            record_missing_name(missing, name);
+        }
+    }
+    return names;
 }
 #endif
 
@@ -201,27 +241,10 @@ FLOWI_TEST_EXPORT int external_c_shared_library_missing_exports(const char* libr
         return -1;
     }
 
-    int names = 0;
-    int missing_count = 0;
-    size_t used = 0;
-    char line[256];
-    char* name;
-    while (fgets(line, sizeof(line), list) != NULL) {
-        if (!export_list_name(line, &name)) {
-            continue;
-        }
-        names++;
-        if (shared_library_symbol(library, name) != NULL) {
-            continue;
-        }
-        missing_count++;
-        int written = snprintf(missing + used, capacity - used, "%s%s", used > 0 ? " " : "", name);
-        if (written > 0 && (size_t)written < capacity - used) {
-            used += (size_t)written;
-        }
-    }
+    MissingNames missing_names = { .text = missing, .capacity = capacity };
+    int names = scan_export_list(list, library, &missing_names);
     fclose(list);
     shared_library_close(library);
-    return names > 0 ? missing_count : -1;
+    return names > 0 ? missing_names.count : -1;
 #endif
 }

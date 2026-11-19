@@ -218,6 +218,10 @@ void fl_viewport3d_draw_lines(FlMeshHandle mesh, bool depth_test) {
               "draw_lines");
 }
 
+static bool viewport_has_area(const Viewport3d* self) {
+    return self->width != 0 && self->height != 0;
+}
+
 void fl_viewport3d_end(void) {
     Viewport3d* self = s_open;
     s_open = nullptr;
@@ -226,7 +230,7 @@ void fl_viewport3d_end(void) {
         return;
     }
     const FlRenderBackend* backend = renderer_3d();
-    if (backend == nullptr || self->width == 0 || self->height == 0) {
+    if (backend == nullptr || !viewport_has_area(self)) {
         return; // no 3D seam (the placeholder already drew), or the element has not been laid out yet
     }
 
@@ -236,8 +240,16 @@ void fl_viewport3d_end(void) {
         self->color = image_system_alloc_backend_handle();
     }
 
-    backend->viewport3d_submit(backend->user_data, self->element_id, self->color, self->width, self->height,
-                               self->view_projection, self->draws, self->draw_count);
+    const FlViewport3dSubmit submit = {
+        .viewport = self->element_id,
+        .color = self->color,
+        .width = self->width,
+        .height = self->height,
+        .view_projection = self->view_projection,
+        .draws = self->draws,
+        .draw_count = self->draw_count,
+    };
+    backend->viewport3d_submit(backend->user_data, &submit);
 }
 
 // Retained meshes are backend-shared resources with no core-side state: these validate the geometry and forward
@@ -245,11 +257,18 @@ void fl_viewport3d_end(void) {
 
 // Triangles and lines differ only in how many indices one primitive takes, so both constructors validate and
 // forward through here. per_primitive also names the shape in the diagnostic.
+static bool mesh_geometry_missing(const FlMeshVertex* vertices, u32 vertices_size, const u16* indices,
+                                  u32 indices_size) {
+    const bool no_vertices = vertices == nullptr || vertices_size == 0;
+    const bool no_indices = indices == nullptr || indices_size == 0;
+    return no_vertices || no_indices;
+}
+
 static FlMeshHandle create_mesh(const FlMeshVertex* vertices, u32 vertices_size, const u16* indices, u32 indices_size,
                                 FlMeshTopology topology) {
     const u32 per_primitive = topology == FlMeshTopology_Lines ? 2u : 3u;
 
-    if (vertices == nullptr || indices == nullptr || vertices_size == 0 || indices_size == 0) {
+    if (mesh_geometry_missing(vertices, vertices_size, indices, indices_size)) {
         return FL_MESH_HANDLE_INVALID;
     }
     if (indices_size % per_primitive != 0) {
@@ -261,7 +280,14 @@ static FlMeshHandle create_mesh(const FlMeshVertex* vertices, u32 vertices_size,
     if (backend == nullptr) {
         return FL_MESH_HANDLE_INVALID;
     }
-    return backend->mesh_create(backend->user_data, vertices, vertices_size, indices, indices_size, topology);
+    const FlMeshDesc desc = {
+        .vertices = vertices,
+        .vertex_count = vertices_size,
+        .indices = indices,
+        .index_count = indices_size,
+        .topology = topology,
+    };
+    return backend->mesh_create(backend->user_data, &desc);
 }
 
 FlMeshHandle fl_mesh_create(const FlMeshVertex* vertices, uint32_t vertices_size, const uint16_t* indices,

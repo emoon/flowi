@@ -75,10 +75,19 @@ const GpuSvgEntry* gpu_svg_atlas_find(const GpuSvgAtlas* atlas, FlImageHandle ha
     return find_live_entry((GpuSvgAtlas*)atlas, handle);
 }
 
-const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle, u16 size, u32 w, u32 h,
-                                       FlVectorClass cls, FlColor mono_color, const FlVectorImage* vector) {
-    GpuSvgEntry* live = find_live_entry(atlas, handle);
-    if (live != nullptr && live->size == size) {
+// A zero-area cell occupies no atlas space; otherwise the packer must have room.
+
+static bool reserve_cell(GpuSvgAtlas* atlas, u32 w, u32 h, GpuAtlasCell* cell) {
+    *cell = (GpuAtlasCell) { 0, 0, w, h };
+    if (w == 0 || h == 0) {
+        return true;
+    }
+    return gpu_atlas_pack_insert(&atlas->pack, w, h, &cell->x, &cell->y);
+}
+
+const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, const GpuSvgPlaceRequest* req) {
+    GpuSvgEntry* live = find_live_entry(atlas, req->handle);
+    if (live != nullptr && live->size == req->size) {
         return live; // already current at this size
     }
 
@@ -87,8 +96,8 @@ const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle,
         return nullptr;
     }
 
-    GpuAtlasCell cell = { 0, 0, w, h };
-    if (w > 0 && h > 0 && !gpu_atlas_pack_insert(&atlas->pack, w, h, &cell.x, &cell.y)) {
+    GpuAtlasCell cell;
+    if (!reserve_cell(atlas, req->w, req->h, &cell)) {
         // The backend answers a full atlas by compacting and retrying.
         return nullptr;
     }
@@ -101,15 +110,29 @@ const GpuSvgEntry* gpu_svg_atlas_place(GpuSvgAtlas* atlas, FlImageHandle handle,
 
     GpuSvgEntry* entry = &atlas->entries[atlas->entry_count++];
     *entry = (GpuSvgEntry) {
-        .handle = handle,
-        .size = size,
+        .handle = req->handle,
+        .size = req->size,
         .live = true,
         .cell = cell,
-        .cls = cls,
-        .mono_color = mono_color,
-        .vector = vector,
+        .cls = req->cls,
+        .mono_color = req->mono_color,
+        .vector = req->vector,
     };
     return entry;
+}
+
+// Re-insert a live cell into the freshly reset packer. A cell that no longer fits is reported and dropped; the
+// icon re-prepares from its retained geometry on a later frame.
+
+static bool repack_entry(GpuSvgAtlas* atlas, GpuSvgEntry* e) {
+    GpuAtlasCell cell = { 0, 0, e->cell.w, e->cell.h };
+    bool empty = cell.w == 0 || cell.h == 0;
+    if (empty || !gpu_atlas_pack_insert(&atlas->pack, cell.w, cell.h, &cell.x, &cell.y)) {
+        log_error("gpu backend: svg atlas compaction dropped a live cell that no longer fits");
+        return false;
+    }
+    e->cell = cell;
+    return true;
 }
 
 void gpu_svg_atlas_compact(GpuSvgAtlas* atlas) {
@@ -123,21 +146,9 @@ void gpu_svg_atlas_compact(GpuSvgAtlas* atlas) {
     u32 write = 0;
     for (u32 i = 0; i < atlas->entry_count; i++) {
         GpuSvgEntry e = atlas->entries[i];
-        if (!e.live) {
-            continue;
+        if (e.live && repack_entry(atlas, &e)) {
+            atlas->entries[write++] = e;
         }
-
-        GpuAtlasCell cell = { 0, 0, e.cell.w, e.cell.h };
-        if (e.cell.w == 0 || e.cell.h == 0
-            || !gpu_atlas_pack_insert(&atlas->pack, e.cell.w, e.cell.h, &cell.x, &cell.y)) {
-            // A live cell that no longer fits the freshly-packed atlas is dropped; the icon re-prepares from its
-            // retained geometry on a later frame.
-            log_error("gpu backend: svg atlas compaction dropped a live cell that no longer fits");
-            continue;
-        }
-
-        e.cell = cell;
-        atlas->entries[write++] = e;
     }
     atlas->entry_count = write;
 }
