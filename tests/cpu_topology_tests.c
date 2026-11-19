@@ -9,6 +9,49 @@
 // CPU ids are the OS's own numbers, so they need not be dense: an id can exceed the CPU count.
 #define CPU_ID_LIMIT 1024
 
+static int count_unknown_cpus(const CpuTopology* topo) {
+    int unknown_count = 0;
+    for (int i = 0; i < topo->count; i++) {
+        if (topo->cpus[i].type == CoreType_Unknown) {
+            unknown_count++;
+        }
+    }
+    return unknown_count;
+}
+
+static const CpuInfo* find_cpu(const CpuTopology* topo, int cpu_id) {
+    for (int i = 0; i < topo->count; i++) {
+        if (topo->cpus[i].cpu_id == cpu_id) {
+            return &topo->cpus[i];
+        }
+    }
+    return nullptr;
+}
+
+static void expect_listed_cpu(int* utest_result, const CpuTopology* topo, int cpu_id, CoreType type) {
+    ASSERT_GE(cpu_id, 0);
+    ASSERT_LT(cpu_id, CPU_ID_LIMIT);
+
+    const CpuInfo* cpu = find_cpu(topo, cpu_id);
+    bool found = cpu != nullptr;
+    if (found) {
+        ASSERT_EQ((int)cpu->type, (int)type);
+    }
+    ASSERT_TRUE(found);
+}
+
+static void expect_id_list_of_type(int* utest_result, CpuIdList list, const CpuTopology* topo, CoreType type) {
+    if (list.count <= 0) {
+        return;
+    }
+
+    ASSERT_NE(list.ids, nullptr);
+
+    for (int i = 0; i < list.count; i++) {
+        expect_listed_cpu(utest_result, topo, list.ids[i], type);
+    }
+}
+
 UTEST(cpu_topology, query_basic) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -18,12 +61,7 @@ UTEST(cpu_topology, query_basic) {
     ASSERT_NE(topo.cpus, nullptr);
 
     int total_classified = topo.performance_count + topo.efficiency_count;
-    int unknown_count = 0;
-    for (int i = 0; i < topo.count; i++) {
-        if (topo.cpus[i].type == CoreType_Unknown) {
-            unknown_count++;
-        }
-    }
+    int unknown_count = count_unknown_cpus(&topo);
     ASSERT_EQ(total_classified + unknown_count, topo.count);
 
     fl_arena_destroy(arena);
@@ -43,29 +81,41 @@ UTEST(cpu_topology, query_cpu_ids_valid) {
 }
 
 #if PLATFORM_LINUX
+static bool any_cpu_has_frequency(const CpuTopology* topo) {
+    for (int i = 0; i < topo->count; i++) {
+        if (topo->cpus[i].max_freq_khz > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void expect_frequency_cpus_classified(int* utest_result, const CpuTopology* topo) {
+    int classified_count = topo->performance_count + topo->efficiency_count;
+    ASSERT_GT(classified_count, 0);
+
+    for (int i = 0; i < topo->count; i++) {
+        if (topo->cpus[i].max_freq_khz > 0) {
+            ASSERT_TRUE(topo->cpus[i].type == CoreType_Performance || topo->cpus[i].type == CoreType_Efficiency);
+        }
+    }
+}
+
+static void expect_plausible_frequency(int* utest_result, const CpuInfo* cpu) {
+    if (cpu->max_freq_khz > 0) {
+        ASSERT_GT(cpu->max_freq_khz, 100000);   // > 100 MHz
+        ASSERT_LT(cpu->max_freq_khz, 10000000); // < 10 GHz
+    }
+}
+
 UTEST(cpu_topology, linux_detects_core_types) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
     CpuTopology topo = cpu_query_topology(arena);
 
     // Frequency info is missing in VMs/containers without /sys/devices/system/cpu access.
-    bool has_frequency_info = false;
-    for (int i = 0; i < topo.count; i++) {
-        if (topo.cpus[i].max_freq_khz > 0) {
-            has_frequency_info = true;
-            break;
-        }
-    }
-
-    if (has_frequency_info) {
-        int classified_count = topo.performance_count + topo.efficiency_count;
-        ASSERT_GT(classified_count, 0);
-
-        for (int i = 0; i < topo.count; i++) {
-            if (topo.cpus[i].max_freq_khz > 0) {
-                ASSERT_TRUE(topo.cpus[i].type == CoreType_Performance || topo.cpus[i].type == CoreType_Efficiency);
-            }
-        }
+    if (any_cpu_has_frequency(&topo)) {
+        expect_frequency_cpus_classified(utest_result, &topo);
     }
 
     fl_arena_destroy(arena);
@@ -77,10 +127,7 @@ UTEST(cpu_topology, linux_frequency_info) {
     CpuTopology topo = cpu_query_topology(arena);
 
     for (int i = 0; i < topo.count; i++) {
-        if (topo.cpus[i].max_freq_khz > 0) {
-            ASSERT_GT(topo.cpus[i].max_freq_khz, 100000);   // > 100 MHz
-            ASSERT_LT(topo.cpus[i].max_freq_khz, 10000000); // < 10 GHz
-        }
+        expect_plausible_frequency(utest_result, &topo.cpus[i]);
     }
 
     // max_freq_khz may be 0 in containers/VMs without sysfs access.
@@ -115,24 +162,7 @@ UTEST(cpu_topology, query_by_type_performance) {
     CpuTopology topo = cpu_query_topology(arena);
     ASSERT_EQ(perf_cpus.count, topo.performance_count);
 
-    if (perf_cpus.count > 0) {
-        ASSERT_NE(perf_cpus.ids, nullptr);
-
-        for (int i = 0; i < perf_cpus.count; i++) {
-            ASSERT_GE(perf_cpus.ids[i], 0);
-            ASSERT_LT(perf_cpus.ids[i], CPU_ID_LIMIT);
-
-            bool found = false;
-            for (int j = 0; j < topo.count; j++) {
-                if (topo.cpus[j].cpu_id == perf_cpus.ids[i]) {
-                    ASSERT_EQ((int)topo.cpus[j].type, (int)CoreType_Performance);
-                    found = true;
-                    break;
-                }
-            }
-            ASSERT_TRUE(found);
-        }
-    }
+    expect_id_list_of_type(utest_result, perf_cpus, &topo, CoreType_Performance);
 
     fl_arena_destroy(arena);
 }
@@ -145,24 +175,7 @@ UTEST(cpu_topology, query_by_type_efficiency) {
     CpuTopology topo = cpu_query_topology(arena);
     ASSERT_EQ(eff_cpus.count, topo.efficiency_count);
 
-    if (eff_cpus.count > 0) {
-        ASSERT_NE(eff_cpus.ids, nullptr);
-
-        for (int i = 0; i < eff_cpus.count; i++) {
-            ASSERT_GE(eff_cpus.ids[i], 0);
-            ASSERT_LT(eff_cpus.ids[i], CPU_ID_LIMIT);
-
-            bool found = false;
-            for (int j = 0; j < topo.count; j++) {
-                if (topo.cpus[j].cpu_id == eff_cpus.ids[i]) {
-                    ASSERT_EQ((int)topo.cpus[j].type, (int)CoreType_Efficiency);
-                    found = true;
-                    break;
-                }
-            }
-            ASSERT_TRUE(found);
-        }
-    }
+    expect_id_list_of_type(utest_result, eff_cpus, &topo, CoreType_Efficiency);
 
     fl_arena_destroy(arena);
 }
@@ -174,14 +187,7 @@ UTEST(cpu_topology, query_by_type_unknown) {
 
     CpuTopology topo = cpu_query_topology(arena);
 
-    int expected_unknown = 0;
-    for (int i = 0; i < topo.count; i++) {
-        if (topo.cpus[i].type == CoreType_Unknown) {
-            expected_unknown++;
-        }
-    }
-
-    ASSERT_EQ(unknown_cpus.count, expected_unknown);
+    ASSERT_EQ(unknown_cpus.count, count_unknown_cpus(&topo));
 
     fl_arena_destroy(arena);
 }
@@ -213,6 +219,11 @@ UTEST(cpu_topology, query_by_type_leaves_only_the_id_list_in_the_arena) {
 #define ASSERT_AFFINITY_APPLIED(result) ASSERT_FALSE(result)
 #endif
 
+static void expect_affinity_applied(int* utest_result, CpuIdList cpus) {
+    bool result = fl_cpu_set_thread_affinity(nullptr, cpus);
+    ASSERT_AFFINITY_APPLIED(result);
+}
+
 UTEST(cpu_topology, set_affinity_current_thread) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
@@ -223,8 +234,7 @@ UTEST(cpu_topology, set_affinity_current_thread) {
     cpus.ids = &topo.cpus[0].cpu_id;
     cpus.count = 1;
 
-    bool result = fl_cpu_set_thread_affinity(nullptr, cpus);
-    ASSERT_AFFINITY_APPLIED(result);
+    expect_affinity_applied(utest_result, cpus);
 
     fl_arena_destroy(arena);
 }
@@ -233,8 +243,7 @@ UTEST(cpu_topology, set_affinity_current_thread) {
 UTEST(cpu_topology, set_affinity_empty_list) {
     CpuIdList empty_cpus = { .ids = nullptr, .count = 0 };
 
-    bool result = fl_cpu_set_thread_affinity(nullptr, empty_cpus);
-    ASSERT_AFFINITY_APPLIED(result);
+    expect_affinity_applied(utest_result, empty_cpus);
 }
 
 UTEST(cpu_topology, set_affinity_multiple_cpus) {
@@ -246,8 +255,7 @@ UTEST(cpu_topology, set_affinity_multiple_cpus) {
         int cpu_ids[2] = { topo.cpus[0].cpu_id, topo.cpus[1].cpu_id };
         CpuIdList cpus = { .ids = cpu_ids, .count = 2 };
 
-        bool result = fl_cpu_set_thread_affinity(nullptr, cpus);
-        ASSERT_AFFINITY_APPLIED(result);
+        expect_affinity_applied(utest_result, cpus);
     }
 
     fl_arena_destroy(arena);
@@ -281,14 +289,12 @@ UTEST(cpu_topology, integration_query_and_pin) {
     CpuIdList perf_cpus = fl_cpu_query_by_type(CoreType_Performance, arena);
 
     if (perf_cpus.count > 0) {
-        bool result = fl_cpu_set_thread_affinity(nullptr, perf_cpus);
-        ASSERT_AFFINITY_APPLIED(result);
+        expect_affinity_applied(utest_result, perf_cpus);
     }
 
     CpuIdList eff_cpus = fl_cpu_query_by_type(CoreType_Efficiency, arena);
     if (eff_cpus.count > 0) {
-        bool result = fl_cpu_set_thread_affinity(nullptr, eff_cpus);
-        ASSERT_AFFINITY_APPLIED(result);
+        expect_affinity_applied(utest_result, eff_cpus);
     }
 
     fl_arena_destroy(arena);

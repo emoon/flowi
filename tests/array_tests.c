@@ -23,53 +23,83 @@ typedef struct {
     i32 value;
 } PtrValueTestStruct;
 
+typedef fixed_array(i32) IntArray;
+
+typedef struct IntArraySeed {
+    u32 capacity;
+    const i32* values;
+    u32 count;
+} IntArraySeed;
+
+static void int_array_init(IntArray* array, FlArena* arena, const IntArraySeed* seed) {
+    fixed_array_new(array, arena, seed->capacity);
+    for (u32 i = 0; i < seed->count; i++) {
+        fixed_array_add(array, seed->values[i]);
+    }
+}
+
+static void expect_array_state(int* utest_result, IntArray* array, bool empty, bool full) {
+    ASSERT_EQ(fixed_array_is_empty(array), empty);
+    ASSERT_EQ(fixed_array_is_full(array), full);
+}
+
+static void expect_array_values(int* utest_result, IntArray* array, const i32* want, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        ASSERT_EQ(fixed_array_get(array, i), want[i]);
+    }
+}
+
+static void expect_array_ptr_values(int* utest_result, IntArray* array, const i32* want, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        ASSERT_EQ(*fixed_array_get_ptr(array, i), want[i]);
+    }
+}
+
+static void expect_values_equal(int* utest_result, const i32* got, const i32* want, u32 count) {
+    for (u32 i = 0; i < count; i++) {
+        ASSERT_EQ(got[i], want[i]);
+    }
+}
+
 UTEST(array, create_and_destroy) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
 
-    fixed_array(i32) int_array;
+    IntArray int_array;
     fixed_array_new(&int_array, arena, 10);
 
     ASSERT_EQ(fixed_array_capacity(&int_array), 10U);
     ASSERT_EQ(fixed_array_length(&int_array), 0U);
     ASSERT_NE(int_array.base.data, nullptr);
-    ASSERT_TRUE(fixed_array_is_empty(&int_array));
-    ASSERT_FALSE(fixed_array_is_full(&int_array));
+    expect_array_state(utest_result, &int_array, true, false);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(array, add_and_get) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
+    IntArray int_array;
     fixed_array_new(&int_array, arena, 5);
 
-    i32 val1 = fixed_array_add(&int_array, 42);
-    i32 val2 = fixed_array_add(&int_array, 17);
-    i32 val3 = fixed_array_add(&int_array, -5);
+    const i32 want[3] = { 42, 17, -5 };
+    i32 added[3];
+    added[0] = fixed_array_add(&int_array, 42);
+    added[1] = fixed_array_add(&int_array, 17);
+    added[2] = fixed_array_add(&int_array, -5);
 
-    ASSERT_EQ(val1, 42);
-    ASSERT_EQ(val2, 17);
-    ASSERT_EQ(val3, -5);
+    expect_values_equal(utest_result, added, want, 3);
     ASSERT_EQ(fixed_array_length(&int_array), 3U);
 
-    ASSERT_EQ(fixed_array_get(&int_array, 0), 42);
-    ASSERT_EQ(fixed_array_get(&int_array, 1), 17);
-    ASSERT_EQ(fixed_array_get(&int_array, 2), -5);
-
-    ASSERT_EQ(*fixed_array_get_ptr(&int_array, 0), 42);
-    ASSERT_EQ(*fixed_array_get_ptr(&int_array, 1), 17);
-    ASSERT_EQ(*fixed_array_get_ptr(&int_array, 2), -5);
+    expect_array_values(utest_result, &int_array, want, 3);
+    expect_array_ptr_values(utest_result, &int_array, want, 3);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(array, bounds_checking) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
-    fixed_array_new(&int_array, arena, 3);
-
-    fixed_array_add(&int_array, 10);
-    fixed_array_add(&int_array, 20);
+    IntArray int_array;
+    const i32 initial[2] = { 10, 20 };
+    int_array_init(&int_array, arena, &(IntArraySeed) { 3, initial, 2 });
 
     i32 value = fixed_array_get(&int_array, 5);
     ASSERT_EQ(value, 0);
@@ -82,30 +112,25 @@ UTEST(array, bounds_checking) {
 
 UTEST(array, set_elements) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
+    IntArray int_array;
     fixed_array_new(&int_array, arena, 5);
 
     fixed_array_set(&int_array, 0, 100);
     fixed_array_set(&int_array, 2, 200);
     fixed_array_set(&int_array, 1, 150);
 
+    const i32 want[3] = { 100, 150, 200 };
     ASSERT_EQ(fixed_array_length(&int_array), 3U); // the highest index set, plus one
-    ASSERT_EQ(fixed_array_get(&int_array, 0), 100);
-    ASSERT_EQ(fixed_array_get(&int_array, 1), 150);
-    ASSERT_EQ(fixed_array_get(&int_array, 2), 200);
+    expect_array_values(utest_result, &int_array, want, 3);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(array, remove_swapback) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
-    fixed_array_new(&int_array, arena, 5);
-
-    fixed_array_add(&int_array, 1);
-    fixed_array_add(&int_array, 2);
-    fixed_array_add(&int_array, 3);
-    fixed_array_add(&int_array, 4);
+    IntArray int_array;
+    const i32 initial[4] = { 1, 2, 3, 4 };
+    int_array_init(&int_array, arena, &(IntArraySeed) { 5, initial, 4 });
 
     ASSERT_EQ(fixed_array_length(&int_array), 4U);
 
@@ -113,32 +138,28 @@ UTEST(array, remove_swapback) {
     ASSERT_EQ(removed, 2);
     ASSERT_EQ(fixed_array_length(&int_array), 3U);
 
-    ASSERT_EQ(fixed_array_get(&int_array, 0), 1);
-    ASSERT_EQ(fixed_array_get(&int_array, 1), 4); // Swapped from end
-    ASSERT_EQ(fixed_array_get(&int_array, 2), 3);
+    const i32 want[3] = { 1, 4, 3 }; // 4 swapped from the end
+    expect_array_values(utest_result, &int_array, want, 3);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(array, clear_and_status) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
+    IntArray int_array;
     fixed_array_new(&int_array, arena, 3);
 
-    ASSERT_TRUE(fixed_array_is_empty(&int_array));
-    ASSERT_FALSE(fixed_array_is_full(&int_array));
+    expect_array_state(utest_result, &int_array, true, false);
 
     fixed_array_add(&int_array, 1);
     fixed_array_add(&int_array, 2);
     fixed_array_add(&int_array, 3);
 
-    ASSERT_FALSE(fixed_array_is_empty(&int_array));
-    ASSERT_TRUE(fixed_array_is_full(&int_array));
+    expect_array_state(utest_result, &int_array, false, true);
 
     fixed_array_clear(&int_array);
 
-    ASSERT_TRUE(fixed_array_is_empty(&int_array));
-    ASSERT_FALSE(fixed_array_is_full(&int_array));
+    expect_array_state(utest_result, &int_array, true, false);
     ASSERT_EQ(fixed_array_length(&int_array), 0U);
     ASSERT_EQ(fixed_array_capacity(&int_array), 3U);
 
@@ -147,27 +168,19 @@ UTEST(array, clear_and_status) {
 
 UTEST(array, direct_access) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
-    fixed_array_new(&int_array, arena, 10);
-
-    for (i32 i = 0; i < 5; i++) {
-        fixed_array_add(&int_array, i * 10);
-    }
+    IntArray int_array;
+    const i32 initial[5] = { 0, 10, 20, 30, 40 };
+    int_array_init(&int_array, arena, &(IntArraySeed) { 10, initial, 5 });
 
     ASSERT_EQ(int_array.base.data != nullptr, true);
-    i32* raw_data = (i32*)int_array.base.data;
-    ASSERT_EQ(raw_data[0], 0);
-    ASSERT_EQ(raw_data[1], 10);
-    ASSERT_EQ(raw_data[2], 20);
-    ASSERT_EQ(raw_data[3], 30);
-    ASSERT_EQ(raw_data[4], 40);
+    expect_values_equal(utest_result, (const i32*)int_array.base.data, initial, 5);
 
     fl_arena_destroy(arena);
 }
 
 UTEST(array, capacity_exceeded) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
+    IntArray int_array;
     fixed_array_new(&int_array, arena, 2);
 
     i32 val1 = fixed_array_add(&int_array, 1);
@@ -184,6 +197,11 @@ UTEST(array, capacity_exceeded) {
     fl_arena_destroy(arena);
 }
 
+static void expect_point(int* utest_result, Point got, Point want) {
+    ASSERT_EQ(got.x, want.x);
+    ASSERT_EQ(got.y, want.y);
+}
+
 UTEST(array, struct_array) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
     fixed_array(Point) point_array;
@@ -198,14 +216,11 @@ UTEST(array, struct_array) {
     Point retrieved1 = fixed_array_get(&point_array, 0);
     Point retrieved2 = fixed_array_get(&point_array, 1);
 
-    ASSERT_EQ(retrieved1.x, 10);
-    ASSERT_EQ(retrieved1.y, 20);
-    ASSERT_EQ(retrieved2.x, 30);
-    ASSERT_EQ(retrieved2.y, 40);
+    expect_point(utest_result, retrieved1, p1);
+    expect_point(utest_result, retrieved2, p2);
 
     Point* p3_ptr = fixed_array_get_ptr(&point_array, 0);
-    ASSERT_EQ(p3_ptr->x, 10);
-    ASSERT_EQ(p3_ptr->y, 20);
+    expect_point(utest_result, *p3_ptr, p1);
 
     fl_arena_destroy(arena);
 }
@@ -233,10 +248,10 @@ UTEST(array, float_array) {
 
 UTEST(array, type_safety) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
-    fixed_array_new(&int_array, arena, 5);
+    IntArray int_array;
+    const i32 initial[1] = { 42 };
+    int_array_init(&int_array, arena, &(IntArraySeed) { 5, initial, 1 });
 
-    fixed_array_add(&int_array, 42);
     fixed_array_set(&int_array, 0, 100);
 
     i32 value = fixed_array_get(&int_array, 0);
@@ -249,12 +264,9 @@ UTEST(array, type_safety) {
 
 UTEST(array, for_each_macro) {
     FlArena* arena = arena_new(.reserved_size = MB(64));
-    fixed_array(i32) int_array;
-    fixed_array_new(&int_array, arena, 5);
-
-    fixed_array_add(&int_array, 10);
-    fixed_array_add(&int_array, 20);
-    fixed_array_add(&int_array, 30);
+    IntArray int_array;
+    const i32 initial[3] = { 10, 20, 30 };
+    int_array_init(&int_array, arena, &(IntArraySeed) { 5, initial, 3 });
 
     i32 sum = 0;
     i32 count = 0;

@@ -59,7 +59,7 @@ rarely a new file. To find the file a group lives in:
 grep -rl 'UTEST(dropdown,' tests/
 ```
 
-Cases live one file per area (`tests/unit_tests_<area>.c`); the rule below is the one that
+Cases live one file per area (`tests/<area>/`); the rule below is the one that
 will bite you when adding a case.
 
 ### No hardware-dependent assertions

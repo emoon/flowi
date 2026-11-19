@@ -2,6 +2,10 @@
 
 #include "unit_tests_common.h"
 
+static void expect_direct_child(int* utest_result, FlString root, FlString path, bool want) {
+    ASSERT_EQ(file_watcher_path_is_direct_child(root, path), want);
+}
+
 UTEST(file_watcher, full_registry_rejects_instead_of_corrupting) {
     FlFileWatcherConfig config = { .watch_directories = true };
     FlFileWatcherHandle handles[64];
@@ -30,36 +34,36 @@ UTEST(file_watcher, full_registry_rejects_instead_of_corrupting) {
 
 UTEST(file_watcher, path_is_direct_child_accepts_root_and_immediate_children) {
     // The root itself (e.g. attribute changes on the watched directory)
-    ASSERT_TRUE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/watch/dir")));
-    ASSERT_TRUE(file_watcher_path_is_direct_child(FL_S("/watch/dir/"), FL_S("/watch/dir")));
-    ASSERT_TRUE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/watch/dir/")));
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/watch/dir"), true);
+    expect_direct_child(utest_result, FL_S("/watch/dir/"), FL_S("/watch/dir"), true);
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/watch/dir/"), true);
 
     // Immediate children, with and without trailing separators
-    ASSERT_TRUE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/watch/dir/file.txt")));
-    ASSERT_TRUE(file_watcher_path_is_direct_child(FL_S("/watch/dir/"), FL_S("/watch/dir/file.txt")));
-    ASSERT_TRUE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/watch/dir/subdir/")));
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/watch/dir/file.txt"), true);
+    expect_direct_child(utest_result, FL_S("/watch/dir/"), FL_S("/watch/dir/file.txt"), true);
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/watch/dir/subdir/"), true);
 
     // Filesystem root as the watched path
-    ASSERT_TRUE(file_watcher_path_is_direct_child(FL_S("/"), FL_S("/")));
-    ASSERT_TRUE(file_watcher_path_is_direct_child(FL_S("/"), FL_S("/etc")));
+    expect_direct_child(utest_result, FL_S("/"), FL_S("/"), true);
+    expect_direct_child(utest_result, FL_S("/"), FL_S("/etc"), true);
 }
 
 UTEST(file_watcher, path_is_direct_child_rejects_deep_and_unrelated_paths) {
     // Deeper than one level
-    ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/watch/dir/sub/file.txt")));
-    ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/"), FL_S("/etc/hosts")));
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/watch/dir/sub/file.txt"), false);
+    expect_direct_child(utest_result, FL_S("/"), FL_S("/etc/hosts"), false);
 
     // Outside the root entirely
-    ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/other/file.txt")));
-    ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/watch")));
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/other/file.txt"), false);
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/watch"), false);
 
     // Sibling whose name shares the root as a prefix
-    ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/watch/dirt")));
-    ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("/watch/dirt/file.txt")));
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/watch/dirt"), false);
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S("/watch/dirt/file.txt"), false);
 
     // Degenerate inputs
-    ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S(""), FL_S("/watch/dir")));
-    ASSERT_FALSE(file_watcher_path_is_direct_child(FL_S("/watch/dir"), FL_S("")));
+    expect_direct_child(utest_result, FL_S(""), FL_S("/watch/dir"), false);
+    expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S(""), false);
 }
 
 // POSIX readdir reuses its internal dirent buffer, so dir_read_next_os copies each name into the caller's arena,
@@ -321,6 +325,11 @@ UTEST(app_identity, data_dir_name_routes_through_seam) {
 // FileWatcherState* passed to platform_start_watching for the stream's lifetime, so removal tombstones the slot
 // in place and does not compact the array.
 
+static void expect_watcher_unmoved(int* utest_result, FlFileWatcherHandle handle, const FileWatcherState* before) {
+    ASSERT_EQ(before, find_watcher_state(handle));
+    ASSERT_TRUE(file_watcher_is_active(handle));
+}
+
 UTEST(file_watcher, stop_does_not_relocate_live_watchers) {
     FlFileWatcherConfig config = { .watch_directories = true };
     FlFileWatcherHandle h1 = file_watcher_start(FL_S("."), config);
@@ -337,10 +346,8 @@ UTEST(file_watcher, stop_does_not_relocate_live_watchers) {
 
     file_watcher_stop(h1);
 
-    ASSERT_EQ(before_h2, find_watcher_state(h2));
-    ASSERT_EQ(before_h3, find_watcher_state(h3));
-    ASSERT_TRUE(file_watcher_is_active(h2));
-    ASSERT_TRUE(file_watcher_is_active(h3));
+    expect_watcher_unmoved(utest_result, h2, before_h2);
+    expect_watcher_unmoved(utest_result, h3, before_h3);
 
     file_watcher_stop(h2);
     file_watcher_stop(h3);
@@ -562,30 +569,34 @@ static bool path_normalize_full_matches(FlString input, FlString expected) {
     return fl_string_equals(fl_path_normalize_full(temp.arena, input), expected);
 }
 
+static void expect_normalized(int* utest_result, FlString input, FlString expected) {
+    ASSERT_TRUE(path_normalize_full_matches(input, expected));
+}
+
 UTEST(path, normalize_full_preserves_absolute_root) {
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("/a/b/../c"), FL_S("/a/c")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("/a/./b"), FL_S("/a/b")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("/"), FL_S("/")));
+    expect_normalized(utest_result, FL_S("/a/b/../c"), FL_S("/a/c"));
+    expect_normalized(utest_result, FL_S("/a/./b"), FL_S("/a/b"));
+    expect_normalized(utest_result, FL_S("/"), FL_S("/"));
 
     // ".." at the root is dropped.
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("/../a"), FL_S("/a")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("/.."), FL_S("/")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("/a/.."), FL_S("/")));
+    expect_normalized(utest_result, FL_S("/../a"), FL_S("/a"));
+    expect_normalized(utest_result, FL_S("/.."), FL_S("/"));
+    expect_normalized(utest_result, FL_S("/a/.."), FL_S("/"));
 }
 
 UTEST(path, normalize_full_keeps_unpoppable_dotdot_on_relative_paths) {
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("../../foo"), FL_S("../../foo")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("a/../../b"), FL_S("../b")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S(".."), FL_S("..")));
+    expect_normalized(utest_result, FL_S("../../foo"), FL_S("../../foo"));
+    expect_normalized(utest_result, FL_S("a/../../b"), FL_S("../b"));
+    expect_normalized(utest_result, FL_S(".."), FL_S(".."));
 
     // ".." pops a real name and never a ".." already kept in the output.
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("../a/../.."), FL_S("../..")));
+    expect_normalized(utest_result, FL_S("../a/../.."), FL_S("../.."));
 }
 
 UTEST(path, normalize_full_relative_basics) {
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("a/./b"), FL_S("a/b")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("a/b/../c"), FL_S("a/c")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("."), FL_S(".")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S("a/.."), FL_S(".")));
-    ASSERT_TRUE(path_normalize_full_matches(FL_S(""), FL_S(".")));
+    expect_normalized(utest_result, FL_S("a/./b"), FL_S("a/b"));
+    expect_normalized(utest_result, FL_S("a/b/../c"), FL_S("a/c"));
+    expect_normalized(utest_result, FL_S("."), FL_S("."));
+    expect_normalized(utest_result, FL_S("a/.."), FL_S("."));
+    expect_normalized(utest_result, FL_S(""), FL_S("."));
 }
