@@ -36,6 +36,41 @@ struct Knob {
     dragging: bool,
 }
 
+/// Starts or ends the hidden-cursor drag as the dragging flag flips.
+fn track_hidden_drag(state: &mut Knob, dragging: bool) {
+    if dragging && !state.dragging {
+        UiInput::mouse_hidden_drag_begin(DRAG_SCALE);
+    } else if !dragging && state.dragging {
+        UiInput::mouse_hidden_drag_end();
+    }
+    state.dragging = dragging;
+}
+
+/// Dragging up is negative screen-y, so subtract the delta to raise the value.
+fn apply_drag_delta(state: &mut Knob) {
+    let mut dy = UiInput::mouse_drag_delta().y;
+    if UiInput::keyboard_modifiers().contains(KeyModifier::SHIFT) {
+        dy *= FINE_FACTOR;
+    }
+    state.value = (state.value - dy * SENSITIVITY).clamp(0.0, 1.0);
+}
+
+fn draw_knob(value: f32) {
+    // The resolved rect is the previous frame's, in logical px.
+    let rect = element_state(KNOB_ID);
+    if !rect.found {
+        return;
+    }
+    let cx = rect.pos.x + rect.size.x / 2.0;
+    let cy = rect.pos.y + rect.size.y / 2.0;
+    let r = rect.size.x.min(rect.size.y) / 2.0 - 6.0;
+    let body = Color { r: 50, g: 50, b: 62, a: 255 };
+    let ring = Color { r: 90, g: 90, b: 110, a: 255 };
+    let indicator = Color { r: 90, g: 170, b: 255, a: 255 };
+    Painter::circle_bordered(cx, cy, r, body, Stroke::new(1.5, ring));
+    Painter::arc(cx, cy, r - 2.0, ARC_START, value * ARC_SWEEP, Stroke::new(4.0, indicator));
+}
+
 // Painter content draws under an element's own background, so the element has no fill.
 fn knob(state: &mut Knob) {
     layout! { KNOB_ID, width: fixed!(72.0), height: fixed!(72.0) {
@@ -44,38 +79,14 @@ fn knob(state: &mut Knob) {
             ItemFlags::CLICKABLE | ItemFlags::DRAGGABLE | ItemFlags::DOUBLE_CLICK,
         );
 
-        if sig.dragging && !state.dragging {
-            UiInput::mouse_hidden_drag_begin(DRAG_SCALE);
-        } else if !sig.dragging && state.dragging {
-            UiInput::mouse_hidden_drag_end();
-        }
-        state.dragging = sig.dragging;
-
-        // Dragging up is negative screen-y, so subtract the delta to raise the value.
+        track_hidden_drag(state, sig.dragging);
         if sig.dragging {
-            let mut dy = UiInput::mouse_drag_delta().y;
-            if UiInput::keyboard_modifiers().contains(KeyModifier::SHIFT) {
-                dy *= FINE_FACTOR;
-            }
-            state.value = (state.value - dy * SENSITIVITY).clamp(0.0, 1.0);
+            apply_drag_delta(state);
         }
-
         if sig.double_clicked {
             state.value = DEFAULT_VALUE;
         }
-
-        // The resolved rect is the previous frame's, in logical px.
-        let rect = element_state(KNOB_ID);
-        if rect.found {
-            let cx = rect.pos.x + rect.size.x / 2.0;
-            let cy = rect.pos.y + rect.size.y / 2.0;
-            let r = rect.size.x.min(rect.size.y) / 2.0 - 6.0;
-            let body = Color { r: 50, g: 50, b: 62, a: 255 };
-            let ring = Color { r: 90, g: 90, b: 110, a: 255 };
-            let indicator = Color { r: 90, g: 170, b: 255, a: 255 };
-            Painter::circle_bordered(cx, cy, r, body, Stroke::new(1.5, ring));
-            Painter::arc(cx, cy, r - 2.0, ARC_START, state.value * ARC_SWEEP, Stroke::new(4.0, indicator));
-        }
+        draw_knob(state.value);
     }}
 }
 

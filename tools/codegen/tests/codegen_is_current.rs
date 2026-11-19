@@ -33,6 +33,44 @@ fn collect(dir: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     found
 }
 
+/// Whether `bytes` carry the marker api_gen stamps into every file it writes.
+fn is_generated(bytes: &[u8]) -> bool {
+    bytes
+        .windows(GENERATED_MARKER.len())
+        .any(|w| w == GENERATED_MARKER)
+}
+
+/// Appends a report line for every file under `dir` that differs between the regenerated and committed
+/// trees; returns how many regenerated files were compared.
+fn compare_dir(
+    dir: &str,
+    fresh: &BTreeMap<PathBuf, Vec<u8>>,
+    committed: &BTreeMap<PathBuf, Vec<u8>>,
+    drifted: &mut Vec<String>,
+) -> usize {
+    for (rel, bytes) in fresh {
+        match committed.get(rel) {
+            Some(on_disk) if on_disk == bytes => {}
+            Some(_) => drifted.push(format!("{}/{} differs", dir, rel.display())),
+            None => drifted.push(format!("{}/{} is missing", dir, rel.display())),
+        }
+    }
+    // An output dir may also hold hand-maintained files. Only a file api_gen
+    // stamped is one it still owns, so only those can go stale.
+    let stale = committed
+        .iter()
+        .filter(|(rel, _)| !fresh.contains_key(*rel))
+        .filter(|(_, bytes)| is_generated(bytes));
+    for (rel, _) in stale {
+        drifted.push(format!(
+            "{}/{} is stale (no def produces it)",
+            dir,
+            rel.display()
+        ));
+    }
+    fresh.len()
+}
+
 #[test]
 fn committed_codegen_matches_the_idl() {
     let repo = flowi_codegen::repo_root();
@@ -50,32 +88,7 @@ fn committed_codegen_matches_the_idl() {
     for dir in targets.iter().flat_map(|t| t.outputs) {
         let fresh = collect(&temp.join(dir));
         let committed = collect(&repo.join(dir));
-
-        for (rel, bytes) in &fresh {
-            checked += 1;
-            match committed.get(rel) {
-                Some(on_disk) if on_disk == bytes => {}
-                Some(_) => drifted.push(format!("{}/{} differs", dir, rel.display())),
-                None => drifted.push(format!("{}/{} is missing", dir, rel.display())),
-            }
-        }
-        // An output dir may also hold hand-maintained files. Only a file api_gen
-        // stamped is one it still owns, so only those can go stale.
-        for (rel, bytes) in committed
-            .iter()
-            .filter(|(rel, _)| !fresh.contains_key(*rel))
-        {
-            if bytes
-                .windows(GENERATED_MARKER.len())
-                .any(|w| w == GENERATED_MARKER)
-            {
-                drifted.push(format!(
-                    "{}/{} is stale (no def produces it)",
-                    dir,
-                    rel.display()
-                ));
-            }
-        }
+        checked += compare_dir(dir, &fresh, &committed, &mut drifted);
     }
     let _ = std::fs::remove_dir_all(&temp);
 
