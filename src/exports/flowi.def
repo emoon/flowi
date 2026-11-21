@@ -273,6 +273,29 @@ EXPORTS
     fl_modal_end
     fl_nav_down_pressed
     fl_nav_up_pressed
+    fl_os_build_path
+    fl_os_create_directory
+    fl_os_create_directory_recursive
+    fl_os_dir_close
+    fl_os_dir_open
+    fl_os_dir_read_next
+    fl_os_directory_exists
+    fl_os_file_close_handle
+    fl_os_file_delete
+    fl_os_file_exists
+    fl_os_file_open_write
+    fl_os_file_write
+    fl_os_file_write_to_handle
+    fl_os_getenv
+    fl_os_monotonic_ns
+    fl_os_process_id
+    fl_os_remove_directory_recursive
+    fl_os_sleep_ms
+    fl_os_sleep_us
+    fl_os_temp_directory
+    fl_os_thread_create
+    fl_os_thread_join
+    fl_os_time_us
     fl_painter_arc
     fl_painter_bars
     fl_painter_circle

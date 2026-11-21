@@ -2,6 +2,7 @@
 
 #include "../string.h"
 #include "../types.h"
+#include <flowi/core/os.h>
 
 struct FlArena;
 
@@ -67,25 +68,12 @@ void file_delete_os(FlString path);
 
 // File system information and directory operations
 
-typedef struct FileStat {
-    FlString name; // Only set for directory listings
-    u64 size;
-    u64 modification_time;
-    bool is_directory;
-    bool is_regular_file;
-    bool is_symlink;
-    bool is_valid; // false = end of directory or error
-    u32 mode;
-} FileStat;
+typedef FlOsFileStat FileStat;
 
 FileStat file_stat_os(FlString path);
 FlString file_build_path_os(struct FlArena* arena, FlString base_path, FlString relative_path);
 
-typedef struct DirHandle {
-    void* platform_data; // Allocated on the arena passed to dir_open_os
-    FlString base_path;
-    bool is_valid;
-} DirHandle;
+typedef FlOsDir DirHandle; // platform_data is allocated on the arena passed to dir_open_os
 
 DirHandle dir_open_os(struct FlArena* arena, FlString path);
 FileStat dir_read_next_os(struct FlArena* arena, DirHandle* dir);

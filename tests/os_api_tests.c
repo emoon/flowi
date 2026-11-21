@@ -99,7 +99,6 @@ static void expect_handle_write(int* utest_result, FlString path, FlString conte
     file_close_handle_os(fd);
 }
 
-
 static void expect_disk_space_valid(int* utest_result, DiskSpaceInfo info) {
     ASSERT_TRUE(info.is_valid);
     ASSERT_GT(info.bytes_total, 0ULL);
@@ -776,3 +775,98 @@ UTEST(os_api, directory_recursive_remove_does_not_follow_symlinks) {
     fl_arena_destroy(arena);
 }
 #endif
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Public fl_os_* surface
+
+static void* public_thread_double(void* user_data) {
+    int* value = (int*)user_data;
+    *value *= 2;
+    return user_data;
+}
+
+UTEST(os_public, process_and_time_queries_are_sane) {
+    ASSERT_EQ(fl_os_process_id(), get_process_id_os());
+    ASSERT_GT(fl_os_time_us(), 0);
+
+    u64 before = fl_os_monotonic_ns();
+    fl_os_sleep_ms(1);
+    fl_os_sleep_us(1);
+    ASSERT_GE(fl_os_monotonic_ns(), before);
+}
+
+UTEST(os_public, getenv_finds_set_and_misses_unset) {
+    ASSERT_TRUE(fl_os_getenv("PATH") != nullptr);
+    ASSERT_TRUE(fl_os_getenv("FLOWI_OS_PUBLIC_TEST_UNSET_VARIABLE") == nullptr);
+}
+
+UTEST(os_public, thread_runs_and_returns_its_result) {
+    int value = 21;
+    FlOsThread thread;
+    ASSERT_TRUE(fl_os_thread_create(&thread, public_thread_double, &value));
+    ASSERT_TRUE(fl_os_thread_join(&thread) == &value);
+    ASSERT_EQ(value, 42);
+}
+
+UTEST(os_public, file_round_trip_through_the_public_calls) {
+    FlArena* arena = test_arena();
+    FlString path = create_test_file_path(arena, "os_public_file");
+    FlString content = FL_S("hello flowi");
+
+    ASSERT_EQ(fl_os_file_write(path, (const u8*)content.data, (i64)content.length), (i64)content.length);
+    ASSERT_TRUE(fl_os_file_exists(path));
+
+    fl_os_file_delete(path);
+    ASSERT_FALSE(fl_os_file_exists(path));
+    fl_arena_destroy(arena);
+}
+
+UTEST(os_public, write_handle_appends) {
+    FlArena* arena = test_arena();
+    FlString path = create_test_file_path(arena, "os_public_handle");
+
+    for (int pass = 0; pass < 2; pass++) {
+        i64 fd = fl_os_file_open_write(path, pass > 0);
+        ASSERT_GE(fd, 0);
+        ASSERT_EQ(fl_os_file_write_to_handle(fd, (const u8*)"ab", 2), 2);
+        fl_os_file_close_handle(fd);
+    }
+
+    ASSERT_TRUE(fl_os_file_exists(path));
+    fl_os_file_delete(path);
+    fl_arena_destroy(arena);
+}
+
+UTEST(os_public, directories_create_iterate_and_remove) {
+    FlArena* arena = test_arena();
+    FlString root = create_test_dir_path(arena, "os_public_dir");
+    FlString nested = fl_os_build_path(arena, fl_os_build_path(arena, root, FL_S("a")), FL_S("b"));
+    FlString file = fl_os_build_path(arena, root, FL_S("file.txt"));
+
+    ASSERT_TRUE(fl_os_create_directory_recursive(nested));
+    ASSERT_TRUE(fl_os_directory_exists(nested));
+    ASSERT_EQ(fl_os_file_write(file, (const u8*)"x", 1), 1);
+
+    u32 files = 0;
+    u32 directories = 0;
+    FlOsDir dir = fl_os_dir_open(arena, root);
+    ASSERT_TRUE(dir.is_valid);
+    for (FlOsFileStat entry = fl_os_dir_read_next(arena, &dir); entry.is_valid;
+         entry = fl_os_dir_read_next(arena, &dir)) {
+        files += entry.is_regular_file;
+        directories += entry.is_directory;
+    }
+    fl_os_dir_close(&dir);
+    ASSERT_EQ(files, 1u);
+    ASSERT_EQ(directories, 1u);
+
+    ASSERT_TRUE(fl_os_remove_directory_recursive(root));
+    ASSERT_FALSE(fl_os_directory_exists(root));
+    fl_arena_destroy(arena);
+}
+
+UTEST(os_public, temp_directory_exists) {
+    FlArena* arena = test_arena();
+    ASSERT_TRUE(fl_os_directory_exists(fl_os_temp_directory(arena)));
+    fl_arena_destroy(arena);
+}
