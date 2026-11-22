@@ -776,7 +776,6 @@ UTEST(os_api, directory_recursive_remove_does_not_follow_symlinks) {
 }
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public fl_os_* surface
 
 static void* public_thread_double(void* user_data) {

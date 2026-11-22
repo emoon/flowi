@@ -32,9 +32,16 @@ void fl_vfs_wait_all(void);
 
 // Hand a driver the host built to the VFS. Call it after fl_vfs_init() and before the first mount: the driver list is
 // not locked, so registering while a mount resolves a path races it. Drivers registered this way are tried before
-// LocalFS, in registration order. A plugin whose api_version is not FL_VFS_PLUGIN_API_VERSION is refused. The plugin
-// must outlive the VFS. instance is passed to every driver call (nullptr for a stateless driver).
-void fl_vfs_register_driver(const FlVfsPlugin* plugin, void* instance);
+// LocalFS, in registration order. The plugin must outlive the VFS. instance is passed to every driver call (nullptr
+// for a stateless driver).
+//
+// fl_host creation mounts the working directory as soon as it has initialized the VFS. A host that uses fl_host
+// therefore calls fl_vfs_init() itself, registers its drivers, and only then creates the host; having created the
+// VFS, it also calls fl_vfs_destroy() after the host is gone.
+//
+// Returns false when the driver was refused: the VFS does not exist, plugin is nullptr, or its api_version is not
+// FL_VFS_PLUGIN_API_VERSION.
+bool fl_vfs_register_driver(const FlVfsPlugin* plugin, void* instance);
 
 #ifdef __cplusplus
 }

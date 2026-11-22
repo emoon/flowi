@@ -14,7 +14,7 @@ macro_rules! vfs_slots {
         $emit! {
             fl_vfs_init(arena: *mut sys::Arena) -> bool;
             fl_vfs_register_builtin_drivers();
-            fl_vfs_register_driver(plugin: *const sys::VfsPlugin, instance: *mut c_void);
+            fl_vfs_register_driver(plugin: *const sys::VfsPlugin, instance: *mut c_void) -> bool;
             fl_vfs_mount_with_options(path: sys::RawStr, options: sys::VfsMountOptions) -> sys::VfsMountResult;
             fl_vfs_mount_close(mount: *mut sys::FlVfsMount);
             fl_vfs_mount_get_job_handle(mount: *mut sys::FlVfsMount) -> sys::JobHandle;

@@ -518,7 +518,13 @@ impl Vfs {
     /// Hand the VFS a driver the host built, ahead of the LocalFS fallback. Drivers
     /// are tried in registration order.
     ///
-    /// Call it after [`Vfs::init`].
+    /// Call it after [`Vfs::init`] and before the first mount: the driver list is
+    /// not locked, so registering while a mount resolves a path races it. A host
+    /// built on the flowi host, which mounts the working directory as it comes up,
+    /// calls [`Vfs::init`] and this before creating the host.
+    ///
+    /// Returns false when the driver was refused: the VFS is not up, `plugin` is
+    /// null, or its `api_version` is not the one this library was built with.
     ///
     /// # Safety
     ///
@@ -526,7 +532,8 @@ impl Vfs {
     /// whatever the driver's calls expect (null for a stateless driver) and likewise
     /// outlive the VFS.
     #[inline]
-    pub unsafe fn register_driver(plugin: *const crate::sys::VfsPlugin, instance: *mut c_void) {
+    #[must_use]
+    pub unsafe fn register_driver(plugin: *const crate::sys::VfsPlugin, instance: *mut c_void) -> bool {
         // SAFETY: the caller upholds the lifetime contract above.
         unsafe { ffi::fl_vfs_register_driver(plugin, instance) }
     }

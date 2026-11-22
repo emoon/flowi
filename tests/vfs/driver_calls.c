@@ -394,3 +394,19 @@ UTEST(vfs, closing_a_file_does_not_wait_for_a_read_in_flight_on_the_same_mount) 
     fl_vfs_close(busy);
     fl_vfs_mount_close(mount);
 }
+
+UTEST(vfs, register_driver_refuses_a_plugin_built_for_another_api_version) {
+    fl_vfs_init(s_arena); // idempotent
+
+    static FlVfsPlugin other_version;
+    other_version = s_stub_vfs_plugin;
+    other_version.api_version = FL_VFS_PLUGIN_API_VERSION + 1;
+
+    const VfsPluginEntry* last_before = g_vfs_state->plugin_last;
+    ASSERT_FALSE(fl_vfs_register_driver(&other_version, nullptr));
+    ASSERT_FALSE(fl_vfs_register_driver(nullptr, nullptr));
+    ASSERT_TRUE(g_vfs_state->plugin_last == last_before);
+    for (const VfsPluginEntry* entry = g_vfs_state->plugin_first; entry != nullptr; entry = entry->next) {
+        ASSERT_TRUE(entry->plugin != &other_version);
+    }
+}

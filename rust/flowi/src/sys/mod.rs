@@ -122,10 +122,12 @@ extern "C" {
     /// fl_vfs_init. A no-op when it contains none.
     pub fn fl_vfs_register_builtin_drivers();
 
-    /// Hand a driver to the VFS, after fl_vfs_init. It is tried before LocalFS, in
-    /// registration order. The plugin must outlive the VFS; instance is passed to
-    /// every driver call.
-    pub fn fl_vfs_register_driver(plugin: *const VfsPlugin, instance: *mut core::ffi::c_void);
+    /// Hand a driver to the VFS, after fl_vfs_init and before the first mount (the
+    /// driver list is not locked). It is tried before LocalFS, in registration
+    /// order. The plugin must outlive the VFS; instance is passed to every driver
+    /// call. False when the driver was refused: no VFS, a null plugin, or an
+    /// api_version other than FL_VFS_PLUGIN_API_VERSION.
+    pub fn fl_vfs_register_driver(plugin: *const VfsPlugin, instance: *mut core::ffi::c_void) -> bool;
 }
 
 mod ergonomics;

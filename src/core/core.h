@@ -19,7 +19,6 @@
 #define DLL_EXPORT __attribute__((visibility("default")))
 #endif
 
-
 #if COMPILER_MSVC
 #define align_of(type) __alignof(type)
 #elif COMPILER_CLANG || COMPILER_GCC

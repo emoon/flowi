@@ -459,8 +459,11 @@ unsafe extern "C" fn fake_register_builtin_drivers() {
     with_fake(|f| f.builtin_registrations += 1);
 }
 
-unsafe extern "C" fn fake_register_driver(plugin: *const sys::VfsPlugin, instance: *mut c_void) {
-    with_fake(|f| f.registered_driver = Some((plugin as usize, instance as usize)));
+unsafe extern "C" fn fake_register_driver(plugin: *const sys::VfsPlugin, instance: *mut c_void) -> bool {
+    with_fake(|f| {
+        f.registered_driver = Some((plugin as usize, instance as usize));
+        !f.fail
+    })
 }
 
 unsafe extern "C" fn fake_mount_get_job_handle(_mount: *mut sys::FlVfsMount) -> sys::JobHandle {

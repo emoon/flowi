@@ -16,7 +16,6 @@ typedef struct FlArena FlArena;
 extern "C" {
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Time and sleeping
 
 // Wall-clock time since the Unix epoch.
@@ -29,7 +28,6 @@ FL_API uint64_t fl_os_monotonic_ns(void);
 FL_API void fl_os_sleep_us(uint64_t microseconds);
 FL_API void fl_os_sleep_ms(uint64_t milliseconds);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Threads
 
 // Opaque storage for a platform thread handle.
@@ -45,7 +43,6 @@ FL_API bool fl_os_thread_create(FlOsThread* thread, FlOsThreadFunc func, void* u
 // Wait for the thread to finish and return the value its function returned.
 FL_API void* fl_os_thread_join(FlOsThread* thread);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Process environment
 
 FL_API uint32_t fl_os_process_id(void);
@@ -57,7 +54,6 @@ FL_API FlString fl_os_temp_directory(FlArena* arena);
 // against concurrent changes to the environment.
 FL_API const char* fl_os_getenv(const char* name);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Files
 
 FL_API bool fl_os_file_exists(FlString path);
@@ -77,7 +73,6 @@ FL_API void fl_os_file_close_handle(int64_t fd);
 
 FL_API void fl_os_file_delete(FlString path);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Directories
 
 FL_API bool fl_os_create_directory(FlString path);
