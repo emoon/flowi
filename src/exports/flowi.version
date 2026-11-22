@@ -274,6 +274,17 @@ FLOWI_1.0 {
     fl_modal_end;
     fl_nav_down_pressed;
     fl_nav_up_pressed;
+    fl_os_create_directory_recursive;
+    fl_os_dir_close;
+    fl_os_dir_open;
+    fl_os_dir_read_next;
+    fl_os_directory_exists;
+    fl_os_file_delete;
+    fl_os_monotonic_ns;
+    fl_os_process_id;
+    fl_os_sleep_us;
+    fl_os_temp_directory;
+    fl_os_time_us;
     fl_painter_arc;
     fl_painter_bars;
     fl_painter_circle;
@@ -432,6 +443,7 @@ FLOWI_1.0 {
     fl_vfs_mount_with_options;
     fl_vfs_read;
     fl_vfs_register_builtin_drivers;
+    fl_vfs_register_driver;
     fl_vfs_set_priority;
     fl_vfs_wait;
     fl_viewport3d_begin;

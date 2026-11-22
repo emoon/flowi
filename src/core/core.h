@@ -19,10 +19,6 @@
 #define DLL_EXPORT __attribute__((visibility("default")))
 #endif
 
-#define KB(x) ((u64)(x) * 1024ULL)
-#define MB(x) ((u64)(x) * 1024ULL * 1024ULL)
-#define GB(x) ((u64)(x) * 1024ULL * 1024ULL * 1024ULL)
-
 #if COMPILER_MSVC
 #define align_of(type) __alignof(type)
 #elif COMPILER_CLANG || COMPILER_GCC

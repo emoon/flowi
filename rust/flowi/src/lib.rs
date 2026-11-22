@@ -105,6 +105,13 @@ pub use crate::sys::ColoredRect;
 /// [`Painter::polyline`] ([`PolylineStyle`]) and [`Painter::image_sub`] ([`ImageSub`]).
 pub use crate::sys::{CornerColors, ImageSub, PolylineStyle};
 
+/// The VFS driver ABI a host implements to add a file system: the [`VfsPlugin`] vtable, its result types and
+/// the status and capability enums. Hand a finished driver to [`Vfs::register_driver`].
+pub use crate::sys::{
+    PluginCreateResult, VfsDriverCapabilities, VfsDriverError, VfsMountOptions, VfsOpenResult,
+    VfsListingCallback, VfsPlugin, VfsReadResult, VfsSizeResult, VfsStatus,
+};
+
 /// The opaque, Copy image handle returned by [`Image::load`] and consumed by [`Image::is_ready`],
 /// and [`Painter::image`] (sentinel 0 = invalid).
 pub use crate::sys::ImageHandle;

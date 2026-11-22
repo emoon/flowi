@@ -66,7 +66,7 @@ UTEST(file_watcher, path_is_direct_child_rejects_deep_and_unrelated_paths) {
     expect_direct_child(utest_result, FL_S("/watch/dir"), FL_S(""), false);
 }
 
-// POSIX readdir reuses its internal dirent buffer, so dir_read_next_os copies each name into the caller's arena,
+// POSIX readdir reuses its internal dirent buffer, so fl_os_dir_read_next copies each name into the caller's arena,
 // as the Windows version does. The name stays valid across later reads and the close of the handle.
 
 UTEST(os_dir, entry_name_survives_next_read_and_close) {
@@ -78,18 +78,18 @@ UTEST(os_dir, entry_name_survives_next_read_and_close) {
     ASSERT_EQ(1, (int)file_write_os(FL_S("unit_test_dir_iter_tmp/aaaa.txt"), (const u8*)"a", 1));
     ASSERT_EQ(1, (int)file_write_os(FL_S("unit_test_dir_iter_tmp/bbbb.txt"), (const u8*)"b", 1));
 
-    DirHandle dir = dir_open_os(arena, dir_path);
+    DirHandle dir = fl_os_dir_open(arena, dir_path);
     ASSERT_TRUE(dir.is_valid);
 
-    FileStat first = dir_read_next_os(arena, &dir);
+    FileStat first = fl_os_dir_read_next(arena, &dir);
     ASSERT_TRUE(first.is_valid);
     FlString snapshot = fl_string_copy(arena, first.name);
 
-    FileStat second = dir_read_next_os(arena, &dir);
+    FileStat second = fl_os_dir_read_next(arena, &dir);
     ASSERT_TRUE(second.is_valid);
     ASSERT_FALSE(fl_string_equals(first.name, second.name)); // distinct entries, distinct storage
 
-    dir_close_os(&dir);
+    fl_os_dir_close(&dir);
     ASSERT_TRUE(fl_string_equals(first.name, snapshot)); // still intact after next read + close
 
     file_remove_directory_recursive_os(dir_path);
@@ -116,7 +116,7 @@ UTEST(os_file, negative_file_size_fails_without_reading) {
     }
 
     file_close_handle_os(fd);
-    file_delete_os(path);
+    fl_os_file_delete(path);
 }
 
 #if !PLATFORM_WINDOWS
@@ -158,7 +158,7 @@ UTEST(os_disk_space, existing_path_immediate_hit) {
 
 #endif // !PLATFORM_WINDOWS
 
-// file_create_directory_recursive_os checks that each path component exists before creating it, so another
+// fl_os_create_directory_recursive checks that each path component exists before creating it, so another
 // creator can win the race between the check and the create. Two threads meet at each iteration and create the
 // same nested path at once, and every call has to succeed.
 
@@ -177,7 +177,7 @@ static void* mkdir_race_thread(void* user_data) {
         atomic_fetch_add(&ctx->gate, 1);
         while (atomic_load(&ctx->gate) < 2 * (i + 1)) {}
         snprintf(path, sizeof(path), "flowi_mkdir_race_tmp/%d/a/b/c", i);
-        if (!file_create_directory_recursive_os(string_from_cstr(path))) {
+        if (!fl_os_create_directory_recursive(string_from_cstr(path))) {
             atomic_fetch_add(&ctx->failures, 1);
         }
     }
@@ -199,7 +199,7 @@ UTEST(os_file, recursive_mkdir_survives_concurrent_creator) {
 
     char last_path[128];
     snprintf(last_path, sizeof(last_path), "flowi_mkdir_race_tmp/%d/a/b/c", MKDIR_RACE_ITERATIONS - 1);
-    ASSERT_TRUE(file_directory_exists_os(string_from_cstr(last_path)));
+    ASSERT_TRUE(fl_os_directory_exists(string_from_cstr(last_path)));
 
     file_remove_directory_recursive_os(FL_S("flowi_mkdir_race_tmp"));
 }
@@ -209,10 +209,10 @@ UTEST(os_file, recursive_mkdir_survives_concurrent_creator) {
 
 UTEST(os_file, recursive_mkdir_still_fails_on_file_component) {
     file_remove_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp"));
-    ASSERT_TRUE(file_create_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp")));
+    ASSERT_TRUE(fl_os_create_directory_recursive(FL_S("flowi_mkdir_fail_tmp")));
     ASSERT_EQ(4, (int)file_write_os(FL_S("flowi_mkdir_fail_tmp/blocker"), (const u8*)"data", 4));
 
-    ASSERT_FALSE(file_create_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp/blocker/sub")));
+    ASSERT_FALSE(fl_os_create_directory_recursive(FL_S("flowi_mkdir_fail_tmp/blocker/sub")));
 
     file_remove_directory_recursive_os(FL_S("flowi_mkdir_fail_tmp"));
 }

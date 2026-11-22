@@ -291,7 +291,7 @@ void stderr_write_os(FlString str) {
     std_write(STD_ERROR_HANDLE, str);
 }
 
-i64 get_current_time_us_os(void) {
+i64 fl_os_time_us(void) {
     // The Precise variant, not GetSystemTimeAsFileTime: the latter ticks at the ~15 ms scheduler interval, so
     // callers that use the value to tell two events apart (arena identity in the watchdog) see them collide.
     FILETIME ft;
@@ -299,7 +299,7 @@ i64 get_current_time_us_os(void) {
     return filetime_to_unix_us(ft);
 }
 
-u64 get_monotonic_time_ns_os(void) {
+u64 fl_os_monotonic_ns(void) {
     LARGE_INTEGER counter, frequency;
 
     if (!QueryPerformanceCounter(&counter)) {
@@ -429,7 +429,7 @@ bool file_exists_os(FlString path) {
     return attrs != INVALID_FILE_ATTRIBUTES;
 }
 
-bool file_directory_exists_os(FlString path) {
+bool fl_os_directory_exists(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     DWORD attrs = GetFileAttributesW(os_path_str(os_path));
@@ -479,18 +479,18 @@ static char* skip_to_separator(char* p) {
 // call; the component existing is the desired outcome, so only a create failure with the
 // directory still absent is an error.
 static bool ensure_directory_os(FlString path) {
-    if (file_directory_exists_os(path)) {
+    if (fl_os_directory_exists(path)) {
         return true;
     }
-    return file_create_directory_os(path) || file_directory_exists_os(path);
+    return file_create_directory_os(path) || fl_os_directory_exists(path);
 }
 
-bool file_create_directory_recursive_os(FlString path) {
+bool fl_os_create_directory_recursive(FlString path) {
     if (string_is_empty(path)) {
         return false;
     }
 
-    if (file_directory_exists_os(path)) {
+    if (fl_os_directory_exists(path)) {
         return true;
     }
 
@@ -519,7 +519,7 @@ bool file_create_directory_recursive_os(FlString path) {
     return true;
 }
 
-void file_delete_os(FlString path) {
+void fl_os_file_delete(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     DeleteFileW(os_path_str(os_path));
@@ -573,7 +573,7 @@ static void remove_directory_entry(FlArena* arena, FlString dir_path, const WIN3
     } else if (is_directory) {
         file_remove_directory_recursive_os(item_path);
     } else {
-        file_delete_os(item_path);
+        fl_os_file_delete(item_path);
     }
 }
 
@@ -654,7 +654,7 @@ typedef struct WindowsDirData {
     char utf8_filename[MAX_PATH * 3];
 } WindowsDirData;
 
-DirHandle dir_open_os(FlArena* arena, FlString path) {
+DirHandle fl_os_dir_open(FlArena* arena, FlString path) {
     DirHandle handle = { 0 };
 
     FlString search_pattern = fl_string_concat(arena, path, FL_S("\\*"));
@@ -703,7 +703,7 @@ static bool next_usable_entry(WindowsDirData* dir_data) {
     return false;
 }
 
-FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
+FileStat fl_os_dir_read_next(FlArena* arena, DirHandle* dir_handle) {
     FileStat result = { 0 };
 
     if (!dir_handle || !dir_handle->is_valid) {
@@ -722,7 +722,7 @@ FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
     return result;
 }
 
-void dir_close_os(DirHandle* dir_handle) {
+void fl_os_dir_close(DirHandle* dir_handle) {
     if (dir_handle && dir_handle->is_valid) {
         WindowsDirData* dir_data = (WindowsDirData*)dir_handle->platform_data;
         if (dir_data->find_handle != INVALID_HANDLE_VALUE) {
@@ -735,7 +735,7 @@ void dir_close_os(DirHandle* dir_handle) {
 
 // System information and utilities
 
-FlString get_temp_directory_os(struct FlArena* arena) {
+FlString fl_os_temp_directory(struct FlArena* arena) {
     wchar_t temp_path[MAX_PATH];
     DWORD result = GetTempPathW(MAX_PATH, temp_path);
     if (result == 0 || result > MAX_PATH) {
@@ -776,7 +776,7 @@ FlString get_current_directory_os(struct FlArena* arena) {
     return wide_to_string(arena, buffer);
 }
 
-u32 get_process_id_os(void) {
+u32 fl_os_process_id(void) {
     return GetCurrentProcessId();
 }
 
@@ -872,7 +872,7 @@ bool os_thread_set_affinity(Thread* thread, const int* cpu_ids, int count) {
 
 // Sleep functions
 
-void sleep_us(u64 microseconds) {
+void fl_os_sleep_us(u64 microseconds) {
     // Windows Sleep() only supports millisecond precision
     DWORD ms = (DWORD)((microseconds + 999) / 1000); // Round up
     if (ms == 0 && microseconds > 0) {

@@ -197,7 +197,7 @@ bool dock_workspace_save(FlDockWorkspace* ws, FlString settings_dir) {
         return false;
     }
 
-    file_create_directory_recursive_os(settings_dir);
+    fl_os_create_directory_recursive(settings_dir);
     FlString path = fl_path_join(temp.arena, settings_dir, DOCK_LAYOUT_FILE);
     return file_write_os(path, (const u8*)json.data, (i64)json.length) >= 0;
 }

@@ -1,6 +1,6 @@
 # Public C symbols declared by flowi's hand-written public headers. The IDL only knows the
 # generated headers; names that don't fit the `fl_<api>_<method>` scheme live in hand-written
-# headers (include/flowi/ui/nav.h, core/assert.h, ui/feedback.h, ui/inspector.h, vfs/drivers.h). Without
+# headers (include/flowi/ui/nav.h, core/assert.h, ui/feedback.h, ui/inspector.h, vfs/drivers.h, core/os.h). Without
 # this file they would be declared public but missing from the dynamic symbol table. api_gen merges
 # this file into flowi.version and flowi.def (see tools/codegen/src/lib.rs). One
 # symbol per line; `#` starts a comment; every entry must be a C identifier.
@@ -34,3 +34,17 @@ fl_inspector_snapshot
 
 # vfs/drivers.h
 fl_vfs_register_builtin_drivers
+fl_vfs_register_driver
+
+# core/os.h
+fl_os_create_directory_recursive
+fl_os_dir_close
+fl_os_dir_open
+fl_os_dir_read_next
+fl_os_directory_exists
+fl_os_file_delete
+fl_os_monotonic_ns
+fl_os_process_id
+fl_os_sleep_us
+fl_os_temp_directory
+fl_os_time_us

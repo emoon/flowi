@@ -14,7 +14,7 @@ typedef struct JobsysWaitTarget {
 // Waits until every counter reached its target or timeout_ns passed, sleeping poll_us between checks when it is
 // non-zero. True when all of them reached it.
 static bool jobsys_wait_reached(const JobsysWaitTarget* targets, int count, u64 timeout_ns, u32 poll_us) {
-    const u64 deadline_ns = get_monotonic_time_ns_os() + timeout_ns;
+    const u64 deadline_ns = fl_os_monotonic_ns() + timeout_ns;
     for (;;) {
         bool all_reached = true;
         for (int i = 0; i < count; i++) {
@@ -23,11 +23,11 @@ static bool jobsys_wait_reached(const JobsysWaitTarget* targets, int count, u64 
         if (all_reached) {
             return true;
         }
-        if (get_monotonic_time_ns_os() >= deadline_ns) {
+        if (fl_os_monotonic_ns() >= deadline_ns) {
             return false;
         }
         if (poll_us > 0) {
-            sleep_us(poll_us);
+            fl_os_sleep_us(poll_us);
         }
     }
 }
@@ -125,7 +125,7 @@ static void jobsys_sat_gate_job(void* user_data, FlJobsWorkerInfo worker_info) {
     (void)worker_info;
     atomic_store(&s_jobsys_sat_gate_started, 1);
     while (atomic_load(&s_jobsys_sat_gate_release) == 0) {
-        sleep_us(10);
+        fl_os_sleep_us(10);
     }
 }
 
@@ -269,7 +269,7 @@ static void jobsys_nested_outer_job(void* user_data, FlJobsWorkerInfo worker_inf
 
     atomic_store(&ctx->outer_started, 1);
     while (atomic_load(&ctx->queue_saturated) == 0) {
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
 
     // A dependency that finished but was never polled gets past the early-outs and registers, so the add ends in

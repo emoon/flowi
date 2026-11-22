@@ -35,18 +35,18 @@ static void cleanup_path(const char* path) {
 }
 
 static FlString get_test_temp_dir(FlArena* arena) {
-    return get_temp_directory_os(arena);
+    return fl_os_temp_directory(arena);
 }
 
 static FlString create_unique_test_dir(FlArena* arena, const char* base_name) {
     FlString temp_dir = get_test_temp_dir(arena);
-    u32 pid = get_process_id_os();
+    u32 pid = fl_os_process_id();
     FlString unique_name = fl_sprintf_arena(arena, "%s_%u", base_name, pid);
     return file_build_path_os(arena, temp_dir, unique_name);
 }
 
 static FlString build_temp_path_fw(FlArena* arena, const char* relative_path) {
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
     FlString rel_str;
     rel_str.data = relative_path;
     rel_str.length = strlen(relative_path);
@@ -69,7 +69,7 @@ static bool wait_for_file_watcher_changes(FlFileWatcherHandle handle, int max_po
         if (file_watcher_has_changes(handle)) {
             return true;
         }
-        sleep_us(poll_sleep_us);
+        fl_os_sleep_us(poll_sleep_us);
     }
     return false;
 }
@@ -118,7 +118,7 @@ static bool wait_for_public_changes(uint32_t handle) {
     for (int i = 0; i < 200 && !pending; i++) {
         pending = fl_file_watcher_has_changes(handle);
         if (!pending) {
-            sleep_us(10000);
+            fl_os_sleep_us(10000);
         }
     }
     return pending;
@@ -147,7 +147,7 @@ static void expect_creation_not_repeated(int* utest_result, uint32_t handle, FlA
             const FlFileChanges later = fl_file_watcher_take_changes(handle, arena);
             expect_entry_not_handed_out(utest_result, &later, created_at);
         }
-        sleep_us(5000);
+        fl_os_sleep_us(5000);
     }
 }
 
@@ -553,11 +553,11 @@ UTEST(file_watcher, event_coalescing_rapid_changes) {
 
     // Rapid changes to the same file; the 5ms gaps stay well inside the coalescing window.
     create_test_file(test_file, "version 1");
-    sleep_us(5000);
+    fl_os_sleep_us(5000);
     create_test_file(test_file, "version 2");
-    sleep_us(5000);
+    fl_os_sleep_us(5000);
     create_test_file(test_file, "version 3");
-    sleep_us(5000);
+    fl_os_sleep_us(5000);
     create_test_file(test_file, "version 4");
 
     ASSERT_TRUE(wait_for_file_watcher_changes(handle, 200, 10000));
@@ -600,7 +600,7 @@ UTEST(file_watcher, buffer_overflow_handling) {
         const char* base_dir = fl_string_to_cstr(arena, file_path);
         snprintf(filename, sizeof(filename), "%s/file%d.txt", base_dir, i);
         create_test_file(filename, "content");
-        sleep_us(50000); // 50ms between files
+        fl_os_sleep_us(50000); // 50ms between files
     }
 
     ASSERT_TRUE(wait_for_file_watcher_changes(handle, 200, 10000));
@@ -742,13 +742,13 @@ static void remove_subdirectories(FlArena* arena, FlString root, u32 count) {
 static u32 count_open_descriptors(void) {
     FlArena* arena = arena_new(.reserved_size = MB(1));
     u32 count = 0;
-    DirHandle dir = dir_open_os(arena, FL_S("/proc/self/fd"));
+    DirHandle dir = fl_os_dir_open(arena, FL_S("/proc/self/fd"));
     if (dir.is_valid) {
         FileStat entry;
-        while ((entry = dir_read_next_os(arena, &dir)).is_valid) {
+        while ((entry = fl_os_dir_read_next(arena, &dir)).is_valid) {
             count++;
         }
-        dir_close_os(&dir);
+        fl_os_dir_close(&dir);
     }
     fl_arena_destroy(arena);
     return count;
@@ -908,7 +908,7 @@ static void fw_in_flight_on_change(const FileChange* change, void* user_data) {
     (void)change;
     FwInFlightCtx* ctx = (FwInFlightCtx*)user_data;
     if (atomic_exchange(&ctx->entered, 1) == 0) {
-        sleep_us(200000);
+        fl_os_sleep_us(200000);
         atomic_store(&ctx->finished, 1);
     }
 }
@@ -937,7 +937,7 @@ UTEST(file_watcher, stop_waits_for_a_callback_in_flight) {
     ASSERT_TRUE(create_test_file(fl_string_to_cstr(arena, target), "payload"));
 
     for (int i = 0; i < 500 && atomic_load(&ctx.entered) == 0; ++i) {
-        sleep_us(10000);
+        fl_os_sleep_us(10000);
     }
     ASSERT_EQ_MSG(1u, atomic_load(&ctx.entered), "FSEvents never delivered the change");
 
@@ -978,7 +978,7 @@ static void* fw_concurrent_worker(void* user) {
     // Wait for every worker, so they all enter the registry at the same time.
     atomic_fetch_add(&s_fw_concurrent_ready, 1);
     while (atomic_load(&s_fw_concurrent_ready) < FW_CONCURRENT_THREADS) {
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 
     for (int round = 0; round < FW_CONCURRENT_ROUNDS; ++round) {
@@ -1040,7 +1040,7 @@ UTEST(file_watcher, concurrent_start_poll_stop) {
         if (file_watcher_has_changes(poller)) {
             file_watcher_clear_changes(poller);
         }
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 
     for (int t = 0; t < FW_CONCURRENT_THREADS; ++t) {

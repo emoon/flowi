@@ -83,16 +83,21 @@ static void vfs_append_driver(VfsState* self, VfsPluginEntry* entry) {
     self->plugin_last = entry;
 }
 
-void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
+bool vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
     profile_function_auto_nc("vfs:vfs_register_driver", PROFILE_COLOR_CYAN);
     VfsState* self = g_vfs_state;
 
     if (self == nullptr) {
         logc_error(VFS_ID, "vfs_register_driver called before fl_vfs_init");
-        return;
+        return false;
     }
     if (plugin == nullptr) {
-        return;
+        return false;
+    }
+    if (plugin->api_version != FL_VFS_PLUGIN_API_VERSION) {
+        logc_error(VFS_ID, "VFS driver %S refused: plugin API version %llu, expected %d", plugin->plugin_name,
+                   (unsigned long long)plugin->api_version, FL_VFS_PLUGIN_API_VERSION);
+        return false;
     }
 
     VfsPluginEntry* entry = arena_alloc_zero(self->main_arena, VfsPluginEntry);
@@ -107,6 +112,11 @@ void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
     }
 
     logc_info(VFS_ID, "VFS driver registered: %S", plugin->plugin_name);
+    return true;
+}
+
+bool fl_vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
+    return vfs_register_driver(plugin, instance);
 }
 
 // Reference counting
@@ -938,7 +948,7 @@ static void vfs_mount_drain(VfsState* self, FlVfsMount* mount) {
         // An op between scheduling and recording its job, or between its last job and its destruction, has nothing
         // waitable, so this is a poll: back off rather than spin on it.
         if (atomic_load_explicit(&mount->refs, memory_order_acquire) > 1) {
-            sleep_us(100);
+            fl_os_sleep_us(100);
         }
     }
 }
@@ -1016,7 +1026,7 @@ void vfs_destroy(void) {
     // A mount closed from a worker is freed by its last op, so it leaves the list on its own once the jobs are done.
     while (vfs_has_mounts(self)) {
         vfs_wait_jobs(self, nullptr);
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 
     // The hashmaps are allocated from main_arena

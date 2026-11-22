@@ -185,7 +185,7 @@ void stderr_write_os(FlString str) {
     write_all(STDERR_FILENO, str.data, str.length);
 }
 
-i64 get_current_time_us_os(void) {
+i64 fl_os_time_us(void) {
     struct timespec ts;
     if (clock_gettime(CLOCK_REALTIME, &ts) == 0) {
         return (i64)ts.tv_sec * 1000000LL + (i64)ts.tv_nsec / 1000LL;
@@ -193,7 +193,7 @@ i64 get_current_time_us_os(void) {
     return 0;
 }
 
-u64 get_monotonic_time_ns_os(void) {
+u64 fl_os_monotonic_ns(void) {
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
         return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
@@ -310,7 +310,7 @@ bool file_exists_os(FlString path) {
     return exists;
 }
 
-bool file_directory_exists_os(FlString path) {
+bool fl_os_directory_exists(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     struct stat st;
@@ -343,18 +343,18 @@ static char* skip_to_separator(char* p) {
 // call; the component existing is the desired outcome, so only a create failure with the
 // directory still absent is an error.
 static bool ensure_directory_os(FlString path) {
-    if (file_directory_exists_os(path)) {
+    if (fl_os_directory_exists(path)) {
         return true;
     }
-    return file_create_directory_os(path) || file_directory_exists_os(path);
+    return file_create_directory_os(path) || fl_os_directory_exists(path);
 }
 
-bool file_create_directory_recursive_os(FlString path) {
+bool fl_os_create_directory_recursive(FlString path) {
     if (string_is_empty(path)) {
         return false;
     }
 
-    if (file_directory_exists_os(path)) {
+    if (fl_os_directory_exists(path)) {
         return true;
     }
 
@@ -387,7 +387,7 @@ bool file_create_directory_recursive_os(FlString path) {
     return true;
 }
 
-void file_delete_os(FlString path) {
+void fl_os_file_delete(FlString path) {
     arena_scratch_auto(temp);
     OsPath os_path = string_to_os_path(temp.arena, path);
     remove(os_path_str(os_path));
@@ -452,7 +452,7 @@ FlString file_build_path_os(struct FlArena* arena, FlString base_path, FlString 
     }
 }
 
-DirHandle dir_open_os(FlArena* arena, FlString path) {
+DirHandle fl_os_dir_open(FlArena* arena, FlString path) {
     DirHandle handle = { 0 };
 
     OsPath os_path = string_to_os_path(arena, path);
@@ -514,7 +514,7 @@ static FileStat dir_entry_stat(FlArena* arena, const DirHandle* dir_handle, cons
     return result;
 }
 
-FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
+FileStat fl_os_dir_read_next(FlArena* arena, DirHandle* dir_handle) {
     DIR* dir = dir_handle_stream(dir_handle);
     if (!dir) {
         return (FileStat) { 0 };
@@ -530,7 +530,7 @@ FileStat dir_read_next_os(FlArena* arena, DirHandle* dir_handle) {
     return (FileStat) { 0 };
 }
 
-void dir_close_os(DirHandle* dir_handle) {
+void fl_os_dir_close(DirHandle* dir_handle) {
     if (dir_handle && dir_handle->is_valid) {
         DIR** dir_ptr = (DIR**)dir_handle->platform_data;
         if (dir_ptr && *dir_ptr) {
@@ -566,13 +566,13 @@ bool file_remove_directory_os(FlString path) {
 bool file_remove_directory_recursive_os(FlString path) {
     arena_scratch_auto(temp);
 
-    DirHandle dir_handle = dir_open_os(temp.arena, path);
+    DirHandle dir_handle = fl_os_dir_open(temp.arena, path);
     if (!dir_handle.is_valid) {
         return false;
     }
 
     FileStat entry;
-    while ((entry = dir_read_next_os(temp.arena, &dir_handle)).is_valid) {
+    while ((entry = fl_os_dir_read_next(temp.arena, &dir_handle)).is_valid) {
         if (fl_string_equals(entry.name, FL_S(".")) || fl_string_equals(entry.name, FL_S(".."))) {
             continue;
         }
@@ -582,11 +582,11 @@ bool file_remove_directory_recursive_os(FlString path) {
         if (entry.is_directory && !entry.is_symlink) {
             file_remove_directory_recursive_os(item_path);
         } else {
-            file_delete_os(item_path);
+            fl_os_file_delete(item_path);
         }
     }
 
-    dir_close_os(&dir_handle);
+    fl_os_dir_close(&dir_handle);
 
     bool success = file_remove_directory_os(path);
     return success;
@@ -594,7 +594,7 @@ bool file_remove_directory_recursive_os(FlString path) {
 
 // System information and utilities
 
-FlString get_temp_directory_os(struct FlArena* arena) {
+FlString fl_os_temp_directory(struct FlArena* arena) {
     const char* temp_dirs[] = { "TMPDIR", "TMP", "TEMP", "TEMPDIR" };
 
     for_count(i, sizeof_array(temp_dirs)) {
@@ -627,7 +627,7 @@ FlString get_current_directory_os(struct FlArena* arena) {
     return (FlString) { 0 };
 }
 
-u32 get_process_id_os(void) {
+u32 fl_os_process_id(void) {
     return (u32)getpid();
 }
 
@@ -703,7 +703,7 @@ bool os_thread_set_affinity(Thread* thread, const int* cpu_ids, int count) {
 
 // Sleep functions
 
-void sleep_us(u64 microseconds) {
+void fl_os_sleep_us(u64 microseconds) {
     usleep((useconds_t)microseconds);
 }
 

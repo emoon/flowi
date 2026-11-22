@@ -59,9 +59,9 @@ typedef void (*PerfScene)(FlUiCtx* ctx, int n);
 // Runs one scene frame, prints its wall-clock time and counters for a human to read (never asserted), and returns
 // the counters.
 static FlFrameStats run_perf_scene(FlUiCtx* ctx, const char* name, PerfScene scene, int n) {
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     scene(ctx, n);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
 
     const FlFrameStats stats = perf_fence_frame_stats(ctx);
     printf("[perf_fence] %s(N=%d): %llu ns, render_commands=%u bin_alloc_bytes=%u clip_broadcasts=%u\n", name, n,
@@ -124,11 +124,11 @@ static u64 scene_painter_rects(FlUiCtx* ctx, bool batch) {
     fl_layout_start(ID("scene_painter_rects_root"));
     fl_layout_configure((FlLayoutConfig) { .sizing = { .width = sizing_grow(), .height = sizing_grow() } });
 
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     for (int c = 0; c < SCOPE_CHANNELS; c++) {
         submit_scope_channel(c, batch);
     }
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
 
     fl_layout_end();
     ui_update_end(ctx, 1.0f / 60.0f);

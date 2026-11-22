@@ -98,22 +98,22 @@ static void collect_entry(SourceList* self, FlString directory, FileStat entry) 
 // extension, so a single file can be pointed at directly.
 
 static void collect_sources(SourceList* self, FlString path) {
-    if (!file_directory_exists_os(path)) {
+    if (!fl_os_directory_exists(path)) {
         source_list_add(self, path);
         return;
     }
 
-    DirHandle dir = dir_open_os(self->arena, path);
+    DirHandle dir = fl_os_dir_open(self->arena, path);
     if (!dir.is_valid) {
         return;
     }
 
-    for (FileStat entry = dir_read_next_os(self->arena, &dir); entry.is_valid;
-         entry = dir_read_next_os(self->arena, &dir)) {
+    for (FileStat entry = fl_os_dir_read_next(self->arena, &dir); entry.is_valid;
+         entry = fl_os_dir_read_next(self->arena, &dir)) {
         collect_entry(self, path, entry);
     }
 
-    dir_close_os(&dir);
+    fl_os_dir_close(&dir);
 }
 
 static bool read_manifest(FlArena* arena, FlString manifest_path, FlString* default_tag, FlJsonArray** languages) {

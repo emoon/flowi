@@ -35,6 +35,27 @@ fn register_builtin_drivers_reaches_the_c_once_per_call() {
     assert_eq!(with_fake(|f| f.builtin_registrations), 1);
 }
 
+#[test]
+fn register_driver_hands_the_plugin_and_instance_to_the_c() {
+    install_fake(FakeState::default());
+    // The fake only records the pointers, so any stable addresses will do.
+    let plugin_address = 0x1000_usize;
+    let instance_address = 0x2000_usize;
+    // SAFETY: the fake never calls through either pointer.
+    let registered =
+        unsafe { Vfs::register_driver(plugin_address as *const crate::sys::VfsPlugin, instance_address as *mut _) };
+    assert!(registered);
+    assert_eq!(with_fake(|f| f.registered_driver), Some((plugin_address, instance_address)));
+}
+
+#[test]
+fn register_driver_reports_a_refusal() {
+    install_fake(FakeState { fail: true, ..FakeState::default() });
+    // SAFETY: the fake never calls through either pointer.
+    let registered = unsafe { Vfs::register_driver(core::ptr::null(), core::ptr::null_mut()) };
+    assert!(!registered);
+}
+
 /// Bring-up passes the caller's arena straight through and reports what the C
 /// says. A refusal (a job system too large for the handle array, say) is a
 /// false the caller has to act on.

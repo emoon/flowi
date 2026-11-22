@@ -16,7 +16,7 @@ flowi aims to stay fast even on slow machines (CPU/SW and GPU/SDF alike), but th
 **no performance tests, no timing gate, and no regression fence** of any kind. The raw
 ingredients exist unused: `core/perf_scope.*` (a per-frame scope profiler with a 16.8 ms
 budget, already wired into `ui_update_end`), `core/perf_counters.*` (Linux `perf_event_open`,
-including `PERF_COUNTER_INSTRUCTIONS`), `get_monotonic_time_ns_os()`, and the headless
+including `PERF_COUNTER_INSTRUCTIONS`), `fl_os_monotonic_ns()`, and the headless
 drivers both backends already use in tests (`headless_window_backend` for SW, EGL-surfaceless
 llvmpipe for GPU).
 
@@ -55,7 +55,7 @@ path so a regression points at a cause.
   constant-factor regressions tier 1 is blind to (a lost SIMD path, a new scalar loop that
   emits the same command count). It **asserts when `perf_counters_available()`** (bare-metal
   Linux dev box / self-hosted runner) and **auto-skips otherwise**, including GitHub CI VMs.
-- **Tier 3 — wall-clock ns (observed only).** `get_monotonic_time_ns_os()` around each scene.
+- **Tier 3 — wall-clock ns (observed only).** `fl_os_monotonic_ns()` around each scene.
   Printed for human sanity ("do the proxies track real time on real hardware?"), **never
   asserted** — it is not deterministic and must never gate a build.
 

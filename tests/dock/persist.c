@@ -21,8 +21,8 @@ typedef struct DockTempDir {
 
 static DockTempDir dock_temp_dir_make(const char* name) {
     DockTempDir dir = { .arena = arena_new() };
-    FlString leaf = fl_sprintf_arena(dir.arena, "flowi_dock_%s_%u", name, get_process_id_os());
-    dir.path = file_build_path_os(dir.arena, get_temp_directory_os(dir.arena), leaf);
+    FlString leaf = fl_sprintf_arena(dir.arena, "flowi_dock_%s_%u", name, fl_os_process_id());
+    dir.path = file_build_path_os(dir.arena, fl_os_temp_directory(dir.arena), leaf);
     file_remove_directory_recursive_os(dir.path);
     return dir;
 }

@@ -20,7 +20,7 @@ void localization_settle(struct Localization* loc) {
         if (!localization_is_loading(loc)) {
             return;
         }
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
 }
 

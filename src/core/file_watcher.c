@@ -237,7 +237,7 @@ void add_file_change(FileWatcherState* watcher, FlString path, FlString old_path
     }
 
     change_types = effective_change_types(change_types, is_directory);
-    u64 timestamp = get_current_time_us_os();
+    u64 timestamp = fl_os_time_us();
 
     // Called from platform threads, e.g. the dispatch queue on macOS.
     mutex_lock(&watcher->changes_lock);
@@ -326,7 +326,7 @@ FlFileWatcherHandle file_watcher_start(FlString path, FlFileWatcherConfig config
     // to allocate from and no lock to take.
     FL_VALIDATE_RET(registry->arena != nullptr, FL_FILE_WATCHER_INVALID);
 
-    if (!file_exists_os(path) && !file_directory_exists_os(path)) {
+    if (!file_exists_os(path) && !fl_os_directory_exists(path)) {
         logc_error(FW_ID, "Path does not exist: %.*s", (int)path.length, path.data);
         return FL_FILE_WATCHER_INVALID;
     }

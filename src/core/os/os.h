@@ -2,6 +2,7 @@
 
 #include "../string.h"
 #include "../types.h"
+#include <flowi/core/os.h>
 
 struct FlArena;
 
@@ -58,47 +59,23 @@ i64 file_write_to_handle_os(i64 fd, const u8* data, i64 size);
 
 bool file_rename_os(FlString old_path, FlString new_path);
 bool file_exists_os(FlString path);
-bool file_directory_exists_os(FlString path);
 bool file_create_directory_os(FlString path);
-bool file_create_directory_recursive_os(FlString path);
 bool file_remove_directory_os(FlString path);
 bool file_remove_directory_recursive_os(FlString path);
-void file_delete_os(FlString path);
 
 // File system information and directory operations
 
-typedef struct FileStat {
-    FlString name; // Only set for directory listings
-    u64 size;
-    u64 modification_time;
-    bool is_directory;
-    bool is_regular_file;
-    bool is_symlink;
-    bool is_valid; // false = end of directory or error
-    u32 mode;
-} FileStat;
+typedef FlOsFileStat FileStat;
 
 FileStat file_stat_os(FlString path);
 FlString file_build_path_os(struct FlArena* arena, FlString base_path, FlString relative_path);
 
-typedef struct DirHandle {
-    void* platform_data; // Allocated on the arena passed to dir_open_os
-    FlString base_path;
-    bool is_valid;
-} DirHandle;
-
-DirHandle dir_open_os(struct FlArena* arena, FlString path);
-FileStat dir_read_next_os(struct FlArena* arena, DirHandle* dir);
-void dir_close_os(DirHandle* dir);
+typedef FlOsDir DirHandle; // platform_data is allocated on the arena passed to fl_os_dir_open
 
 void stderr_write_os(FlString str);
 
-i64 get_current_time_us_os(void);
 u64 get_current_time_ms_os(void);
 FlString timestamp_format_os(struct FlArena* arena, i64 timestamp_us);
-
-// Returns nanoseconds since an arbitrary starting point (only for computing durations)
-u64 get_monotonic_time_ns_os(void);
 
 // Convert a monotonic tick count to nanoseconds without overflowing: splitting
 // into whole seconds and remainder ticks keeps every intermediate below
@@ -111,7 +88,6 @@ static inline u64 monotonic_ticks_to_ns(u64 ticks, u64 ticks_per_second) {
 }
 
 // Actual precision depends on the OS scheduler, typically 1-15ms.
-void sleep_us(u64 microseconds);
 void sleep_ms(u64 milliseconds);
 
 // Gives up the rest of the time slice to another ready thread and returns at once when there is none.
@@ -194,11 +170,7 @@ ArenaError release_range_os(void* ptr, u64 size);
 
 // System information and utilities
 
-FlString get_temp_directory_os(struct FlArena* arena);
-
 FlString get_current_directory_os(struct FlArena* arena);
-
-u32 get_process_id_os(void);
 
 // Disk space information
 

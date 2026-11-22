@@ -377,10 +377,10 @@ static FlFontId load_roboto(FlFontCache* cache, FlVfsMount** out_mount, u16 size
 }
 
 static const Glyph* wait_for_glyph(SwGlyphCache* sw, FlFontId font, u16 size, u32 glyph_index) {
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     const Glyph* glyph = sw_glyph_cache_get(sw, font, size, glyph_index);
-    while (glyph == nullptr && get_monotonic_time_ns_os() < deadline_ns) {
-        sleep_us(200);
+    while (glyph == nullptr && fl_os_monotonic_ns() < deadline_ns) {
+        fl_os_sleep_us(200);
         glyph = sw_glyph_cache_get(sw, font, size, glyph_index);
     }
     return glyph;
@@ -435,14 +435,14 @@ UTEST(sw_glyph_cache, concurrent_atlas_jobs_and_on_demand) {
     }
 
     // Poll until every size's 'A' is realized.
-    u64 deadline_ns = get_monotonic_time_ns_os() + 5000000000ull;
+    u64 deadline_ns = fl_os_monotonic_ns() + 5000000000ull;
     bool all_ready = false;
     while (!all_ready) {
         poll_atlas_sizes(utest_result, &poll, &all_ready);
-        ASSERT_TRUE_MSG(get_monotonic_time_ns_os() < deadline_ns,
+        ASSERT_TRUE_MSG(fl_os_monotonic_ns() < deadline_ns,
                         "atlas rasterization jobs did not all complete within the deadline");
         if (!all_ready) {
-            sleep_us(200);
+            fl_os_sleep_us(200);
         }
     }
 

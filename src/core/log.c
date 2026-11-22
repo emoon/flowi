@@ -166,7 +166,7 @@ static bool resolve_log_dir(FlString base_dir, FlString* dir_path) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool ensure_log_dir_exists(FlString dir_path) {
-    return file_directory_exists_os(dir_path) || file_create_directory_recursive_os(dir_path);
+    return fl_os_directory_exists(dir_path) || fl_os_create_directory_recursive(dir_path);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -364,7 +364,7 @@ static void log_formatted_message_internal(LogChannelId id, LogLevel level, LogS
     arena_scratch_auto(temp);
 
     LogLine line = {
-        .timestamp = timestamp_format_os(temp.arena, get_current_time_us_os()),
+        .timestamp = timestamp_format_os(temp.arena, fl_os_time_us()),
         .channel = format_channel_padded(temp.arena, channel.name),
         .message = message,
         .filename = path_basename(site.file),

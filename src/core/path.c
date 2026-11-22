@@ -511,7 +511,7 @@ static FlString find_in_ancestors(struct FlArena* arena, FlString directory, FlS
         const FlString parent = path_reconstruct_from_segments(&components, 0, segment_count - levels, arena);
         const FlString candidate = fl_path_join(arena, parent, name);
 
-        if (file_directory_exists_os(candidate)) {
+        if (fl_os_directory_exists(candidate)) {
             return candidate;
         }
     }
@@ -538,7 +538,7 @@ FlString path_find_directory(struct FlArena* arena, FlString start_directory) {
         return (FlString) { 0 };
     }
 
-    if (file_directory_exists_os(start_directory)) {
+    if (fl_os_directory_exists(start_directory)) {
         return fl_string_copy(arena, start_directory);
     }
 
@@ -559,5 +559,5 @@ FlString path_find_directory(struct FlArena* arena, FlString start_directory) {
     }
 
     const FlString from_root = fl_path_join(arena, root, start_directory);
-    return file_directory_exists_os(from_root) ? from_root : (FlString) { 0 };
+    return fl_os_directory_exists(from_root) ? from_root : (FlString) { 0 };
 }
