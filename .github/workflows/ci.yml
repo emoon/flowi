@@ -6,6 +6,16 @@ on:
   pull_request:
 
 jobs:
+  # The style rules a compiler does not enforce.
+  style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Style check
+        run: tools/scripts/check_style.sh origin/main
+
   # Full C build and the headless tests on Linux and macOS. gpu_smoke_test
   # covers each platform's GPU backend. On ubuntu-latest the mesa packages
   # provide surfaceless EGL and the llvmpipe software rasterizer, and

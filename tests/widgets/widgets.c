@@ -196,7 +196,7 @@ UTEST(selection, apply_rows_reads_ids_from_item_descriptors) {
 UTEST(scroll_math, max_never_negative) {
     EXPECT_NEAR(scroll_max(1000.0f, 300.0f), 700.0f, 0.001f);
     const f32 content_not_taller[] = { 200.0f, 300.0f, 0.0f };
-    for (size_t i = 0; i < sizeof(content_not_taller) / sizeof(content_not_taller[0]); i++) {
+    for_count(i, sizeof_array(content_not_taller)) {
         EXPECT_EQ(scroll_max(content_not_taller[i], 300.0f), 0.0f);
     }
 }

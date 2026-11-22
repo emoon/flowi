@@ -52,26 +52,26 @@ static inline void assert_true_checks(int* utest_result, const TrueCheck* checks
 }
 
 // Asserts every TRUE_CHECK listed and ends the calling UTEST at the first one that fails.
-#define ASSERT_TRUE_CHECKS(...)                                                                         \
-    do {                                                                                                \
-        const TrueCheck true_checks_[] = { __VA_ARGS__ };                                               \
-        assert_true_checks(utest_result, true_checks_, sizeof(true_checks_) / sizeof(true_checks_[0])); \
-        RETURN_IF_TEST_FAILED();                                                                        \
+#define ASSERT_TRUE_CHECKS(...)                                                     \
+    do {                                                                            \
+        const TrueCheck true_checks_[] = { __VA_ARGS__ };                           \
+        assert_true_checks(utest_result, true_checks_, sizeof_array(true_checks_)); \
+        RETURN_IF_TEST_FAILED();                                                    \
     } while (0)
 
 // Asserts every NEAR_CHECK listed and ends the calling UTEST at the first one that fails.
-#define ASSERT_NEAR_CHECKS(...)                                                                         \
-    do {                                                                                                \
-        const NearCheck near_checks_[] = { __VA_ARGS__ };                                               \
-        assert_near_checks(utest_result, near_checks_, sizeof(near_checks_) / sizeof(near_checks_[0])); \
-        RETURN_IF_TEST_FAILED();                                                                        \
+#define ASSERT_NEAR_CHECKS(...)                                                     \
+    do {                                                                            \
+        const NearCheck near_checks_[] = { __VA_ARGS__ };                           \
+        assert_near_checks(utest_result, near_checks_, sizeof_array(near_checks_)); \
+        RETURN_IF_TEST_FAILED();                                                    \
     } while (0)
 
 // Expects every NEAR_CHECK listed and lets the calling UTEST continue past a failure.
-#define EXPECT_NEAR_CHECKS(...)                                                                         \
-    do {                                                                                                \
-        const NearCheck near_checks_[] = { __VA_ARGS__ };                                               \
-        expect_near_checks(utest_result, near_checks_, sizeof(near_checks_) / sizeof(near_checks_[0])); \
+#define EXPECT_NEAR_CHECKS(...)                                                     \
+    do {                                                                            \
+        const NearCheck near_checks_[] = { __VA_ARGS__ };                           \
+        expect_near_checks(utest_result, near_checks_, sizeof_array(near_checks_)); \
     } while (0)
 
 // One frame of a synthetic pointer gesture: the cursor position and the left-button state, which the real input layer
@@ -110,9 +110,9 @@ static inline void assert_string_checks(int* utest_result, const StringCheck* ch
 }
 
 // Asserts every STRING_CHECK listed and ends the calling UTEST at the first one that fails.
-#define ASSERT_STRING_CHECKS(...)                                                                               \
-    do {                                                                                                        \
-        const StringCheck string_checks_[] = { __VA_ARGS__ };                                                   \
-        assert_string_checks(utest_result, string_checks_, sizeof(string_checks_) / sizeof(string_checks_[0])); \
-        RETURN_IF_TEST_FAILED();                                                                                \
+#define ASSERT_STRING_CHECKS(...)                                                         \
+    do {                                                                                  \
+        const StringCheck string_checks_[] = { __VA_ARGS__ };                             \
+        assert_string_checks(utest_result, string_checks_, sizeof_array(string_checks_)); \
+        RETURN_IF_TEST_FAILED();                                                          \
     } while (0)

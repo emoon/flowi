@@ -206,7 +206,7 @@ static void draw_backdrop_and_title(const Painter* p) {
     // Full-window background, emitted in screen space (not view-transformed) so it fills the window while the
     // gallery pans and zooms over it.
     ir_fill_rect(p->arena, (FlRect) { 0, 0, p->view.screen_w, p->view.screen_h }, (FlCornerRadius) { 0 },
-                    (FlColor[4]) { k_bg, k_bg, k_bg, k_bg }, nullptr);
+                 (FlColor[4]) { k_bg, k_bg, k_bg, k_bg }, nullptr);
 
     scene_text(
         p, (TextSpec) { TITLE_SIZE, k_ink, FL_S("flowi — GPU backend primitive gallery"), { MARGIN, MARGIN + 26.0f } });
@@ -218,7 +218,7 @@ void gallery_build(const Gallery* g, FlRenderFrame* frame) {
     const void* start = begin_scene(arena);
 
     draw_backdrop_and_title(&g->painter);
-    for_count(i, sizeof(k_cells) / sizeof(k_cells[0])) {
+    for_count(i, sizeof_array(k_cells)) {
         k_cells[i](g, cell_rect((int)i % GRID_COLS, (int)i / GRID_COLS));
     }
 

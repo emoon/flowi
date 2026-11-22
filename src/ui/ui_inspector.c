@@ -16,13 +16,10 @@
 // Scissor/None commands are layout plumbing, not user-facing elements.
 static bool inspector_is_element(UiRenderCommandType type) {
     static const bool element[] = {
-        [UiRenderCmd_Rectangle] = true,
-        [UiRenderCmd_Border] = true,
-        [UiRenderCmd_Text] = true,
-        [UiRenderCmd_Image] = true,
-        [UiRenderCmd_Custom] = true,
+        [UiRenderCmd_Rectangle] = true, [UiRenderCmd_Border] = true, [UiRenderCmd_Text] = true,
+        [UiRenderCmd_Image] = true,     [UiRenderCmd_Custom] = true,
     };
-    return (unsigned)type < sizeof(element) / sizeof(element[0]) && element[type];
+    return (unsigned)type < sizeof_array(element) && element[type];
 }
 
 static const char* inspector_type_name(UiRenderCommandType type) {
@@ -36,7 +33,7 @@ static const char* inspector_type_name(UiRenderCommandType type) {
         [UiRenderCmd_ScissorEnd] = "scissor_end",
         [UiRenderCmd_Custom] = "custom",
     };
-    if ((unsigned)type >= sizeof(names) / sizeof(names[0])) {
+    if ((unsigned)type >= sizeof_array(names)) {
         return "none";
     }
     return names[type];
@@ -49,7 +46,7 @@ static bool inspector_get_element(int32_t i, UiRenderCommand* cmd) {
 
 static const char* inspector_json_escape(unsigned char c) {
     static const char from[] = "\"\\\n\r\t";
-    static const char* const to[] = {"\\\"", "\\\\", "\\n", "\\r", "\\t"};
+    static const char* const to[] = { "\\\"", "\\\\", "\\n", "\\r", "\\t" };
     const char* hit = c != '\0' ? strchr(from, c) : nullptr;
     return hit ? to[hit - from] : nullptr;
 }

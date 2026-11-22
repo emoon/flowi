@@ -262,7 +262,7 @@ static const ModifierKey k_modifier_keys[] = {
 };
 
 static u32 headless_modifier_bit(FlKey key) {
-    for (u32 i = 0; i < sizeof(k_modifier_keys) / sizeof(k_modifier_keys[0]); i++) {
+    for_count(i, sizeof_array(k_modifier_keys)) {
         if (k_modifier_keys[i].key == key) {
             return k_modifier_keys[i].bit;
         }

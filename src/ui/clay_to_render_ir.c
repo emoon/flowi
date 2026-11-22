@@ -40,8 +40,8 @@ static void clay_rectangle_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) 
 static void clay_border_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     const Clay_BorderRenderData* border = &cmd->renderData.border;
     ir_border_stroked(arena, to_em_rect(cmd->boundingBox), (f32)border->width.left, (f32)border->width.right,
-                         (f32)border->width.top, (f32)border->width.bottom, to_em_radius(border->cornerRadius),
-                         to_em_color(border->color), (FlStrokeStyle) { border->dashLen, border->gapLen });
+                      (f32)border->width.top, (f32)border->width.bottom, to_em_radius(border->cornerRadius),
+                      to_em_color(border->color), (FlStrokeStyle) { border->dashLen, border->gapLen });
 }
 
 static void clay_image_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
@@ -53,9 +53,8 @@ static void clay_image_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     }
     // FlCmdImage carries no corner radius, so a rounded Clay image loses its rounding through the IR.
     bool alpha_only = source->kind == FlImageKind_Dynamic && source->dynamic.alpha_only;
-    ir_image(arena, *source, alpha_only ? FlImageMode_AlphaCoverage : FlImageMode_Color,
-                to_em_rect(cmd->boundingBox), (FlRect) { 0 }, to_em_color(image->backgroundColor), FlImageFilter_Linear,
-                nullptr);
+    ir_image(arena, *source, alpha_only ? FlImageMode_AlphaCoverage : FlImageMode_Color, to_em_rect(cmd->boundingBox),
+             (FlRect) { 0 }, to_em_color(image->backgroundColor), FlImageFilter_Linear, nullptr);
 }
 
 // Splice one painter span. The painter records each element's primitives in element-local pixel
@@ -163,7 +162,7 @@ static void splice_paint_record(FlArena* arena, const FlCmdHeader* rec, float dx
 
     void* payload = dst + 1;
     const u32 kind = dst->kind;
-    if (kind >= sizeof(SPLICE_TRANSLATORS) / sizeof(SPLICE_TRANSLATORS[0]) || SPLICE_TRANSLATORS[kind] == nullptr) {
+    if (kind >= sizeof_array(SPLICE_TRANSLATORS) || SPLICE_TRANSLATORS[kind] == nullptr) {
         return;
     }
     SPLICE_TRANSLATORS[kind](payload, dx, dy);
@@ -190,8 +189,7 @@ static void clay_custom_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
     }
 }
 
-static float text_baseline_y(Clay_BoundingBox bb, Clay_TextVerticalAlignment align, float ascender,
-                             float descender) {
+static float text_baseline_y(Clay_BoundingBox bb, Clay_TextVerticalAlignment align, float ascender, float descender) {
     switch (align) {
         case CLAY_TEXT_VALIGN_TOP:
             return bb.y + ascender;
@@ -228,8 +226,8 @@ static void clay_text_to_ir(FlArena* arena, FlFontCache* font_cache, const Clay_
     // Letter spacing is applied between glyphs (n−1 gaps), the same rule font_cache_measure_text and the painter
     // follow.
     ir_text_layout(arena, font_cache, text_data->fontId, font_cache_whole_px_to_q4(text_data->fontSize), 1.0f,
-                      to_em_color(text_data->textColor), (FlString) { .data = text, .length = length }, bb.x,
-                      baseline_y, (float)text_data->letterSpacing);
+                   to_em_color(text_data->textColor), (FlString) { .data = text, .length = length }, bb.x, baseline_y,
+                   (float)text_data->letterSpacing);
 }
 
 static void clay_scissor_start_to_ir(FlArena* arena, const Clay_RenderCommand* cmd) {
@@ -256,7 +254,7 @@ static void clay_command_to_ir(FlArena* arena, FlFontCache* font_cache, const Cl
     const unsigned type = (unsigned)cmd->commandType;
     if (type == CLAY_RENDER_COMMAND_TYPE_TEXT) {
         clay_text_to_ir(arena, font_cache, cmd);
-    } else if (type < sizeof(CLAY_TRANSLATORS) / sizeof(CLAY_TRANSLATORS[0]) && CLAY_TRANSLATORS[type] != nullptr) {
+    } else if (type < sizeof_array(CLAY_TRANSLATORS) && CLAY_TRANSLATORS[type] != nullptr) {
         CLAY_TRANSLATORS[type](arena, cmd);
     }
 }
