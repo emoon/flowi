@@ -1,0 +1,11 @@
+#!/bin/bash
+#
+# Refuses a commit message that carries a Claude session trailer or link.
+# Comment lines and the diff that `git commit -v` appends are not part of the
+# message and are skipped.
+
+if sed '/^# -\{24\} >8 -\{24\}$/,$d; /^#/d' "$1" \
+    | grep -qE '^Claude-Session:|https://claude\.ai/code/session'; then
+    echo "commit-msg: remove the Claude session link from the commit message" >&2
+    exit 1
+fi

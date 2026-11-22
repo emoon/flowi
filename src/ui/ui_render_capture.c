@@ -51,7 +51,7 @@ static const UiRenderCommandType CLAY_COMMAND_TYPE_MAP[] = {
 
 static UiRenderCommandType map_clay_command_type(Clay_RenderCommandType t) {
     const size_t index = (size_t)t;
-    if (index >= sizeof(CLAY_COMMAND_TYPE_MAP) / sizeof(CLAY_COMMAND_TYPE_MAP[0])) {
+    if (index >= sizeof_array(CLAY_COMMAND_TYPE_MAP)) {
         return UiRenderCmd_None;
     }
     return CLAY_COMMAND_TYPE_MAP[index];

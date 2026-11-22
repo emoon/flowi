@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Formats staged sources before they are committed.
+# Formats staged sources before they are committed, then runs the style check
+# on them.
 #
 # Rust: generated mirrors are skipped. api_gen emits them without a formatter
 # pass and CI's `cargo regen-check` compares the committed output byte for
@@ -20,7 +21,7 @@ mapfile -t staged < <(
 )
 
 if [ ${#staged[@]} -eq 0 ]; then
-    exit 0
+    exec tools/scripts/check_style.sh staged
 fi
 
 # A file staged with unstaged edits on top (as `git add -p` leaves it) would
@@ -57,3 +58,5 @@ fi
 # Re-add only the staged paths to pick up the formatters' edits. The
 # partial-stage check above means these paths have no other worktree changes.
 git add -- "${staged[@]}"
+
+tools/scripts/check_style.sh staged

@@ -126,9 +126,17 @@ git config core.hooksPath .githooks
 ```
 
 It runs clang-format on staged C sources and rustfmt on staged `.rs` files,
-skipping the generated trees. Without the hook, run `tools/scripts/format.sh staged`
-yourself. Never run a package-level `cargo fmt`: rustfmt follows `mod`
+skipping the generated trees, then runs `tools/scripts/check_style.sh` on the
+staged change. A second hook, `commit-msg`, refuses a commit message that
+carries a Claude session link. Without the hooks, run
+`tools/scripts/format.sh staged` and `tools/scripts/check_style.sh` yourself. Never run a package-level `cargo fmt`: rustfmt follows `mod`
 declarations into the generated trees and churns them. Format per file.
+
+`tools/scripts/check.sh` runs the C side of CI's Linux job (style check; default,
+headless and Release builds with their tests; export and codegen checks) and
+prints one line per step. Run it before opening a pull request; the Rust job
+runs in CI. What a review looks for beyond these checks is in
+`CODING_STANDARDS.md`.
 
 ## What CI gates
 
