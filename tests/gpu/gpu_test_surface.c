@@ -190,9 +190,9 @@ int run_perf_fence_scenes(FlRenderBackend* backend, FlArena* ir_arena) {
 
     // Frame 2: a UI-scale change wipes the atlas, so this re-render re-rasterizes the whole resident set.
     backend->scale_changed(ud, 2.0f);
-    const u64 t0 = get_monotonic_time_ns_os();
+    const u64 t0 = fl_os_monotonic_ns();
     ir_frame_render(backend, surface, &frame, ir_arena, start);
-    const u64 t1 = get_monotonic_time_ns_os();
+    const u64 t1 = fl_os_monotonic_ns();
     GpuFrameStats zoom;
     gpu_debug_read_frame_stats(ud, surface, arena, &zoom);
 

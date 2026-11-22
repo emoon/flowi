@@ -948,7 +948,7 @@ static void vfs_mount_drain(VfsState* self, FlVfsMount* mount) {
         // An op between scheduling and recording its job, or between its last job and its destruction, has nothing
         // waitable, so this is a poll: back off rather than spin on it.
         if (atomic_load_explicit(&mount->refs, memory_order_acquire) > 1) {
-            sleep_us(100);
+            fl_os_sleep_us(100);
         }
     }
 }
@@ -1026,7 +1026,7 @@ void vfs_destroy(void) {
     // A mount closed from a worker is freed by its last op, so it leaves the list on its own once the jobs are done.
     while (vfs_has_mounts(self)) {
         vfs_wait_jobs(self, nullptr);
-        sleep_us(100);
+        fl_os_sleep_us(100);
     }
 
     // The hashmaps are allocated from main_arena

@@ -13,18 +13,18 @@ static FlArena* test_arena(void) {
 }
 
 static FlString create_test_name(FlArena* arena, const char* base_name) {
-    u32 pid = get_process_id_os();
+    u32 pid = fl_os_process_id();
     return fl_sprintf_arena(arena, "%s_%u", base_name, pid);
 }
 
 static FlString create_test_file_path(FlArena* arena, const char* test_name) {
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
     FlString unique_name = create_test_name(arena, test_name);
     return file_build_path_os(arena, temp_dir, unique_name);
 }
 
 static FlString create_test_dir_path(FlArena* arena, const char* test_name) {
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
     FlString unique_name = create_test_name(arena, test_name);
     return file_build_path_os(arena, temp_dir, unique_name);
 }
@@ -51,7 +51,7 @@ static void expect_write_text(int* utest_result, FlString path, FlString content
 
 static void expect_dirs_exist(int* utest_result, const FlString* paths, u32 count, bool want) {
     for (u32 i = 0; i < count; i++) {
-        ASSERT_EQ(file_directory_exists_os(paths[i]), want);
+        ASSERT_EQ(fl_os_directory_exists(paths[i]), want);
     }
 }
 
@@ -66,7 +66,7 @@ static void expect_file(int* utest_result, FlString path, bool want) {
 }
 
 static void expect_dir(int* utest_result, FlString path, bool want) {
-    ASSERT_EQ(file_directory_exists_os(path), want);
+    ASSERT_EQ(fl_os_directory_exists(path), want);
 }
 
 static void expect_disk_space_bounds(int* utest_result, DiskSpaceInfo info) {
@@ -84,12 +84,12 @@ static void expect_disk_space_empty(int* utest_result, DiskSpaceInfo info) {
 
 static void expect_dir_created(int* utest_result, FlString path) {
     ASSERT_TRUE(file_create_directory_os(path));
-    ASSERT_TRUE(file_directory_exists_os(path));
+    ASSERT_TRUE(fl_os_directory_exists(path));
 }
 
 static void expect_dir_created_recursive(int* utest_result, FlString path) {
-    ASSERT_TRUE(file_create_directory_recursive_os(path));
-    ASSERT_TRUE(file_directory_exists_os(path));
+    ASSERT_TRUE(fl_os_create_directory_recursive(path));
+    ASSERT_TRUE(fl_os_directory_exists(path));
 }
 
 static void expect_handle_write(int* utest_result, FlString path, FlString content, bool append) {
@@ -107,7 +107,7 @@ static void expect_disk_space_valid(int* utest_result, DiskSpaceInfo info) {
 UTEST(os_api, get_temp_directory_basic) {
     FlArena* arena = test_arena();
 
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
 
     ASSERT_GT((u64)temp_dir.length, 0ULL);
     ASSERT_NE(temp_dir.data, nullptr);
@@ -120,8 +120,8 @@ UTEST(os_api, get_temp_directory_basic) {
 UTEST(os_api, get_temp_directory_consistency) {
     FlArena* arena = test_arena();
 
-    FlString temp_dir1 = get_temp_directory_os(arena);
-    FlString temp_dir2 = get_temp_directory_os(arena);
+    FlString temp_dir1 = fl_os_temp_directory(arena);
+    FlString temp_dir2 = fl_os_temp_directory(arena);
 
     ASSERT_TRUE(fl_string_equals(temp_dir1, temp_dir2));
 
@@ -129,14 +129,14 @@ UTEST(os_api, get_temp_directory_consistency) {
 }
 
 UTEST(os_api, get_process_id_basic) {
-    u32 pid = get_process_id_os();
+    u32 pid = fl_os_process_id();
 
     ASSERT_GT(pid, 0U);
 }
 
 UTEST(os_api, get_process_id_consistency) {
-    u32 pid1 = get_process_id_os();
-    u32 pid2 = get_process_id_os();
+    u32 pid1 = fl_os_process_id();
+    u32 pid2 = fl_os_process_id();
 
     ASSERT_EQ(pid1, pid2);
 }
@@ -151,7 +151,7 @@ UTEST(os_api, file_write_basic) {
 
     expect_file(utest_result, file_path, true);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
     expect_file(utest_result, file_path, false);
 
     fl_arena_destroy(arena);
@@ -167,7 +167,7 @@ UTEST(os_api, file_write_empty) {
 
     expect_file(utest_result, file_path, true);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
 
     fl_arena_destroy(arena);
 }
@@ -187,7 +187,7 @@ UTEST(os_api, file_write_large_content) {
 
     expect_file(utest_result, file_path, true);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
 
     fl_arena_destroy(arena);
 }
@@ -205,7 +205,7 @@ UTEST(os_api, file_write_overwrite) {
     expect_write_text(utest_result, file_path, content2);
     expect_file(utest_result, file_path, true);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
 
     fl_arena_destroy(arena);
 }
@@ -302,7 +302,7 @@ UTEST(os_api, directory_create_recursive_nested) {
 
     expect_dir(utest_result, base_dir, false);
 
-    ASSERT_TRUE(file_create_directory_recursive_os(level3));
+    ASSERT_TRUE(fl_os_create_directory_recursive(level3));
 
     expect_dirs_exist(utest_result, levels, 4, true);
 
@@ -325,7 +325,7 @@ UTEST(os_api, directory_create_recursive_existing) {
 }
 
 UTEST(os_api, directory_create_recursive_empty_path) {
-    ASSERT_FALSE(file_create_directory_recursive_os(string_empty()));
+    ASSERT_FALSE(fl_os_create_directory_recursive(string_empty()));
 }
 
 UTEST(os_api, directory_create_recursive_single_level) {
@@ -380,7 +380,7 @@ UTEST(os_api, full_workflow_integration) {
 UTEST(os_api, cross_platform_path_handling) {
     FlArena* arena = test_arena();
 
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
     FlString test_name = create_test_name(arena, "path_test");
     FlString test_path = file_build_path_os(arena, temp_dir, test_name);
 
@@ -425,7 +425,7 @@ UTEST(os_api, directory_remove_nonexistent) {
 UTEST(os_api, get_disk_space_temp_directory) {
     FlArena* arena = test_arena();
 
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
     DiskSpaceInfo info = get_disk_space_os(temp_dir);
 
     expect_disk_space_valid(utest_result, info);
@@ -459,7 +459,7 @@ UTEST(os_api, get_disk_space_file_path) {
     DiskSpaceInfo info = get_disk_space_os(file_path);
     expect_disk_space_valid(utest_result, info);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
 
     fl_arena_destroy(arena);
 }
@@ -495,7 +495,7 @@ UTEST(os_api, get_disk_space_empty_path) {
 UTEST(os_api, get_disk_space_consistency) {
     FlArena* arena = test_arena();
 
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
 
     DiskSpaceInfo info1 = get_disk_space_os(temp_dir);
     DiskSpaceInfo info2 = get_disk_space_os(temp_dir);
@@ -537,7 +537,7 @@ UTEST(os_api, file_open_write_basic) {
     expect_file(utest_result, file_path, true);
     ASSERT_EQ(file_get_size_os(file_path), (i64)test_content.length);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
 
     fl_arena_destroy(arena);
 }
@@ -556,7 +556,7 @@ UTEST(os_api, file_open_write_truncate) {
 
     ASSERT_EQ(file_get_size_os(file_path), (i64)content2.length);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
 
     fl_arena_destroy(arena);
 }
@@ -574,7 +574,7 @@ UTEST(os_api, file_open_write_append) {
     i64 expected_size = (i64)(content1.length + content2.length);
     ASSERT_EQ(file_get_size_os(file_path), expected_size);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
 
     fl_arena_destroy(arena);
 }
@@ -600,7 +600,7 @@ UTEST(os_api, file_open_write_multiple_writes) {
 
     ASSERT_EQ(file_get_size_os(file_path), expected_size);
 
-    file_delete_os(file_path);
+    fl_os_file_delete(file_path);
 
     fl_arena_destroy(arena);
 }
@@ -646,7 +646,7 @@ UTEST(os_api, file_rename_basic) {
 
     ASSERT_EQ(file_get_size_os(new_path), (i64)content.length);
 
-    file_delete_os(new_path);
+    fl_os_file_delete(new_path);
 
     fl_arena_destroy(arena);
 }
@@ -671,7 +671,7 @@ UTEST(os_api, file_rename_overwrite) {
     expect_file(utest_result, dest_path, true);
     ASSERT_EQ(file_get_size_os(dest_path), (i64)source_content.length);
 
-    file_delete_os(dest_path);
+    fl_os_file_delete(dest_path);
 
     fl_arena_destroy(arena);
 }
@@ -701,7 +701,7 @@ UTEST(os_api, file_rename_to_invalid_path) {
 
     expect_file(utest_result, source_path, true);
 
-    file_delete_os(source_path);
+    fl_os_file_delete(source_path);
 
     fl_arena_destroy(arena);
 }
@@ -709,7 +709,7 @@ UTEST(os_api, file_rename_to_invalid_path) {
 UTEST(os_api, file_rename_same_directory) {
     FlArena* arena = test_arena();
 
-    FlString temp_dir = get_temp_directory_os(arena);
+    FlString temp_dir = fl_os_temp_directory(arena);
     FlString old_name = create_test_name(arena, "rename_same_old");
     FlString new_name = create_test_name(arena, "rename_same_new");
     FlString old_path = file_build_path_os(arena, temp_dir, old_name);
@@ -724,7 +724,7 @@ UTEST(os_api, file_rename_same_directory) {
     expect_file(utest_result, old_path, false);
     expect_file(utest_result, new_path, true);
 
-    file_delete_os(new_path);
+    fl_os_file_delete(new_path);
 
     fl_arena_destroy(arena);
 }
@@ -775,51 +775,3 @@ UTEST(os_api, directory_recursive_remove_does_not_follow_symlinks) {
     fl_arena_destroy(arena);
 }
 #endif
-
-// Public fl_os_* surface
-
-UTEST(os_public, process_and_time_queries_are_sane) {
-    ASSERT_EQ(fl_os_process_id(), get_process_id_os());
-    ASSERT_GT(fl_os_time_us(), 0);
-
-    u64 before = fl_os_monotonic_ns();
-    fl_os_sleep_us(1);
-    ASSERT_GE(fl_os_monotonic_ns(), before);
-}
-
-UTEST(os_public, directories_create_iterate_and_delete) {
-    FlArena* arena = test_arena();
-    FlString root = create_test_dir_path(arena, "os_public_dir");
-    FlString nested = file_build_path_os(arena, file_build_path_os(arena, root, FL_S("a")), FL_S("b"));
-    FlString file = file_build_path_os(arena, root, FL_S("file.txt"));
-
-    ASSERT_TRUE(fl_os_create_directory_recursive(nested));
-    ASSERT_TRUE(fl_os_directory_exists(nested));
-    ASSERT_EQ(file_write_os(file, (const u8*)"x", 1), 1);
-
-    u32 files = 0;
-    u32 directories = 0;
-    FlOsDir dir = fl_os_dir_open(arena, root);
-    ASSERT_TRUE(dir.is_valid);
-    for (FlOsFileStat entry = fl_os_dir_read_next(arena, &dir); entry.is_valid;
-         entry = fl_os_dir_read_next(arena, &dir)) {
-        files += entry.is_regular_file;
-        directories += entry.is_directory;
-    }
-    fl_os_dir_close(&dir);
-    ASSERT_EQ(files, 1u);
-    ASSERT_EQ(directories, 1u);
-
-    fl_os_file_delete(file);
-    ASSERT_FALSE(file_exists_os(file));
-
-    ASSERT_TRUE(file_remove_directory_recursive_os(root));
-    ASSERT_FALSE(fl_os_directory_exists(root));
-    fl_arena_destroy(arena);
-}
-
-UTEST(os_public, temp_directory_exists) {
-    FlArena* arena = test_arena();
-    ASSERT_TRUE(fl_os_directory_exists(fl_os_temp_directory(arena)));
-    fl_arena_destroy(arena);
-}

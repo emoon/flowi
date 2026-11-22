@@ -1053,7 +1053,7 @@ UTEST(path, find_directory_current_existing) {
         FlString result = path_find_directory(arena, test_dir);
 
         ASSERT_GT((u64)result.length, 0UL);
-        ASSERT_TRUE(file_directory_exists_os(result));
+        ASSERT_TRUE(fl_os_directory_exists(result));
 
         file_remove_directory_os(test_dir);
     }
@@ -1070,7 +1070,7 @@ UTEST(path, find_directory_relative_vs_absolute) {
 
         // The result is either empty (not found) or an existing directory.
         if (result.length > 0) {
-            ASSERT_TRUE(file_directory_exists_os(result));
+            ASSERT_TRUE(fl_os_directory_exists(result));
         }
     }
 

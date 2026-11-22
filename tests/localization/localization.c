@@ -377,7 +377,7 @@ UTEST(localization, an_in_flight_switch_keeps_the_old_language_until_it_lands) {
                         "a frame with the table still loading resolves entirely against the old language");
         ASSERT_EQ_MSG((u32)1, localization_resident_table_count(loc),
                       "a table still being built on the worker is not resident");
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
 
     ASSERT_TRUE_MSG(frames > 0, "the read is started at a frame boundary, so at least one frame sees it in flight");
@@ -407,7 +407,7 @@ UTEST(localization, a_tag_set_while_a_switch_is_in_flight_is_applied_after_it) {
         ASSERT_TRUE_MSG(!fl_string_equals(text, FL_S_UTF8("Configurações")),
                         "a tag set during a switch never overtakes the table already loading");
         landed = fl_string_equals(text, FL_S_UTF8("Einstellungen"));
-        sleep_us(200);
+        fl_os_sleep_us(200);
     }
     ASSERT_TRUE_MSG(landed, "the switch that was in flight is the one that lands first");
 

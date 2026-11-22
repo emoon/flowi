@@ -253,7 +253,7 @@ static void dispatch_notification(FileWatcherState* state, const FILE_NOTIFY_INF
     FlString full_path = notification_full_path(temp_arena, state->watch_path, fni, utf8_len);
 
     // Attributes are readable for created/modified files, but not for deleted ones
-    bool is_directory = !(change_types & FlFileChangeType_Deleted) && file_directory_exists_os(full_path);
+    bool is_directory = !(change_types & FlFileChangeType_Deleted) && fl_os_directory_exists(full_path);
 
     logc_debug(FW_ID, "FileWatcher[%u]: %S (types: 0x%x, dir: %d)", state->handle, full_path, change_types,
                is_directory);

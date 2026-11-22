@@ -410,7 +410,7 @@ StatsRegistry* font_cache_stats(FlFontCache* self) {
 void font_cache_wait_loaded(FlFontCache* self, FlFontId id) {
     while (font_cache_get_font_status(self, id) == FontStatus_Loading) {
         font_cache_update(self);
-        sleep_us(500);
+        fl_os_sleep_us(500);
     }
 }
 
@@ -431,7 +431,7 @@ bool font_cache_ensure_all_loaded(FlFontCache* self) {
             break;
         }
         font_cache_update(self);
-        sleep_us(500);
+        fl_os_sleep_us(500);
     }
 
     bool all_ready = true;

@@ -219,9 +219,9 @@ typedef bool (*VfsPredicate)(const void* arg);
 
 // Polls predicate until it holds or timeout_ns passes, and returns whether it held.
 static inline bool vfs_await_until(VfsPredicate predicate, const void* arg, u64 timeout_ns) {
-    u64 deadline_ns = get_monotonic_time_ns_os() + timeout_ns;
+    u64 deadline_ns = fl_os_monotonic_ns() + timeout_ns;
     while (!predicate(arg)) {
-        if (get_monotonic_time_ns_os() >= deadline_ns) {
+        if (fl_os_monotonic_ns() >= deadline_ns) {
             return false;
         }
         sleep_ms(1);

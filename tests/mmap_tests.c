@@ -6,8 +6,8 @@
 #include <string.h>
 
 static FlString mmap_test_file_path(FlArena* arena, const char* name) {
-    FlString temp_dir = get_temp_directory_os(arena);
-    u32 pid = get_process_id_os();
+    FlString temp_dir = fl_os_temp_directory(arena);
+    u32 pid = fl_os_process_id();
     FlString filename = fl_sprintf_arena(arena, "mmap_test_%s_%u", name, pid);
     return file_build_path_os(arena, temp_dir, filename);
 }
@@ -27,7 +27,7 @@ UTEST(mmap, open_valid_file) {
     file_mmap_close_os(&m);
     ASSERT_EQ(m.data, nullptr);
 
-    file_delete_os(path);
+    fl_os_file_delete(path);
     fl_arena_destroy(arena);
 }
 
@@ -47,7 +47,7 @@ UTEST(mmap, open_empty_file) {
     ASSERT_EQ(m.data, nullptr);
     ASSERT_EQ(m.size, 0ULL);
 
-    file_delete_os(path);
+    fl_os_file_delete(path);
     fl_arena_destroy(arena);
 }
 
@@ -81,6 +81,6 @@ UTEST(mmap, read_binary_data) {
     ASSERT_EQ(m.data[1023], 255);
 
     file_mmap_close_os(&m);
-    file_delete_os(path);
+    fl_os_file_delete(path);
     fl_arena_destroy(arena);
 }

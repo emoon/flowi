@@ -91,7 +91,7 @@ static bool hot_reload_wait_for_request(const LocalizationHotReload* fixture, u6
         if (localization_hot_reload_request_count(loc) > requests_before && !localization_is_loading(loc)) {
             return true;
         }
-        sleep_us(1000);
+        fl_os_sleep_us(1000);
     }
 
     return false;
@@ -110,7 +110,7 @@ static bool hot_reload_wait_for(const LocalizationHotReload* fixture, FlString s
         if (!localization_is_loading(loc) && fl_string_equals(localization_lookup(loc, sid), expected)) {
             return true;
         }
-        sleep_us(1000);
+        fl_os_sleep_us(1000);
     }
 
     return false;
@@ -303,7 +303,7 @@ static bool hot_reload_wait_for_independent_watcher(FlFileWatcherHandle watcher)
         if (file_watcher_has_changes(watcher)) {
             return true;
         }
-        sleep_us(1000);
+        fl_os_sleep_us(1000);
     }
     return false;
 }

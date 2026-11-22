@@ -209,8 +209,8 @@ static void stub_vfs_wait_at_gate(void) {
         return;
     }
     atomic_store(&s_stub_vfs_read_entered, true);
-    const u64 deadline_ns = get_monotonic_time_ns_os() + STUB_VFS_GATE_TIMEOUT_NS;
-    while (!atomic_load(&s_stub_vfs_read_release) && get_monotonic_time_ns_os() < deadline_ns) {
+    const u64 deadline_ns = fl_os_monotonic_ns() + STUB_VFS_GATE_TIMEOUT_NS;
+    while (!atomic_load(&s_stub_vfs_read_release) && fl_os_monotonic_ns() < deadline_ns) {
         sleep_ms(1);
     }
 }

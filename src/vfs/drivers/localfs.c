@@ -229,13 +229,13 @@ static void localfs_list_directory(void* instance, void* handle, FlString relati
 
     arena_scratch_auto(temp);
     FlString dir_path = localfs_resolve(temp.arena, h, relative_path);
-    DirHandle dir = dir_open_os(temp.arena, dir_path);
+    DirHandle dir = fl_os_dir_open(temp.arena, dir_path);
     if (!dir.is_valid) {
         return;
     }
 
-    // dir_read_next_os already skips "." and ".." and stats each entry.
-    for (FileStat e = dir_read_next_os(temp.arena, &dir); e.is_valid; e = dir_read_next_os(temp.arena, &dir)) {
+    // fl_os_dir_read_next already skips "." and ".." and stats each entry.
+    for (FileStat e = fl_os_dir_read_next(temp.arena, &dir); e.is_valid; e = fl_os_dir_read_next(temp.arena, &dir)) {
         FlVfsEntry entry = {
             .name = e.name,
             .size = e.is_directory ? 0 : (i64)e.size,
@@ -248,7 +248,7 @@ static void localfs_list_directory(void* instance, void* handle, FlString relati
         }
     }
 
-    dir_close_os(&dir);
+    fl_os_dir_close(&dir);
 }
 
 static void localfs_close(void* instance, void* handle) {

@@ -23,7 +23,7 @@ Two facts make a built-in driver clean rather than a layering violation:
   handed in already constructed. A driver that flowi *links* and *registers itself* keeps that
   invariant intact — nothing is loaded, it is just always present.
 - **`os.h` already abstracts the platform.** `file_open_os` / `file_read_from_handle_os` /
-  `file_stat_os` / `dir_open_os` and friends cover every filesystem operation the driver needs, so a
+  `file_stat_os` / `fl_os_dir_open` and friends cover every filesystem operation the driver needs, so a
   single cross-platform driver has no `#ifdef` of its own — the platform forks stay in `os/posix.c`
   and `os/windows.c` where they belong.
 

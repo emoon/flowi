@@ -121,7 +121,7 @@ static void schedule_job_with_priority(Jobs* self, JobInfo* job, JobPriority pri
         // Non-worker producer (main thread, a subsystem's own threads): apply backpressure until a slot frees.
         // Workers never block on a full queue, so the queue keeps draining while queued jobs terminate.
         while (!try_enqueue(&self->work_queues[queue], &job)) {
-            sleep_us(50);
+            fl_os_sleep_us(50);
         }
     }
 
@@ -559,12 +559,12 @@ void fl_jobs_wait(FlJobHandle handle) {
 
     // Most waited-on jobs finish within microseconds, so yield for a while before sleeping. A sleep costs a
     // whole scheduler tick on Windows, about 15 ms, however short the requested time.
-    const u64 yield_until_ns = get_monotonic_time_ns_os() + JOBS_WAIT_YIELD_NS;
+    const u64 yield_until_ns = fl_os_monotonic_ns() + JOBS_WAIT_YIELD_NS;
     while (fl_jobs_is_finished(handle) == FlJobsResult_NotFinished) {
-        if (get_monotonic_time_ns_os() < yield_until_ns) {
+        if (fl_os_monotonic_ns() < yield_until_ns) {
             os_thread_yield();
         } else {
-            sleep_us(100);
+            fl_os_sleep_us(100);
         }
     }
 }
