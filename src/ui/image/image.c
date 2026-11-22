@@ -280,13 +280,9 @@ static bool dynamic_image_args_valid(int width, int height, const FlArena* arena
     return arena != nullptr && width > 0 && height > 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool dynamic_source_valid(const DynamicImageSource* source) {
     return source->buffer != nullptr && source->stride > 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ImageData* image_create_dynamic(const DynamicImageSource* source, FlArena* arena) {
     if (!dynamic_source_valid(source) || !dynamic_image_args_valid(source->width, source->height, arena)) {

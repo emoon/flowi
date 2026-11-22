@@ -17,20 +17,14 @@
 #define UI_MESSAGE_BOX_OK_ID "##msgbox_ok"
 #define UI_MESSAGE_BOX_CANCEL_ID "##msgbox_cancel"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct {
     FlSignal ok;
     FlSignal cancel;
 } MessageBoxSignals;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool message_box_has_cancel(const FlMessageBoxConfig* cfg) {
     return cfg->cancel_label.length > 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Right-aligned button row: [Cancel] [OK], primary rightmost.
 static void message_box_button_row(const FlMessageBoxConfig* cfg, MessageBoxSignals* signals) {
@@ -48,8 +42,6 @@ static void message_box_button_row(const FlMessageBoxConfig* cfg, MessageBoxSign
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static MessageBoxSignals message_box_panel(FlString title, FlString message, const FlMessageBoxConfig* cfg,
                                            const FlThemeColors* theme) {
     MessageBoxSignals signals = { 0 };
@@ -65,8 +57,6 @@ static MessageBoxSignals message_box_panel(FlString title, FlString message, con
     }
     return signals;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Root-attached floating backdrop that captures pointer events.
 static MessageBoxSignals message_box_backdrop(FlString title, FlString message, const FlMessageBoxConfig* cfg,
@@ -89,8 +79,6 @@ static MessageBoxSignals message_box_backdrop(FlString title, FlString message, 
     return signals;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Skip dismissal on the opening frame so the input that opened the dialog can't also close it (the button's
 // own just_gained_focus guard already blocks the opening keypress from confirming via OK).
 static FlDialogResult message_box_dismissal(const FlMessageBoxConfig* cfg, const MessageBoxSignals* signals) {
@@ -107,8 +95,6 @@ static FlDialogResult message_box_dismissal(const FlMessageBoxConfig* cfg, const
     return FlDialogResult_None;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // A closed dialog is a no-op; if the app cleared `*open` itself, close the modal scope still armed from the
 // previous frame.
 static void message_box_close_stale_scope(const FlUiCtx* ctx) {
@@ -116,8 +102,6 @@ static void message_box_close_stale_scope(const FlUiCtx* ctx) {
         fl_modal_close();
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // On the opening frame, claim the initial-focus request and focus the primary (OK) button.
 static bool message_box_claim_opening_frame(FlUiCtx* ctx) {
@@ -128,8 +112,6 @@ static bool message_box_claim_opening_frame(FlUiCtx* ctx) {
     }
     return opening_frame;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlDialogResult ui_message_box_impl(FlString title, FlString message, bool* open, FlMessageBoxConfig cfg) {
     FlUiCtx* ctx = g_ui_ctx;

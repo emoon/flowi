@@ -134,8 +134,6 @@ ListRowGeometry list_uniform_geometry(const FlUiCtx* ctx, f32 row_height, f32 ga
     return list_row_geometry(row_height, gap, ctx->ui_scale, count);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void list_uniform_begin_update(FlListUniformContext* self) {
     self->viewport_height = self->ui_ctx->layout_height;
 }
@@ -205,8 +203,6 @@ FlListUniformRange list_uniform_begin_rows(FlListUniformContext* self, FlString 
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u32 total_count,
                                       FlListUniformOpts opts) {
     ListRowGeometry rows = list_uniform_geometry(self->ui_ctx, opts.height_hint, opts.gap, total_count);
@@ -217,8 +213,6 @@ FlListUniformRange list_uniform_begin(FlListUniformContext* self, FlString id, u
                                    });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlLayoutId list_uniform_row_begin(FlListUniformContext* self, u32 index, FlLayoutConfig decoration) {
     FlLayoutId row_id = list_row_layout_id(self->current_id, index);
     decoration.sizing = (FlLayoutSizing) { sizing_grow(), sizing_fit() };
@@ -227,8 +221,6 @@ FlLayoutId list_uniform_row_begin(FlListUniformContext* self, u32 index, FlLayou
     fl_layout_configure(decoration);
     return row_id;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void list_uniform_item_begin(FlListUniformContext* self, u32 index) {
     self->in_item = true;
@@ -269,8 +261,6 @@ bool list_uniform_scrollbar_engaged(FlListUniformContext* self, FlString id) {
     return state != nullptr && state->scrollbar_engaged;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool list_uniform_viewport(const FlListUniformContext* self, FlString id, ListViewport* out) {
     (void)self;
     FlElementState state = ui_get_element_state(list_container_layout_id(id));
@@ -284,14 +274,10 @@ bool list_uniform_viewport(const FlListUniformContext* self, FlString id, ListVi
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f64 list_uniform_scroll_offset(FlListUniformContext* self, FlString id) {
     ListUniformState* state = hashmap_string_get(&self->states, id);
     return state != nullptr ? state->scroll_offset : 0.0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void list_uniform_nudge_scroll(FlListUniformContext* self, FlString id, f32 delta_px) {
     ListUniformState* state = hashmap_string_get(&self->states, id);

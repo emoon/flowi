@@ -99,8 +99,6 @@ static EGLDisplay open_surfaceless_display(void) {
     return dpy;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static EGLContext make_gl43_core_current(EGLDisplay dpy) {
     eglBindAPI(EGL_OPENGL_API);
 
@@ -122,8 +120,6 @@ static EGLContext make_gl43_core_current(EGLDisplay dpy) {
 
     return context;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // EGL surfaceless GL 4.3 core context with no window and no native display (CI's llvmpipe). Returns false (leaving
 // *dpy/*ctx at EGL_NO_*) on any failure.

@@ -191,8 +191,6 @@ static void row_lead(FlTreeContext* self, u32 row, FlTreeRow r) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // With columns, the lead is cut off at the first column's right edge so the other columns stay under their headers.
 static void row_lead_in_column(FlTreeContext* self, u32 row, FlTreeRow r) {
     FlListContext* list = self->list;
@@ -215,8 +213,6 @@ static void row_lead_in_column(FlTreeContext* self, u32 row, FlTreeRow r) {
     row_lead(self, row, r);
     fl_layout_end();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlSignal row_begin(FlTreeContext* self, u32 row, FlTreeRow r) {
     FlSignal signal = list_item_begin_impl(self->list, r.id);

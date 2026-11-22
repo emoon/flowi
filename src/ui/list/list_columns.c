@@ -13,13 +13,9 @@ typedef struct ResolvePass {
     f32 remaining;
 } ResolvePass;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static f32 column_weight(const FlColumnDef* col) {
     return col->flex > 0.0f ? col->flex : 1.0f;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Fixes every column with a width, marks the rest unresolved and takes the fixed widths out of remaining.
 static void resolve_fixed_columns(ResolvePass* pass) {
@@ -34,8 +30,6 @@ static void resolve_fixed_columns(ResolvePass* pass) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static f32 unresolved_weight(const ResolvePass* pass) {
     f32 total = 0.0f;
     for_count(i, pass->count) {
@@ -45,8 +39,6 @@ static f32 unresolved_weight(const ResolvePass* pass) {
     }
     return total;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Pins the first unresolved column whose proportional share is below its minimum. Returns false when every
 // share already fits.
@@ -65,8 +57,6 @@ static bool pin_one_column_below_min(ResolvePass* pass, f32 total_weight) {
     return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Gives every unresolved column its share of what is left, or its minimum when nothing is left.
 static void fill_unresolved(const ResolvePass* pass, f32 total_weight) {
     for_count(i, pass->count) {
@@ -77,8 +67,6 @@ static void fill_unresolved(const ResolvePass* pass, f32 total_weight) {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void list_resolve_column_widths(const FlColumnDef* columns, u32 count, f32 available, f32* out) {
     ResolvePass pass = { .columns = columns, .count = count, .out = out, .remaining = available };

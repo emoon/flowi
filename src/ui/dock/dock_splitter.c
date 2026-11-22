@@ -18,8 +18,6 @@ f32 dock_splitter_ratio_at(f32 cursor_rel_px, f32 extent_px) {
     return clamp(r, FL_DOCK_MIN_RATIO, 1.0f - FL_DOCK_MIN_RATIO);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void splitter_set_resize_cursor(FlSignal sig, FlDockAxis axis) {
     if (sig.hovered || sig.dragging) {
         fl_cursor_set((FlCursor) {
@@ -27,8 +25,6 @@ static void splitter_set_resize_cursor(FlSignal sig, FlDockAxis axis) {
         });
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Map the cursor into the split's last-frame rect and turn the offset along the axis into the new child[0]
 // fraction. The ratio comes from the cursor position alone, so there is no per-divider drag state.
@@ -51,8 +47,6 @@ static bool splitter_drag_ratio(FlDockNodeId split_id, FlDockAxis axis, f32* out
     *out_ratio = dock_layout_clamp_ratio(dock_splitter_ratio_at(cursor_rel, extent), axis, extent, nullptr);
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void dock_splitter_handle_drag(FlDockTree* tree, FlDockNodeId split_id, FlDockAxis axis) {
     // draggable yields hover and the drag latch; FlItem_DragThreshold ignores sub-threshold movement.

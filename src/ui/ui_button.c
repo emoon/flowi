@@ -110,8 +110,6 @@ void ui_progress_bar_impl(float fraction, FlProgressConfig cfg) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlColor link_color_with_focus(const ItemState* item, FlColor base) {
     if (!item || item->state.focused_t <= 0.0f) {
         return base;
@@ -119,8 +117,6 @@ static FlColor link_color_with_focus(const ItemState* item, FlColor base) {
     FlColor white = { 255, 255, 255, 255 };
     return ui_color_lerp(base, white, item->state.focused_t);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlColor link_background_color(const ItemState* item, FlColor base) {
     FlColor bg_color = UI_HIT_TEST_FILL(2);
@@ -131,8 +127,6 @@ static FlColor link_background_color(const ItemState* item, FlColor base) {
     return ui_color_lerp(bg_color, focus_bg, item->state.focused_t);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlColor link_border_color(const ItemState* item, FlColor base) {
     FlColor border_color = { 0, 0, 0, 0 };
     if (!item || item->state.focused_t <= 0.0f) {
@@ -141,16 +135,12 @@ static FlColor link_border_color(const ItemState* item, FlColor base) {
     return ui_color_lerp(border_color, base, item->state.focused_t);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool link_is_hovered_unfocused(const ItemState* item) {
     if (!item) {
         return false;
     }
     return item->state.hot_t > 0.0f && item->state.focused_t < 0.5f;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Brighten on hover, but not while focused (the focused text is already white).
 static FlColor link_color_with_hover(const ItemState* item, FlColor link_color) {
@@ -161,8 +151,6 @@ static FlColor link_color_with_hover(const ItemState* item, FlColor link_color) 
                             (u8)min(link_color.b + 40, 255), link_color.a };
     return ui_color_lerp(link_color, hover_color, item->state.hot_t);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The underline fades in with hover/focus and is invisible at rest.
 static FlColor link_underline_color(const ItemState* item, FlColor link_color) {

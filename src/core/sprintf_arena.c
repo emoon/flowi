@@ -4,14 +4,10 @@
 #include "memory.h"
 #include "stb_sprintf.h"
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct SprintfArenaContext {
     FlArena* arena;
     u64 total_len;
 } SprintfArenaContext;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static char* sprintf_arena_callback(const char* buf, void* user, int len) {
     SprintfArenaContext* ctx = (SprintfArenaContext*)user;
@@ -26,8 +22,6 @@ static char* sprintf_arena_callback(const char* buf, void* user, int len) {
     return (char*)buf;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Assembles formatted chunks in scratch.
 static FlString sprintf_assemble(FlArena* scratch, const char* format, va_list args) {
     SprintfArenaContext ctx = { .arena = scratch };
@@ -41,8 +35,6 @@ static FlString sprintf_assemble(FlArena* scratch, const char* format, va_list a
     // Default to is_ascii = 0 (conservative - formatted output may contain UTF-8 from %S args)
     return (FlString) { .data = (char*)scratch->ptr + start_pos, .length = ctx.total_len, .is_ascii = 0 };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString vsprintf_arena(FlArena* arena, const char* format, va_list args) {
     // The conflict argument keeps the assembly off arena itself when a caller formats into its own
@@ -61,8 +53,6 @@ FlString vsprintf_arena(FlArena* arena, const char* format, va_list args) {
     return (FlString) { .data = dest, .length = assembled.length, .is_ascii = 0 };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 FlString fl_sprintf_arena(FlArena* arena, const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -71,7 +61,6 @@ FlString fl_sprintf_arena(FlArena* arena, const char* format, ...) {
     return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Multi-Threaded Arena Sprintf Implementation
 
 FlString vsprintf_arena_mt(FlArenaMt* arena_mt, const char* format, va_list args) {
@@ -88,8 +77,6 @@ FlString vsprintf_arena_mt(FlArenaMt* arena_mt, const char* format, va_list args
 
     return (FlString) { .data = dest, .length = assembled.length, .is_ascii = 0 };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlString sprintf_arena_mt(FlArenaMt* arena_mt, const char* format, ...) {
     va_list args;

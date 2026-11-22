@@ -270,8 +270,6 @@ static struct {
                           "50515253545556575859606162636465666768697071727374"
                           "75767778798081828384858687888990919293949596979899" };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #define STBSP__LEFTJUST 1
 #define STBSP__LEADINGPLUS 2
 #define STBSP__LEADINGSPACE 4
@@ -286,8 +284,6 @@ static struct {
 #define STBSP__METRIC_1024 2048
 #define STBSP__METRIC_JEDEC 4096
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void stbsp__lead_sign(stbsp__uint32 fl, char* sign) {
     sign[0] = 0;
     if (fl & STBSP__NEGATIVE) {
@@ -301,8 +297,6 @@ static void stbsp__lead_sign(stbsp__uint32 fl, char* sign) {
         sign[1] = '+';
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static STBSP__ASAN stbsp__uint32 stbsp__strlen_limited(char const* s, stbsp__uint32 limit) {
     char const* sn = s;
@@ -342,8 +336,6 @@ static STBSP__ASAN stbsp__uint32 stbsp__strlen_limited(char const* s, stbsp__uin
 
     return (stbsp__uint32)(sn - s);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB* callback, void* user, char* buf, char const* fmt,
                                                       va_list va) {
@@ -1641,8 +1633,6 @@ done:
 // ============================================================================
 //   wrapper functions
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintf)(char* buf, char const* fmt, ...) {
     int result;
     va_list va;
@@ -1658,8 +1648,6 @@ typedef struct stbsp__context {
     int length;
     char tmp[STB_SPRINTF_MIN];
 } stbsp__context;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static char* stbsp__clamp_callback(const char* buf, void* user, int len) {
     stbsp__context* c = (stbsp__context*)user;
@@ -1688,8 +1676,6 @@ static char* stbsp__clamp_callback(const char* buf, void* user, int len) {
     return (c->count >= STB_SPRINTF_MIN) ? c->buf : c->tmp; // go direct into buffer if you can
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static char* stbsp__count_clamp_callback(const char* buf, void* user, int len) {
     stbsp__context* c = (stbsp__context*)user;
     (void)sizeof(buf);
@@ -1697,8 +1683,6 @@ static char* stbsp__count_clamp_callback(const char* buf, void* user, int len) {
     c->length += len;
     return c->tmp; // go direct into buffer if you can
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintf)(char* buf, int count, char const* fmt, va_list va) {
     stbsp__context c;
@@ -1726,8 +1710,6 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintf)(char* buf, int count, char 
     return c.length;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintf)(char* buf, int count, char const* fmt, ...) {
     int result;
     va_list va;
@@ -1753,8 +1735,6 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintf)(char* buf, int count, char c
     }
 
 // get float info
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static stbsp__int32 stbsp__real_to_parts(stbsp__int64* bits, stbsp__int32* expo, double value) {
     double d;
@@ -1892,8 +1872,6 @@ static stbsp__uint64 const stbsp__powten[20] = { 1,
 
 #define stbsp__ddmultlos(oh, ol, xh, yl) ol = ol + (xh * yl);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void stbsp__raise_to_power10(double* ohi, double* olo, double d, stbsp__int32 power) // power can be -323 to +350
 {
     double ph, pl;
@@ -1961,8 +1939,6 @@ static void stbsp__raise_to_power10(double* ohi, double* olo, double d, stbsp__i
 //   decimal point in decimal_pos.  +/-INF and NAN are specified by special values
 //   returned in the decimal_pos parameter.
 // frac_digits is absolute normally, but if you want from first significant digits (got %g and %e), or in 0x80000000
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static stbsp__int32 stbsp__real_to_str(char const** start, stbsp__uint32* len, char* out, stbsp__int32* decimal_pos,
                                        double value, stbsp__uint32 frac_digits) {

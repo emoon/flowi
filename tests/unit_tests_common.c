@@ -83,8 +83,6 @@ static bool stub_vfs_name_is_file(FlString name) {
     return name.length == n && memcmp(name.data, STUB_VFS_FILE, (size_t)n) == 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool stub_vfs_is_file(FlString path) {
     if (stub_vfs_name_is_file(path)) {
         return true;
@@ -126,13 +124,9 @@ static FlVfsOpenResult stub_vfs_open_handle(bool is_dir) {
                                .error = h ? stub_vfs_ok() : stub_vfs_not_found() };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlVfsOpenResult stub_vfs_open_not_found(void) {
     return (FlVfsOpenResult) { .handle = nullptr, .error = stub_vfs_not_found() };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static FlVfsOpenResult stub_vfs_open_root(FlString path) {
     const bool is_file = stub_vfs_is_file(path);
@@ -141,8 +135,6 @@ static FlVfsOpenResult stub_vfs_open_root(FlString path) {
     }
     return stub_vfs_open_handle(!(s_stub_vfs_open_as_file && is_file));
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsOpenResult stub_vfs_open(void* instance, void* parent_handle, FlString path, uint32_t flags,
                               FlVfsMountOptions mount_options) {
@@ -160,8 +152,6 @@ FlVfsOpenResult stub_vfs_open(void* instance, void* parent_handle, FlString path
     }
     return stub_vfs_is_file(path) ? stub_vfs_open_handle(false) : stub_vfs_open_not_found();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool stub_vfs_is_directory(void* instance, void* handle) {
     (void)instance;
@@ -215,16 +205,12 @@ static void stub_vfs_wait_at_gate(void) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool stub_vfs_read_args_valid(const StubVfsHandle* h, const uint8_t* buffer, int64_t size) {
     if (!h || h->is_dir) {
         return false;
     }
     return buffer && size >= 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlVfsReadResult stub_vfs_read(void* instance, void* handle, FlString relative_path, uint8_t* buffer, int64_t size) {
     (void)instance;
@@ -249,8 +235,6 @@ FlVfsReadResult stub_vfs_read(void* instance, void* handle, FlString relative_pa
     int64_t reported = (s_stub_vfs_short_read && n > 0) ? n - 1 : n;
     return (FlVfsReadResult) { .bytes_read = reported, .error = stub_vfs_ok() };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void stub_vfs_list_directory(void* instance, void* handle, FlString relative_path, FlVfsListingCallback callback,
                              void* user_data) {
@@ -315,8 +299,6 @@ static void render_fixture_capture_text_run(const FlCmdTextRun* run) {
     s_render.text_run_found = true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void render_fixture_capture_command(const FlCmdHeader* h) {
     if (h->kind == FlCmd_Border && !s_render.border_found) {
         s_render.submitted_border = *(const FlCmdBorder*)(h + 1);
@@ -328,8 +310,6 @@ static void render_fixture_capture_command(const FlCmdHeader* h) {
         render_fixture_capture_text_run((const FlCmdTextRun*)(h + 1));
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void render_fixture_capture(void* user_data, FlSurface* surface, const FlRenderFrame* frame) {
     s_render.submitted_global_alpha = frame->global_alpha;
@@ -345,8 +325,6 @@ void render_fixture_capture(void* user_data, FlSurface* surface, const FlRenderF
     }
     s_render.render(user_data, surface, frame);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlUiCtx* render_fixture_get(void) {
     if (s_render.created) {
@@ -462,13 +440,9 @@ static bool render_command_is_border(int index, UiRenderCommand* cmd) {
     return ui_get_render_command(index, cmd) && cmd->type == UiRenderCmd_Border;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool channel_close(float got, u8 want) {
     return fabsf(got - (float)want) < 1.0f;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool border_is_focus_color(UiColor4 got, FlColor want) {
     if (want.a == 0 || got.a <= 0.0f) {
@@ -476,8 +450,6 @@ static bool border_is_focus_color(UiColor4 got, FlColor want) {
     }
     return channel_close(got.r, want.r) && channel_close(got.g, want.g) && channel_close(got.b, want.b);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // True if this frame drew the keyboard focus ring: a border render command in the theme's border.focus color.
 // item_begin draws it only on the frame_focus_cursor row.

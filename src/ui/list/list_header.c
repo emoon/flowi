@@ -24,8 +24,6 @@ static FlLayoutId header_id(const FlListContext* self, i32 id) {
     return list_layout_id(self->current_id.name, id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 u32 list_column_at(const FlListContext* self, f32 x) {
     f32 edge = 0.0f;
     for_count(i, self->column_count) {
@@ -37,8 +35,6 @@ u32 list_column_at(const FlListContext* self, f32 x) {
     return 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool mouse_in_row(const FlListContext* self, FlElementState row) {
     ListViewport vp;
     if (!list_get_viewport(self, &vp)) {
@@ -49,8 +45,6 @@ static bool mouse_in_row(const FlListContext* self, FlElementState row) {
     bool in_rows = y >= row.pos.y && y < row.pos.y + row.size.y;
     return in_rows && list_viewport_contains(&vp, ui->input_state.mouse.x, y);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 list_row_cell_under_mouse(const FlListContext* self, FlLayoutId row_id) {
     if (self->column_count == 0) {
@@ -67,8 +61,6 @@ u32 list_row_cell_under_mouse(const FlListContext* self, FlLayoutId row_id) {
     return list_column_at(self, (ui->input_state.mouse.x - row.pos.x) / ui_scale_or_one(ui->ui_scale));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The dragged column's width: where it was when the press landed plus the drag distance, never below the column's
 // minimum or the resize floor.
 static f32 resized_width_of(const FlListContext* self, const ListState* st, u32 index, f32 drag_x) {
@@ -78,16 +70,12 @@ static f32 resized_width_of(const FlListContext* self, const ListState* st, u32 
     return width > floor ? width : floor;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void header_resize_arm(FlListContext* self, ListState* st, u32 index) {
     st->resize_column = self->columns[index].id;
     st->resize_start_width = self->column_widths[index];
     st->resize_moved = false;
     self->frame_header_pressed = true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Reports the dragged column's new width once the mouse has moved, and ends the drag with the button.
 static void header_resize_drag(FlListContext* self, ListState* st, u32 index, FlSignal handle) {
@@ -100,8 +88,6 @@ static void header_resize_drag(FlListContext* self, ListState* st, u32 index, Fl
         st->resize_column = 0;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Records a press on a header edge, or the drag that follows it.
 static void header_resize(FlListContext* self, ListState* st, u32 index, FlSignal handle) {
@@ -117,8 +103,6 @@ static void header_resize(FlListContext* self, ListState* st, u32 index, FlSigna
         header_resize_drag(self, st, index, handle);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The grab area on the cell's right edge, with the divider line drawn inside it.
 static FlSignal header_handle(const FlListContext* self, u32 index) {
@@ -141,13 +125,9 @@ static FlSignal header_handle(const FlListContext* self, u32 index) {
     return signal;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static f32 cell_width_or_min(f32 width) {
     return width > LIST_CELL_MIN_WIDTH ? width : LIST_CELL_MIN_WIDTH;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The title in a box of a fixed width, so a long title is elided and leaves the handle its place.
 static void header_title(FlString title, f32 width) {
@@ -160,8 +140,6 @@ static void header_title(FlString title, f32 width) {
     ui_text_styled(title, .color = fl_theme_colors()->text.secondary, .no_wrap = true, .overflow = FlOverflow_Elide);
     fl_layout_end();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void header_cell(FlListContext* self, ListState* st, u32 index) {
     const FlColumnDef* col = &self->columns[index];
@@ -185,8 +163,6 @@ static void header_cell(FlListContext* self, ListState* st, u32 index) {
     fl_layout_end();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void header_emit(FlListContext* self, ListState* st, f32 height) {
     fl_layout_start(header_id(self, LIST_ID_HEADER));
     fl_layout_configure((FlLayoutConfig) {
@@ -202,8 +178,6 @@ static void header_emit(FlListContext* self, ListState* st, f32 height) {
     fl_layout_end();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void validate_column_ids(const FlColumnDef* columns, u32 count) {
     for_count(i, count) {
         FL_ASSERT_FATAL_MSG(columns[i].id != 0, "ListConfig.columns: a column id is 0");
@@ -212,8 +186,6 @@ static void validate_column_ids(const FlColumnDef* columns, u32 count) {
         }
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void list_header_begin(FlListContext* self, ListState* st, const FlListConfig* config, f32 row_height) {
     self->columns = config->columns;
@@ -239,8 +211,6 @@ void list_header_begin(FlListContext* self, ListState* st, const FlListConfig* c
     header_emit(self, st, config->header_height > 0.0f ? config->header_height : row_height);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void list_header_end(FlListContext* self) {
     if (self->column_count > 0) {
         fl_layout_end();
@@ -248,8 +218,6 @@ void list_header_end(FlListContext* self) {
     self->columns = nullptr;
     self->column_count = 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A cell is two boxes: the outer one cuts off what cannot shrink, and the inner one, which does not clip, lets the
 // layout shrink what can (elided text, a growing child) to the column width.
@@ -288,8 +256,6 @@ void fl_cell_begin(u32 column_id) {
         .child_alignment = { .y = LayoutAlignmentY_Center },
     });
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_cell_end(void) {
     fl_layout_end();

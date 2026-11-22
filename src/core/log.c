@@ -113,13 +113,9 @@ typedef struct {
     bool enabled;
 } ChannelInfo;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool channel_is_resolvable(LogChannelId id, u32 count) {
     return id < count && s_channels[id].registered && id != LOG_CHANNEL_INVALID;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Copies a channel's name/level/enabled under s_channel_mutex so concurrent set_level / enable writers can't be
 // observed torn. Invalid or unregistered ids resolve to a permissive DEFAULT channel.
@@ -163,13 +159,9 @@ static bool resolve_log_dir(FlString base_dir, FlString* dir_path) {
     return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool ensure_log_dir_exists(FlString dir_path) {
     return fl_os_directory_exists(dir_path) || fl_os_create_directory_recursive(dir_path);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void rotate_log_file(FlString dir_path, FlString log_name, FlString log_path) {
     FlString old_log_path
@@ -180,8 +172,6 @@ static void rotate_log_file(FlString dir_path, FlString log_name, FlString log_p
         file_rename_os(log_path, old_log_path);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static bool open_log_file(FlString log_path) {
     // Close the fd from any previous init so re-init doesn't leak it
@@ -198,8 +188,6 @@ static bool open_log_file(FlString log_path) {
 
     return opened;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_log_file_init(FlString base_dir) {
     ensure_log_file_mutex_initialized();
@@ -331,8 +319,6 @@ typedef struct {
     int line;
 } LogSite;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString format_log_line(FlArena* arena, const LogLine* l) {
     if (l->show_location && l->filename) {
         return fl_sprintf_arena(arena, "[%S] [%S] [%S] : %S (%s:%d)\n", l->timestamp, l->channel, l->level,
@@ -340,8 +326,6 @@ static FlString format_log_line(FlArena* arena, const LogLine* l) {
     }
     return fl_sprintf_arena(arena, "[%S] [%S] [%S] : %S\n", l->timestamp, l->channel, l->level, l->message);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static const char* path_basename(const char* file) {
     if (file == nullptr) {
@@ -351,8 +335,6 @@ static const char* path_basename(const char* file) {
     const char* slash = strrchr(file, '/');
     return slash ? slash + 1 : file;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void log_formatted_message_internal(LogChannelId id, LogLevel level, LogSite site, FlString message) {
     ChannelInfo channel = channel_info_read(id);
@@ -382,8 +364,6 @@ static void log_formatted_message_internal(LogChannelId id, LogLevel level, LogS
         log_file_write(format_log_line(temp.arena, &line));
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void fl_log_c_vmessage_loc(LogChannelId id, LogLevel level, const char* file, int line, const char* format,
                            va_list args) {

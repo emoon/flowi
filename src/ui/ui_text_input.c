@@ -200,8 +200,6 @@ static void scroll_to_cursor(const TextField* f, float visible_width) {
     state->scroll_offset_x += (state->target_scroll_x - state->scroll_offset_x) * 0.3f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The authored lengths of one field's chrome.
 typedef struct FieldBox {
     FlLayoutSizingAxis outer_width;
@@ -215,8 +213,6 @@ typedef struct FieldBox {
     float visible_width;  // width the text scrolls in
     FlLayoutAlignmentY text_align;
 } FieldBox;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // The text, or the placeholder while empty, followed by the optional character counter.
 static void render_content(const TextField* f, const FieldBox* box) {
@@ -246,8 +242,6 @@ static Clay_SizingAxis clay_fixed(float size) {
     return (Clay_SizingAxis) { .type = CLAY__SIZING_TYPE_FIXED, .size = { .minMax = { .min = size, .max = size } } };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FieldBox bordered_box(const FlTextInputConfig* cfg) {
     const float min_width = cfg->min_width > 0.0f ? cfg->min_width : 200.0f;
     const float inner_width = min_width - (s_border_width * 2.0f);
@@ -264,8 +258,6 @@ static FieldBox bordered_box(const FlTextInputConfig* cfg) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // No chrome: the field takes the size of the box it is in, as measured on the previous frame.
 static FieldBox borderless_box(const FlUiCtx* ctx, u32 clay_id) {
     const FlElementState last = ui_get_element_state_by_id(clay_id);
@@ -281,13 +273,9 @@ static FieldBox borderless_box(const FlUiCtx* ctx, u32 clay_id) {
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FieldBox field_box(const TextField* f, u32 clay_id) {
     return f->cfg->borderless ? borderless_box(f->ctx, clay_id) : bordered_box(f->cfg);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Render the blinking text cursor as a floating element attached to the input container.
 // Caller is responsible for the focus/stb_state guard before invoking.
@@ -412,14 +400,10 @@ static void render_field(const TextField* f, FlLayoutId input_id, bool focused) 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void ui_text_input_request_focus(FlTextInputState* state, bool select_all) {
     state->focus_requested = true;
     state->select_all_requested = select_all;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void apply_focus_request(FlTextInputState* state, FlLayoutId input_id) {
     if (!state->focus_requested) {

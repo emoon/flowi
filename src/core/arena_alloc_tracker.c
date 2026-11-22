@@ -89,8 +89,6 @@ void arena_alloc_tracker_reset(ArenaAllocTracker* tracker) {
     mutex_unlock(&tracker->mutex);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int top_insert_pos(const ArenaAllocEntry* result, int result_count, int capacity, u64 total_bytes) {
     for (int i = 0; i < result_count; i++) {
         if (total_bytes > result[i].total_bytes) {
@@ -100,8 +98,6 @@ static int top_insert_pos(const ArenaAllocEntry* result, int result_count, int c
 
     return result_count < capacity ? result_count : result_count - 1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int top_insert(ArenaAllocEntry* result, int result_count, int capacity, const TrackerSlot* slot) {
     bool has_room = result_count < capacity;
@@ -127,8 +123,6 @@ static int top_insert(ArenaAllocEntry* result, int result_count, int capacity, c
     return has_room ? result_count + 1 : result_count;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int top_collect(const ArenaAllocTracker* tracker, ArenaAllocEntry* result, int capacity) {
     int result_count = 0;
 
@@ -141,8 +135,6 @@ static int top_collect(const ArenaAllocTracker* tracker, ArenaAllocEntry* result
 
     return result_count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int arena_alloc_tracker_get_top(ArenaAllocTracker* tracker, FlArena* output_arena, int max_entries,
                                 ArenaAllocEntry** out_entries) {
