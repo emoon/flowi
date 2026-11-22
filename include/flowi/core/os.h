@@ -1,9 +1,8 @@
 #pragma once
 
-// Operating-system services for hosts and tools built on flowi: time and sleeping, threads, the process
-// environment, and plain file and directory access. Paths are UTF-8 FlStrings. Applications that read
-// content should go through the VFS (<flowi/vfs/vfs.h>); this header is for the cases the VFS does not
-// cover, such as temp files, directory scans and process-level setup.
+// Operating-system services for hosts built on flowi: time and sleeping, the process environment, and
+// directory scans. Paths are UTF-8 FlStrings. Applications that read content should go through the VFS
+// (<flowi/vfs/vfs.h>); this header is for the cases the VFS does not cover.
 
 #include <flowi/core/string.h>
 #include <flowi/fl_api.h>
@@ -26,22 +25,6 @@ FL_API uint64_t fl_os_monotonic_ns(void);
 
 // Suspend the calling thread. Precision depends on the OS scheduler (typically 1-15 ms).
 FL_API void fl_os_sleep_us(uint64_t microseconds);
-FL_API void fl_os_sleep_ms(uint64_t milliseconds);
-
-// Threads
-
-// Opaque storage for a platform thread handle.
-typedef struct FlOsThread {
-    uint8_t data[64];
-} FlOsThread;
-
-typedef void* (*FlOsThreadFunc)(void* user_data);
-
-// Start a thread running func(user_data). False when the thread could not be created.
-FL_API bool fl_os_thread_create(FlOsThread* thread, FlOsThreadFunc func, void* user_data);
-
-// Wait for the thread to finish and return the value its function returned.
-FL_API void* fl_os_thread_join(FlOsThread* thread);
 
 // Process environment
 
@@ -50,41 +33,14 @@ FL_API uint32_t fl_os_process_id(void);
 // The system temp directory.
 FL_API FlString fl_os_temp_directory(FlArena* arena);
 
-// The value of an environment variable (do not modify it), or nullptr when it is not set. Not thread-safe
-// against concurrent changes to the environment.
-FL_API const char* fl_os_getenv(const char* name);
+// Files and directories
 
-// Files
-
-FL_API bool fl_os_file_exists(FlString path);
 FL_API bool fl_os_directory_exists(FlString path);
-
-// Create or truncate path and write size bytes. Returns the number of bytes written, or -1 on failure.
-FL_API int64_t fl_os_file_write(FlString path, const uint8_t* data, int64_t size);
-
-// Open path for writing; append keeps existing content, otherwise the file is truncated or created.
-// Returns a descriptor (>= 0), or -1 on failure.
-FL_API int64_t fl_os_file_open_write(FlString path, bool append);
-
-// Returns the number of bytes written, or -1 on failure.
-FL_API int64_t fl_os_file_write_to_handle(int64_t fd, const uint8_t* data, int64_t size);
-
-FL_API void fl_os_file_close_handle(int64_t fd);
 
 FL_API void fl_os_file_delete(FlString path);
 
-// Directories
-
-FL_API bool fl_os_create_directory(FlString path);
-
 // Create path and any missing parents.
 FL_API bool fl_os_create_directory_recursive(FlString path);
-
-// Remove path and everything under it.
-FL_API bool fl_os_remove_directory_recursive(FlString path);
-
-// base_path joined with relative_path using the platform separator.
-FL_API FlString fl_os_build_path(FlArena* arena, FlString base_path, FlString relative_path);
 
 // What a directory read reports about one entry.
 typedef struct FlOsFileStat {
