@@ -1,7 +1,7 @@
-#include "sprintf.h"
-#include "string.h"
-#include "memory.h"
-#include "simd.h"
+#include <core/sprintf.h>
+#include <core/string.h>
+#include <core/memory.h>
+#include <core/simd.h>
 #include <string.h>
 
 // stb_sprintf - v1.10 - public domain snprintf() implementation

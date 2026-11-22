@@ -18,7 +18,7 @@
 #include <core/mcmpq.h>
 #include <core/os/os.h>
 #include <core/pool_allocator.h>
-#include <core/tlsf.h>
+#include <tlsf/tlsf.h>
 #include <core/heap.h>
 #include <flowi/core/jobs.h>
 #include <core/perf_counters.h>

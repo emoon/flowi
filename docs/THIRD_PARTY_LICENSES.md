@@ -14,7 +14,8 @@ licenses, reproduced in the files listed below. All of them permit redistributio
 | [lhasa](https://github.com/fragglet/lhasa) | ISC | 2011-2025 Simon Howard | `external/lhasa/COPYING.md` |
 | [mimalloc](https://github.com/microsoft/mimalloc) | MIT | 2018-2025 Microsoft Corporation, Daan Leijen | `external/mimalloc/LICENSE` |
 | [nanosvg](https://github.com/memononen/nanosvg) | zlib/libpng | 2013-14 Mikko Mononen; SVG parser derived from Anti-Grain Geometry 2.4, 2002-2004 Maxim Shemanarev | `external/nanosvg/nanosvg.h` (header notice) |
-| [stb](https://github.com/nothings/stb) (`stb_image`, `stb_image_write`, `stb_image_resize2`) (`stb_image.h` **modified**, see below) | Public domain (Unlicense) or MIT, at your option | Sean Barrett | end of each `external/stb/*.h` |
+| [stb](https://github.com/nothings/stb) (`stb_image`, `stb_image_write`, `stb_image_resize2`, `stb_sprintf` v1.10) (`stb_image.h` and `stb_sprintf` **modified**, see below) | Public domain (Unlicense) or MIT, at your option | Sean Barrett; `stb_sprintf` also RAD Game Tools and the contributors listed in the file | end of each `external/stb/*.h`; top of `external/stb/stb_sprintf.c` |
+| [TLSF](http://tlsf.baisoku.org) 3.1 | BSD 3-Clause (reproduced below) | 2006-2016 Matthew Conte | top of `external/tlsf/tlsf.c` and `tlsf.h` |
 | unlzx | Public domain | Erik Meusel, Dan Fraser; LZX by Jonathan Forbes and Tomi Poutanen | notice at the top of `external/unlzx/unlzx.c` |
 | [utest.h](https://github.com/sheredom/utest.h) | Unlicense | dedicated to the public domain | `external/utest/utest.h` (header notice) |
 | [xxHash](https://github.com/Cyan4973/xxHash) | BSD 2-Clause | 2012-2021 Yann Collet | `external/xxhash/LICENSE` |
@@ -28,7 +29,7 @@ notice that the zlib license (clause 2) requires. Do not assume the vendored cop
 upstream v0.14; diff before re-basing. See
 [ADR-0012](adr/0012-fork-clay-as-em-layout.md).
 
-The other eleven are upstream copies, except `stb_image.h` (see below). libarchive, lhasa and unlzx back the optional VFS archive
+The other twelve are upstream copies, except `stb_image.h` and `stb_sprintf` (see below) and TLSF, whose edits since it was copied were not tracked; treat it as modified. libarchive, lhasa and unlzx back the optional VFS archive
 drivers and are compiled only when `FLOWI_VFS_DRIVER_LIBARCHIVE`, `FLOWI_VFS_DRIVER_LHASA` or
 `FLOWI_VFS_DRIVER_UNLZX` is on. fzy is a partial vendor — only `match.c`,
 `match.h`, `bonus.h` and `config*.h`, with a flowi-authored `CMakeLists.txt`
@@ -41,6 +42,14 @@ alongside and two portability edits (`<strings.h>` guarded for Windows, flattene
 (`stbi__apng_directory` and the APNG frame loading path). It is no longer identical
 to upstream; diff against upstream stb_image.h v2.30 before re-basing.
 
+## stb_sprintf carries flowi format specifiers
+
+`external/stb/stb_sprintf.c` is stb_sprintf v1.10 with its implementation split
+out of the header and two additions: `%S` prints an `FlString`, and `%v...`
+prints a `simd.h` vector. It includes flowi's own headers for those types, so
+it builds only as part of flowi. `external/stb/stb_sprintf.h` holds the
+declarations.
+
 ## Third-party code outside `external/`
 
 These files are copied into flowi's own source tree and keep their upstream
@@ -48,8 +57,6 @@ notices in the file. "Modified" means edited after copying.
 
 | Code | Where | License | Copyright | Modified |
 |---|---|---|---|---|
-| [TLSF](http://tlsf.baisoku.org) 3.1 | `src/core/tlsf.c`, `tlsf.h` | BSD 3-Clause (notice in both files; reproduced below) | 2006-2016 Matthew Conte | Not tracked; treat as modified |
-| [stb_sprintf](https://github.com/nothings/stb) v1.10 | `src/core/sprintf.c` | Public domain (Unlicense) or MIT, at your option (notice at end of the stb section) | 2017 Sean Barrett; RAD Game Tools and contributors listed in the file | Modified: flowi arena wrappers appended after the upstream code |
 | [branchless-utf8](https://github.com/skeeto/branchless-utf8) | `src/core/utf8.h` | Unlicense (public domain) | Christopher Wellons | Modified: embedded in flowi's UTF-8 helpers |
 | [teeny-sha1](https://github.com/CTrabant/teeny-sha1) | `src/core/hash.c` (SHA1 section) | MIT (full notice in the file) | 2017 CTrabant | Modified: flowi types and hex output wrapper |
 | MD5 (Colin Plumb) | `src/core/hash.c` (MD5 section) | Public domain | 1993 Colin Plumb (no copyright claimed) | Modified: flowi API wrapper |

@@ -9,7 +9,7 @@
 #include <core/sprintf.h>
 #include <core/stats.h>
 #include <core/string_allocator.h>
-#include <core/tlsf.h>
+#include <tlsf/tlsf.h>
 #include <ui/image/image_private.h>
 #include "sr_image_convert.h"
 #include <core/memory.h>
