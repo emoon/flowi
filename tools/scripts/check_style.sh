@@ -21,14 +21,13 @@
 #   <base-ref>  the change is everything since the branch left <base-ref>
 #               (default origin/main)
 #
-# Not checked: external/, src/core/tlsf.c and src/core/sprintf.c (vendored).
-# The NULL rule also skips tests/probes/, examples/ and Objective-C files.
+# Not checked: external/. The NULL rule also skips tests/probes/, examples/
+# and Objective-C files.
 
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
-VENDORED=(':!src/core/tlsf.c' ':!src/core/tlsf.h' ':!src/core/sprintf.c')
 C_FILES=('*.c' '*.h' '*.cpp')
 
 errors=0
@@ -38,7 +37,7 @@ ban() {
     local heading="$1" pattern="$2"
     shift 2
     local hits
-    hits="$(git grep -nE "$pattern" -- "$@" "${VENDORED[@]}" || true)"
+    hits="$(git grep -nE "$pattern" -- "$@" || true)"
     if [ -n "$hits" ]; then
         echo "error: $heading" >&2
         echo "$hits" | sed 's/^/  /' >&2
@@ -86,7 +85,7 @@ fi
 changed_lines() {
     local pattern="$1"
     shift
-    git diff "${diff_args[@]}" --unified=0 --no-color -- "$@" "${VENDORED[@]}" \
+    git diff "${diff_args[@]}" --unified=0 --no-color -- "$@" \
         | awk -v pattern="$pattern" '
             /^\+\+\+ b\// { file = substr($0, 7); next }
             /^--- a\//    { if (file == "") file = substr($0, 7); next }

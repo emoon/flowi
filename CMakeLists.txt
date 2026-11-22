@@ -83,7 +83,8 @@ add_subdirectory(external/freetype2)
 # Sources
 
 file(GLOB SOURCES CONFIGURE_DEPENDS
-    ${SRC}/app/*.c external/clay/clay.c external/kb/kb_text_shape.c ${SRC}/core/*.c ${SRC}/core/os/*.c ${SRC}/vfs/*.c
+    ${SRC}/app/*.c external/clay/clay.c external/kb/kb_text_shape.c external/stb/stb_sprintf.c external/tlsf/tlsf.c
+    ${SRC}/core/*.c ${SRC}/core/os/*.c ${SRC}/vfs/*.c
     ${SRC}/vfs/drivers/*.c
     ${SRC}/image_loader/*.c ${SRC}/platform/*.c ${SRC}/ui/*.c ${SRC}/ui/dock/*.c ${SRC}/ui/image/*.c ${SRC}/ui/list/*.c ${SRC}/ui/menu/*.c ${SRC}/render/software/*.c)
 
