@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_codescene_codescene__code_health_score",
+      "mcp__plugin_codescene_codescene__code_health_review",
+      "mcp__plugin_codescene_codescene__pre_commit_code_health_safeguard",
+      "mcp__plugin_codescene_codescene__analyze_change_set",
+      "mcp__plugin_codescene_codescene__rules_config_validate",
+      "mcp__plugin_codescene_codescene__rules_config_list_thresholds",
+      "Bash(tools/scripts/code_health.sh:*)"
+    ]
+  }
+}

@@ -1,39 +1,312 @@
 {
-  "usage": "Code Health rule overrides for flowi. See https://codescene.io/docs/guides/technical/code-health.html",
+  "usage": "Code Health rule overrides for flowi. The first rule set whose path matches a file is the only one applied to it, so the order below is specific to general and every set repeats the argument limit it needs. Policy and reasons: docs/codescene.md.",
   "rule_sets": [
     {
-      "matching_content_path": "src/ui/{ui_api,painter,ui_list,ui_tree,ui_dropdown,ui_slider,dock/dock_persist,dock/dock_tree}.c",
+      "matching_content_path": "external/**",
+      "rules": [
+        {
+          "name": "Brain Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Bumpy Road Ahead",
+          "weight": 0.0
+        },
+        {
+          "name": "Code Duplication",
+          "weight": 0.0
+        },
+        {
+          "name": "Complex Conditional",
+          "weight": 0.0
+        },
+        {
+          "name": "Complex Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Constructor Over-Injection",
+          "weight": 0.0
+        },
+        {
+          "name": "Deep, Global Nested Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Deep, Nested Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Duplicated Assertion Blocks",
+          "weight": 0.0
+        },
+        {
+          "name": "Excess Number of Function Arguments",
+          "weight": 0.0
+        },
+        {
+          "name": "Global Conditionals",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Assertion Blocks",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Embedded Code Block",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Lines of Code in a Single File",
+          "weight": 0.0
+        },
+        {
+          "name": "Lines of Declarations in a Single File",
+          "weight": 0.0
+        },
+        {
+          "name": "Low Cohesion",
+          "weight": 0.0
+        },
+        {
+          "name": "Missing Arguments Abstractions",
+          "weight": 0.0
+        },
+        {
+          "name": "Number of Functions in a Single Module",
+          "weight": 0.0
+        },
+        {
+          "name": "Overall Code Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Overall Function Size",
+          "weight": 0.0
+        },
+        {
+          "name": "Primitive Obsession",
+          "weight": 0.0
+        },
+        {
+          "name": "String Heavy Function Arguments",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/render/software/**",
+      "rules": [
+        {
+          "name": "Brain Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Bumpy Road Ahead",
+          "weight": 0.0
+        },
+        {
+          "name": "Code Duplication",
+          "weight": 0.0
+        },
+        {
+          "name": "Complex Conditional",
+          "weight": 0.0
+        },
+        {
+          "name": "Complex Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Constructor Over-Injection",
+          "weight": 0.0
+        },
+        {
+          "name": "Deep, Global Nested Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Deep, Nested Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Duplicated Assertion Blocks",
+          "weight": 0.0
+        },
+        {
+          "name": "Excess Number of Function Arguments",
+          "weight": 0.0
+        },
+        {
+          "name": "Global Conditionals",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Assertion Blocks",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Embedded Code Block",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Lines of Code in a Single File",
+          "weight": 0.0
+        },
+        {
+          "name": "Lines of Declarations in a Single File",
+          "weight": 0.0
+        },
+        {
+          "name": "Low Cohesion",
+          "weight": 0.0
+        },
+        {
+          "name": "Missing Arguments Abstractions",
+          "weight": 0.0
+        },
+        {
+          "name": "Number of Functions in a Single Module",
+          "weight": 0.0
+        },
+        {
+          "name": "Overall Code Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Overall Function Size",
+          "weight": 0.0
+        },
+        {
+          "name": "Primitive Obsession",
+          "weight": 0.0
+        },
+        {
+          "name": "String Heavy Function Arguments",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/core/simd.h",
+      "rules": [
+        {
+          "name": "Brain Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Bumpy Road Ahead",
+          "weight": 0.0
+        },
+        {
+          "name": "Code Duplication",
+          "weight": 0.0
+        },
+        {
+          "name": "Complex Conditional",
+          "weight": 0.0
+        },
+        {
+          "name": "Complex Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Constructor Over-Injection",
+          "weight": 0.0
+        },
+        {
+          "name": "Deep, Global Nested Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Deep, Nested Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Duplicated Assertion Blocks",
+          "weight": 0.0
+        },
+        {
+          "name": "Excess Number of Function Arguments",
+          "weight": 0.0
+        },
+        {
+          "name": "Global Conditionals",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Assertion Blocks",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Embedded Code Block",
+          "weight": 0.0
+        },
+        {
+          "name": "Large Method",
+          "weight": 0.0
+        },
+        {
+          "name": "Lines of Code in a Single File",
+          "weight": 0.0
+        },
+        {
+          "name": "Lines of Declarations in a Single File",
+          "weight": 0.0
+        },
+        {
+          "name": "Low Cohesion",
+          "weight": 0.0
+        },
+        {
+          "name": "Missing Arguments Abstractions",
+          "weight": 0.0
+        },
+        {
+          "name": "Number of Functions in a Single Module",
+          "weight": 0.0
+        },
+        {
+          "name": "Overall Code Complexity",
+          "weight": 0.0
+        },
+        {
+          "name": "Overall Function Size",
+          "weight": 0.0
+        },
+        {
+          "name": "Primitive Obsession",
+          "weight": 0.0
+        },
+        {
+          "name": "String Heavy Function Arguments",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/ui/render_ir_build.h",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 10
+        }
+      ]
+    },
+    {
+      "matching_content_path": "src/ui/{ui_api,painter,list/ui_list,ui_tree,ui_dropdown,ui_slider,dock/dock_persist,dock/dock_tree}.c",
       "thresholds": [
         {
           "name": "function_max_arguments",
           "value": 6
-        }
-      ]
-    },
-    {
-      "matching_content_path": "src/ui/{list_uniform,ui_selection,scroll_core}.c",
-      "thresholds": [
-        {
-          "name": "function_max_arguments",
-          "value": 5
-        }
-      ]
-    },
-    {
-      "matching_content_path": "rust/flowi/src/tree.rs",
-      "thresholds": [
-        {
-          "name": "function_max_arguments",
-          "value": 6
-        }
-      ]
-    },
-    {
-      "matching_content_path": "{src/core/file_watcher.c,src/render/software/sw_glyph_cache.c,src/render/gpu/gl/gpu_viewport3d.c,src/render/gpu/gpu_atlas_pack.c,src/render/gpu/gl/gpu_renderer.c,src/render/gpu/gpu_image_atlas.c,src/render/gpu/gpu_image_slots.c,src/render/gpu/gl/gpu_resource_prepare.c,src/render/gpu/gpu_svg_translate.c,src/render/software/sr_image_backend.c,src/render/software/sr_render_fill.c,src/render/software/sr_render_image.c,src/render/software/calculate_edge_rounding.h,src/ui/ui_inspector.c,src/ui/viewport3d.c,src/ui/ui_hit_test.c,src/ui/image/image_dedup.c,src/ui/ui_private.h,src/ui/ui_text_buffer.h,src/ui/ui_widget_common.c,src/ui/image/image_system.c,src/vfs/vfs_tree.c,src/vfs/drivers/localfs.c,src/vfs/drivers/archive/lhasa.c,src/vfs/drivers/archive/unlzx.c,src/vfs/drivers/archive/libarchive.c,src/platform/backend_headless_window.c}",
-      "thresholds": [
-        {
-          "name": "function_max_arguments",
-          "value": 5
         }
       ]
     },
@@ -47,53 +320,11 @@
       ]
     },
     {
-      "matching_content_path": "rust/flowi/{src/slider.rs,tests/common/mod.rs,tests/layout.rs}",
+      "matching_content_path": "rust/flowi/src/tree.rs",
       "thresholds": [
         {
           "name": "function_max_arguments",
-          "value": 5
-        }
-      ],
-      "rules": [
-        {
-          "name": "Primitive Obsession",
-          "weight": 0.0
-        }
-      ]
-    },
-    {
-      "matching_content_path": "tests/render/{common,image_load}.c",
-      "thresholds": [
-        {
-          "name": "function_max_arguments",
-          "value": 5
-        }
-      ]
-    },
-    {
-      "matching_content_path": "tests/gpu/{gpu_test_common.h,gpu_test_app.c,gpu_test_text.c}",
-      "thresholds": [
-        {
-          "name": "function_max_arguments",
-          "value": 5
-        }
-      ]
-    },
-    {
-      "matching_content_path": "tests/{unit_tests_common.c,loc_check_tests.c,unit_tests_common.h,vfs_test_support.h}",
-      "thresholds": [
-        {
-          "name": "function_max_arguments",
-          "value": 5
-        }
-      ]
-    },
-    {
-      "matching_content_path": "tests/vfs/{vfs,unlzx,archive_refused,driver_calls,mount_path,nested,resolve}.c",
-      "thresholds": [
-        {
-          "name": "function_max_arguments",
-          "value": 5
+          "value": 6
         }
       ]
     },
@@ -113,7 +344,13 @@
       ]
     },
     {
-      "matching_content_path": "{rust/flowi/src/application.rs,rust/flowi/src/layout_ext.rs,rust/flowi/src/slider.rs,rust/flowi/src/vfs/fake.rs,tests/simd_test_support.h}",
+      "matching_content_path": "{rust/flowi/src/application.rs,rust/flowi/src/layout_ext.rs,rust/flowi/src/slider.rs,rust/flowi/tests/common/mod.rs,rust/flowi/tests/layout.rs,tests/simd_test_support.h}",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ],
       "rules": [
         {
           "name": "Primitive Obsession",
@@ -123,6 +360,12 @@
     },
     {
       "matching_content_path": "tests/probes/shared_library_smoke_probe.c",
+      "thresholds": [
+        {
+          "name": "function_max_arguments",
+          "value": 5
+        }
+      ],
       "rules": [
         {
           "name": "String Heavy Function Arguments",
@@ -131,61 +374,11 @@
       ]
     },
     {
-      "matching_content_path": "src/ui/render_ir_build.h",
+      "matching_content_path": "**/*",
       "thresholds": [
         {
           "name": "function_max_arguments",
-          "value": 10
-        }
-      ]
-    },
-    {
-      "matching_content_path": "src/core/simd.h",
-      "thresholds": [
-        {
-          "name": "function_max_arguments",
-          "value": 8
-        }
-      ]
-    },
-    {
-      "matching_content_path": "external/stb/stb_textedit.h",
-      "rules": [
-        {
-          "name": "Code Duplication",
-          "weight": 0.0
-        },
-        {
-          "name": "Complex Method",
-          "weight": 0.0
-        },
-        {
-          "name": "Complex Conditional",
-          "weight": 0.0
-        },
-        {
-          "name": "Large Method",
-          "weight": 0.0
-        },
-        {
-          "name": "Bumpy Road Ahead",
-          "weight": 0.0
-        },
-        {
-          "name": "Overall Code Complexity",
-          "weight": 0.0
-        },
-        {
-          "name": "Primitive Obsession",
-          "weight": 0.0
-        },
-        {
-          "name": "Deep, Nested Complexity",
-          "weight": 0.0
-        },
-        {
-          "name": "Excess Number of Function Arguments",
-          "weight": 0.0
+          "value": 5
         }
       ]
     }
