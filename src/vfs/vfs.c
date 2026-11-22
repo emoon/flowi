@@ -123,10 +123,6 @@ void fl_vfs_destroy(void) {
     vfs_destroy();
 }
 
-void fl_vfs_wait_all(void) {
-    vfs_wait_all();
-}
-
 // Reference counting
 
 // Drops one reference to the mount. The last one closes every node handle, children first, and frees it, on whichever

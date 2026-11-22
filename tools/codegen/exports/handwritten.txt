@@ -37,7 +37,6 @@ fl_vfs_register_builtin_drivers
 fl_vfs_destroy
 fl_vfs_init
 fl_vfs_register_driver
-fl_vfs_wait_all
 
 # core/os.h
 fl_os_create_directory_recursive

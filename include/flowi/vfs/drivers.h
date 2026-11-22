@@ -27,9 +27,6 @@ bool fl_vfs_init(struct FlArena* arena);
 // calling this before fl_vfs_init() or after it has run is a bug.
 void fl_vfs_destroy(void);
 
-// Wait for the job of every live operation, including ones whose handle was already closed. The VFS must exist.
-void fl_vfs_wait_all(void);
-
 // Hand a driver the host built to the VFS. Call it after fl_vfs_init() and before the first mount: the driver list is
 // not locked, so registering while a mount resolves a path races it. Drivers registered this way are tried before
 // LocalFS, in registration order. The plugin must outlive the VFS. instance is passed to every driver call (nullptr

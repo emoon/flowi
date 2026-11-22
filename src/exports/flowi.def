@@ -446,7 +446,6 @@ EXPORTS
     fl_vfs_register_driver
     fl_vfs_set_priority
     fl_vfs_wait
-    fl_vfs_wait_all
     fl_viewport3d_begin
     fl_viewport3d_draw_lines
     fl_viewport3d_draw_mesh
