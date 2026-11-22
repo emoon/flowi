@@ -6,6 +6,9 @@
 // (libarchive, lhasa, unlzx) are optional: each is compiled in only when its FLOWI_VFS_DRIVER_* cmake option is on.
 
 #include <flowi/vfs/vfs_plugin.h>
+#include <stdbool.h>
+
+struct FlArena;
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +18,16 @@ extern "C" {
 // LocalFS stays the fallback and is tried last regardless. A build with every FLOWI_VFS_DRIVER_* off leaves this a
 // no-op.
 void fl_vfs_register_builtin_drivers(void);
+
+// Create the process-wide VFS and register LocalFS, the catch-all fallback tried after every other driver. Returns true
+// when this call created it (the caller must then call fl_vfs_destroy), false when it already existed.
+bool fl_vfs_init(struct FlArena* arena);
+
+// Tear the VFS down on the main thread, waiting for the operations still open on every mount.
+void fl_vfs_destroy(void);
+
+// Wait for the job of every live operation, including ones whose handle was already closed.
+void fl_vfs_wait_all(void);
 
 // Hand a driver the host built to the VFS. Call after fl_vfs_init(). Drivers registered this way are tried before
 // LocalFS, in registration order. The plugin must outlive the VFS. instance is passed to every driver call (nullptr

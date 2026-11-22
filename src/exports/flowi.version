@@ -440,6 +440,7 @@ FLOWI_1.0 {
     fl_tree_row_at;
     fl_ui_set_feedback_hook;
     fl_vfs_close;
+    fl_vfs_destroy;
     fl_vfs_get_data;
     fl_vfs_get_file_list;
     fl_vfs_get_listing;
@@ -458,6 +459,7 @@ FLOWI_1.0 {
     fl_vfs_register_driver;
     fl_vfs_set_priority;
     fl_vfs_wait;
+    fl_vfs_wait_all;
     fl_viewport3d_begin;
     fl_viewport3d_draw_lines;
     fl_viewport3d_draw_mesh;
