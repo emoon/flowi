@@ -56,8 +56,6 @@ bool list_viewport_contains(const ListViewport* vp, f32 x, f32 y) {
     return x >= vp->left && x <= vp->right && y >= vp->top && y <= vp->bottom;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool list_press_on_focused_widget(const FlListContext* self) {
     const FlUiCtx* ui = self->ui_ctx;
     if (!ui->mouse_pressed_this_frame || ui->hot_id == self->current_clay_id) {

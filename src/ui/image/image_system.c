@@ -559,16 +559,12 @@ static bool memory_load_args_valid(const ImageSystem* sys, const void* data, siz
     return sys && data && size > 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static MemoryLoadContext* create_reserved_memory_load(ImageSystem* sys, const void* data, size_t size) {
     if (!reserve_pending_job(sys)) {
         return nullptr;
     }
     return memory_load_context_create(sys, data, size);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlImageLoadRequestId image_system_load_from_memory(ImageSystem* sys, const void* data, size_t size,
                                                    const ImageDecodeOptions* options,

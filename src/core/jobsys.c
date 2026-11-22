@@ -358,21 +358,15 @@ static JobInfo* job_acquire(Jobs* self, FlJobsFunc func, void* user_data, JobPri
     return job;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlJobHandle job_handle_of(const Jobs* self, JobInfo* job) {
     u64 job_index = (u64)(job - self->start_jobs);
     u64 generation = atomic_load(&job->generation);
     return (job_index << JOB_HANDLE_INDEX_SHIFT) | generation;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool job_status_is_done(u32 status) {
     return status == JOB_STATUS_COMPLETED || status == JOB_STATUS_FREE || status == JOB_STATUS_PROMOTING;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static JobInfo* live_dependency_job(Jobs* self, FlJobHandle dependency) {
     if (dependency == 0 || dependency == JOB_HANDLE_IMMEDIATE_COMPLETE) {
@@ -400,8 +394,6 @@ static JobInfo* live_dependency_job(Jobs* self, FlJobHandle dependency) {
 
     return dep_job;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 FlJobHandle fl_jobs_add_job_with_priority(FlJobsFunc func, void* user_data, JobPriority priority) {
     Jobs* self = g_global_job_system;

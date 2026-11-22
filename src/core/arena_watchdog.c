@@ -112,8 +112,6 @@ static WatchdogEntry* find_or_add_entry(FlArena* arena) {
     return entry != nullptr ? entry : add_entry(arena);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void record_sample(WatchdogEntry* entry, u64 pos) {
     entry->samples[entry->sample_index] = pos;
     entry->sample_index = (entry->sample_index + 1) % WATCHDOG_RING_SIZE;
@@ -123,8 +121,6 @@ static void record_sample(WatchdogEntry* entry, u64 pos) {
 
     entry->seen = true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void alert_on_new_growth(WatchdogEntry* entry) {
     u64 latest_pos = entry->samples[(entry->sample_index + WATCHDOG_RING_SIZE - 1) % WATCHDOG_RING_SIZE];
@@ -141,8 +137,6 @@ static void alert_on_new_growth(WatchdogEntry* entry) {
 
     entry->last_alert_pos = latest_pos;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void sample_arena_callback(FlArena* arena, void* user_data) {
     (void)user_data;

@@ -17,15 +17,11 @@
 #define CE_INPUT_X 140
 #define CE_INPUT_Y 60
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static const FlColumnDef ce_cols[3] = {
     { .id = 11, .title = { .data = "A", .length = 1 }, .width = 100.0f },
     { .id = 22, .title = { .data = "B", .length = 1 }, .width = 80.0f },
     { .id = 33, .title = { .data = "C", .length = 1 }, .flex = 1.0f },
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct CeState {
     FlTextInputState* input;
@@ -50,15 +46,11 @@ static u64 ce_ids[CE_ROWS];
 static const FlLayoutId ce_list = { .name = { .data = "ce_list", .length = 7 }, .id = 0 };
 static const FlLayoutId ce_input = { .name = { .data = "ce_input", .length = 8 }, .id = 0 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void ce_on_submit(CeState* st) {
     st->submits++;
     st->editing = false;
     fl_list_request_focus(ce_list, CE_EDIT_ID);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ce_input_cell(CeState* st) {
     if (st->refocus_when_emitted && !st->was_emitted) {
@@ -73,13 +65,9 @@ static void ce_input_cell(CeState* st) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool ce_is_edit_row(const CeState* st, u64 id) {
     return st->editing && id == CE_EDIT_ID;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ce_row(CeState* st, u64 id) {
     FlSignal row = fl_list_item_begin(id);
@@ -93,8 +81,6 @@ static void ce_row(CeState* st, u64 id) {
     fl_cell_end();
     fl_list_item_end();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ce_frame(void* user) {
     CeState* st = user;
@@ -116,14 +102,10 @@ static void ce_frame(void* user) {
     st->input_rect = ui_get_element_state_by_id(ui_layout_id_to_clay_id(ce_input));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct CeApp {
     FlApp* app;
     CeState st;
 } CeApp;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static CeApp ce_open(void) {
     CeApp scope = { 0 };
@@ -144,8 +126,6 @@ static CeApp ce_open(void) {
     return scope;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void ce_close(CeApp* scope) {
     if (scope->app != nullptr) {
         fl_app_inject_mouse_button(scope->app, FlMouseButton_Left, false);
@@ -158,15 +138,11 @@ static void ce_close(CeApp* scope) {
     __attribute__((cleanup(ce_close))) CeApp ce = ce_open(); \
     ASSERT_TRUE_MSG(ce.app != nullptr, "headless fl_app_create failed")
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void ce_ticks(CeApp* ce, int n) {
     for (int i = 0; i < n; i++) {
         fl_app_tick(ce->app, &ce->st, ce_frame);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ce_key_tap(CeApp* ce, FlKey key) {
     fl_app_inject_key(ce->app, key, true);
@@ -175,15 +151,11 @@ static void ce_key_tap(CeApp* ce, FlKey key) {
     ce_ticks(ce, 1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void ce_focus_input(CeApp* ce, bool select_all) {
     ce_ticks(ce, 4);
     fl_text_input_request_focus(ce->st.input, select_all);
     ce_ticks(ce, 2);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ce_click_input(CeApp* ce) {
     fl_app_inject_mouse_move(ce->app, CE_INPUT_X, CE_INPUT_Y);
@@ -194,8 +166,6 @@ static void ce_click_input(CeApp* ce) {
     ce_ticks(ce, 2);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cell_edit, a_borderless_input_fills_its_cell) {
     CE_APP(ce);
     ce_ticks(&ce, 4);
@@ -205,16 +175,12 @@ UTEST(cell_edit, a_borderless_input_fills_its_cell) {
     ASSERT_NEAR((double)CE_ROW_H, (double)ce.st.input_rect.size.y, 0.01);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cell_edit, a_long_text_does_not_widen_a_borderless_input) {
     CE_APP(ce);
     fl_text_input_set_text(ce.st.input, FL_S("a value that is far wider than the column it is edited in"));
     ce_ticks(&ce, 4);
     ASSERT_NEAR(80.0 - 2.0 * CE_PAD, (double)ce.st.input_rect.size.x, 0.01);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cell_edit, request_focus_focuses_the_input) {
     CE_APP(ce);
@@ -226,8 +192,6 @@ UTEST(cell_edit, request_focus_focuses_the_input) {
     ASSERT_TRUE_MSG(fl_string_equals(fl_text_input_get_text(ce.st.input), FL_S("abcx")), "typing appends at the caret");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cell_edit, request_focus_with_select_all_lets_typing_replace_the_text) {
     CE_APP(ce);
     fl_text_input_set_text(ce.st.input, FL_S("abc"));
@@ -236,8 +200,6 @@ UTEST(cell_edit, request_focus_with_select_all_lets_typing_replace_the_text) {
     ce_ticks(&ce, 2);
     ASSERT_TRUE_MSG(fl_string_equals(fl_text_input_get_text(ce.st.input), FL_S("x")), "typing replaces the selection");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cell_edit, up_and_down_stay_in_a_focused_input) {
     CE_APP(ce);
@@ -249,8 +211,6 @@ UTEST(cell_edit, up_and_down_stay_in_a_focused_input) {
     ASSERT_EQ_MSG(0u, ce.st.frames_unfocused, "the arrow keys do not move focus off the input");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cell_edit, down_moves_focus_off_a_bordered_input) {
     CE_APP(ce);
     ce.st.bordered = true;
@@ -261,8 +221,6 @@ UTEST(cell_edit, down_moves_focus_off_a_bordered_input) {
     ASSERT_GT_MSG(ce.st.frames_unfocused, 0u, "an input with a border leaves Down to focus navigation");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cell_edit, a_click_on_an_input_in_a_row_goes_to_the_input) {
     CE_APP(ce);
     ce_click_input(&ce);
@@ -270,8 +228,6 @@ UTEST(cell_edit, a_click_on_an_input_in_a_row_goes_to_the_input) {
     ASSERT_EQ_MSG(0u, ce.st.row_clicks, "the row under it is not");
     ASSERT_TRUE_MSG(ce.st.input_signal.focused, "the click focuses the input");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cell_edit, a_press_inside_a_focused_input_keeps_its_focus) {
     CE_APP(ce);
@@ -284,8 +240,6 @@ UTEST(cell_edit, a_press_inside_a_focused_input_keeps_its_focus) {
     ce_ticks(&ce, 2);
     ASSERT_EQ_MSG(0u, ce.st.frames_unfocused, "a second press does not take focus from the input");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cell_edit, a_drag_inside_a_focused_input_selects_no_rows) {
     CE_APP(ce);
@@ -300,8 +254,6 @@ UTEST(cell_edit, a_drag_inside_a_focused_input_selects_no_rows) {
     ASSERT_EQ_MSG(0u, ce.st.selection_requests, "the drag is not a marquee over the rows");
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 UTEST(cell_edit, submit_hands_focus_back_to_the_list) {
     CE_APP(ce);
     ce_focus_input(&ce, false);
@@ -310,8 +262,6 @@ UTEST(cell_edit, submit_hands_focus_back_to_the_list) {
     ce_key_tap(&ce, FlKey_Down);
     ASSERT_EQ_MSG((u64)CE_EDIT_ID + 1, ce.st.result.focused_id, "Down moves the list cursor from the edited row");
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 UTEST(cell_edit, an_edit_survives_its_row_scrolling_out_and_back) {
     CE_APP(ce);

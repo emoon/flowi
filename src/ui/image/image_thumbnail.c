@@ -50,8 +50,6 @@ static bool image_row_all_black(const FlImageDecodeResult* image, int row) {
     return image_region_all_black(image, (PixelRect) { row, row + 1, 0, image->width });
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int count_black_rows_from_top(const FlImageDecodeResult* image) {
     int rows = 0;
     while (rows < image->height && image_row_all_black(image, rows)) {
@@ -60,8 +58,6 @@ static int count_black_rows_from_top(const FlImageDecodeResult* image) {
     return rows;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int count_black_rows_from_bottom(const FlImageDecodeResult* image, int top) {
     int rows = 0;
     while (image->height - 1 - rows >= top && image_row_all_black(image, image->height - 1 - rows)) {
@@ -69,8 +65,6 @@ static int count_black_rows_from_bottom(const FlImageDecodeResult* image, int to
     }
     return rows;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Some content row has a non-black pixel, so both column scans stop inside the image.
 static int count_black_cols_from_left(const FlImageDecodeResult* image, int row_start, int row_end) {
@@ -81,8 +75,6 @@ static int count_black_cols_from_left(const FlImageDecodeResult* image, int row_
     return cols;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static int count_black_cols_from_right(const FlImageDecodeResult* image, int row_start, int row_end) {
     int cols = 0;
     while (image_region_all_black(image, (PixelRect) { row_start, row_end, image->width - 1 - cols,
@@ -91,8 +83,6 @@ static int count_black_cols_from_right(const FlImageDecodeResult* image, int row
     }
     return cols;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Measures the black margin on each side. Returns false when the image has no content at all.
 static bool measure_black_border(const FlImageDecodeResult* image, BorderInsets* out) {
@@ -229,8 +219,6 @@ static void premultiply_row_simd(u8* row_data, int simd_pixels) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void premultiply_row_scalar(u8* row_data, int first_pixel, int width) {
     for (int i = first_pixel; i < width; i++) {
         const int a = row_data[i * 4 + 3];
@@ -240,8 +228,6 @@ static void premultiply_row_scalar(u8* row_data, int first_pixel, int width) {
         row_data[i * 4 + 2] = image_premul_channel(row_data[i * 4 + 2], a);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void premultiply_alpha(FlImageDecodeResult* image) {
     if (image->channels != 4) {
@@ -340,8 +326,6 @@ static void fade_row_rgb(u8* row, int width, Rgb8 target, i16 t) {
         blend_toward_rgb(row + x * 3, target, t);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Vertical fade: from fade_start (0.0 = top, 1.0 = bottom) each row blends from the original toward target.
 static void apply_vertical_fade_rgb(FlImageDecodeResult* image, f32 fade_start, Rgb8 target) {

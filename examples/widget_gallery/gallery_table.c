@@ -21,8 +21,6 @@ enum { TableColumn_Module = 1, TableColumn_Base, TableColumn_Path };
 
 static const char* const s_module_names[] = { "libflowi.so", "libc.so.6", "libSDL3.so.0", "debugger", "libm.so.6" };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gallery_columns_apply(GalleryColumns* columns, const FlListResult* result) {
     if (result->header_clicked_column != 0) {
         columns->header_clicked = result->header_clicked_column;
@@ -37,8 +35,6 @@ void gallery_columns_apply(GalleryColumns* columns, const FlListResult* result) 
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gallery_columns_status(const GalleryColumns* columns) {
     char buf[96];
     snprintf(buf, sizeof(buf), "column under mouse %u, header clicked %u, right-clicked %u", columns->hovered,
@@ -46,15 +42,11 @@ void gallery_columns_status(const GalleryColumns* columns) {
     ui_text(fl_frame_str(buf, strlen(buf)));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gallery_cell_text(u32 column_id, FlString text) {
     fl_cell_begin(column_id);
     ui_text_styled(text, .color = fl_theme_colors()->text.primary, .no_wrap = true, .overflow = FlOverflow_Elide);
     fl_cell_end();
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void cell_format(u32 column_id, const char* format, u32 a, const char* b) {
     char buf[96];
@@ -62,13 +54,9 @@ static void cell_format(u32 column_id, const char* format, u32 a, const char* b)
     gallery_cell_text(column_id, fl_frame_str(buf, (size_t)n));
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static bool is_group_row(u32 row) {
     return row % GALLERY_TABLE_GROUP_EVERY == 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A row that draws no cell spans every column.
 static void group_row(u32 row) {
@@ -80,16 +68,12 @@ static void group_row(u32 row) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void module_row(u32 row) {
     const char* name = s_module_names[row % sizeof_array(s_module_names)];
     gallery_cell_text(TableColumn_Module, fl_frame_str(name, strlen(name)));
     cell_format(TableColumn_Base, "0x%08x%s", 0x7f000000u + row * 0x1000u, "");
     cell_format(TableColumn_Path, "/usr/lib/x86_64-linux-gnu/build-%u/%s", row, name);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void table_row(GalleryTable* table, u32 row) {
     FlSignal signal = fl_list_item_begin(table->ids[row]);
@@ -104,8 +88,6 @@ static void table_row(GalleryTable* table, u32 row) {
     fl_list_item_end();
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gallery_table_init(GalleryTable* table) {
     table->selection = selection_set_create(16);
     for_count(i, GALLERY_TABLE_ROWS) {
@@ -117,13 +99,9 @@ void gallery_table_init(GalleryTable* table) {
         = (FlColumnDef) { .id = TableColumn_Path, .title = FL_S_("Path"), .flex = 1.0f, .min_width = 80.0f };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void gallery_table_destroy(GalleryTable* table) {
     selection_set_destroy(table->selection);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gallery_table_show(GalleryTable* table) {
     table->columns.hovered = 0;

@@ -5,13 +5,9 @@
 #define LIST_ROW_DEFAULT_HEIGHT 32.0f // Row height when the caller leaves it unset (logical px)
 #define LIST_ROW_DEFAULT_GAP 8.0f     // Gap between rows when the caller leaves it unset (logical px)
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static f32 stride(ListRowGeometry rows) {
     return rows.row_px + rows.gap_px;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ListRowGeometry list_row_geometry(f32 row_height, f32 gap, f32 ui_scale, u32 count) {
     f32 scale = ui_scale_or_one(ui_scale);
@@ -26,19 +22,13 @@ ListRowGeometry list_row_geometry(f32 row_height, f32 gap, f32 ui_scale, u32 cou
     };
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool list_geometry_rows_have_extent(ListRowGeometry rows) {
     return stride(rows) > 0.0f;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f64 list_geometry_content_height(ListRowGeometry rows) {
     return (f64)rows.count * (f64)stride(rows);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 f32 list_geometry_span_height(ListRowGeometry rows, u32 row_count) {
     if (row_count == 0) {
@@ -47,19 +37,13 @@ f32 list_geometry_span_height(ListRowGeometry rows, u32 row_count) {
     return rows.row_px * (f32)row_count + rows.gap_px * (f32)(row_count - 1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 f64 list_geometry_row_top(ListRowGeometry rows, u32 row) {
     return (f64)row * (f64)stride(rows);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ScrollRange list_geometry_visible_rows(ListRowGeometry rows, f64 scroll_offset, f32 viewport, u32 buffer) {
     return scroll_visible_range(scroll_offset, viewport, stride(rows), rows.count, buffer);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ListRowSpan list_geometry_rows_in_band(ListRowGeometry rows, f64 lo, f64 hi) {
     f64 step = stride(rows);
@@ -74,8 +58,6 @@ ListRowSpan list_geometry_rows_in_band(ListRowGeometry rows, f64 lo, f64 hi) {
     }
     return (ListRowSpan) { first, last };
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 u32 list_geometry_insertion_index(ListRowGeometry rows, f64 content_y) {
     f64 step = stride(rows);
@@ -92,8 +74,6 @@ u32 list_geometry_insertion_index(ListRowGeometry rows, f64 content_y) {
     f64 row_mid = (f64)row * step + (f64)rows.row_px * 0.5;
     return content_y < row_mid ? (u32)row : (u32)row + 1;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 f64 list_geometry_insertion_y(ListRowGeometry rows, u32 index) {
     return (f64)index * (f64)stride(rows) - (f64)rows.gap_px * 0.5;

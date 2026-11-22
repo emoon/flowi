@@ -93,8 +93,6 @@ void fl_text_input_clear(FlTextInputState* state) {
     ui_text_input_clear(state);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void fl_text_input_request_focus(FlTextInputState* state, bool select_all) {
     ui_text_input_request_focus(state, select_all);
 }

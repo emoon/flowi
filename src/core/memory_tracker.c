@@ -144,8 +144,6 @@ static FlString format_size_text(FlArena* arena, u64 bytes) {
     return fl_sprintf_arena(arena, "%llu bytes", bytes);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static FlString format_age_text(FlArena* arena, i64 age_us) {
     if (age_us < 0) {
         return FL_S("0.0s");
@@ -161,15 +159,11 @@ static FlString format_age_text(FlArena* arena, i64 age_us) {
     return fl_sprintf_arena(arena, "%.1fs", age_seconds);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 typedef struct {
     const char* label;
     u64 used;
     u64 capacity;
 } UsageLine;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void append_usage_line(FlStringBuilder* sb, FlArena* output_arena, UsageLine line) {
     arena_scratch_auto_conflict(temp, output_arena);
@@ -183,8 +177,6 @@ static void append_usage_line(FlStringBuilder* sb, FlArena* output_arena, UsageL
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void append_arena_age_line(FlStringBuilder* sb, FlArena* output_arena, const FlArena* arena) {
     arena_scratch_auto_conflict(temp, output_arena);
     i64 age_us = get_current_time_us_os() - (i64)arena->creation_timestamp_us;
@@ -192,8 +184,6 @@ static void append_arena_age_line(FlStringBuilder* sb, FlArena* output_arena, co
 
     sb_append_line(sb, output_arena, "    Age:       %S\n\n", age_str);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void dump_arena_callback(FlArena* arena, void* user_data) {
     ArenaDumpData* data = (ArenaDumpData*)user_data;
@@ -278,8 +268,6 @@ static bool write_snapshot_file(FlString filepath, FlString content, const char*
 
     return true;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool fl_memory_tracker_dump_to_file(FlString filepath) {
     FL_VALIDATE_RET(!string_is_empty(filepath), false);

@@ -124,8 +124,6 @@ static void host_release_surfaces(FlHost* host) {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void host_release_assets_and_shared(FlHost* host) {
     // The mount lives in the process-global VFS (its own arena), so it is closed explicitly. The host arena does
     // not reclaim it.
@@ -142,8 +140,6 @@ static void host_release_assets_and_shared(FlHost* host) {
         host->shared = nullptr;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void host_reset_singletons(FlHost* host) {
     // The font cache goes after the backend, which may hold a glyph cache built from these faces, and before
@@ -166,8 +162,6 @@ static void host_reset_singletons(FlHost* host) {
         host->owns_vfs = false;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void host_destroy(FlHost* host) {
     if (!host) {

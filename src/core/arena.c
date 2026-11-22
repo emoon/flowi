@@ -237,8 +237,6 @@ static void arena_fatal(const FlArena* self, const char* reason) {
     exit(1);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static void arena_check_size_overflow(const FlArena* self, u64 aligned_pos, u64 size) {
     // A size large enough to wrap aligned_pos + size would produce a small new_pos that slips
     // past the reserved_size check and hand back an overlapping pointer.
@@ -246,8 +244,6 @@ static void arena_check_size_overflow(const FlArena* self, u64 aligned_pos, u64 
         arena_fatal(self, "Out of reserved memory in arena (allocation size overflow)");
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void* arena_publish_alloc(FlArena* self, u64 aligned_pos, u64 new_pos, u64 size) {
     void* return_ptr = (char*)self->ptr + aligned_pos;
@@ -265,8 +261,6 @@ static void* arena_publish_alloc(FlArena* self, u64 aligned_pos, u64 new_pos, u6
 
     return return_ptr;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void arena_commit_up_to(FlArena* self, u64 new_pos) {
     while (true) {
@@ -294,8 +288,6 @@ static void arena_commit_up_to(FlArena* self, u64 new_pos) {
         // If CAS fails, another thread may have committed more, so loop again
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void* fl_arena_alloc_raw(FlArena* self, u64 size, u64 alignment) {
     while (true) {

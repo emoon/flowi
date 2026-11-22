@@ -49,8 +49,6 @@ static const UiRenderCommandType CLAY_COMMAND_TYPE_MAP[] = {
     [CLAY_RENDER_COMMAND_TYPE_CUSTOM] = UiRenderCmd_Custom,
 };
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 static UiRenderCommandType map_clay_command_type(Clay_RenderCommandType t) {
     const size_t index = (size_t)t;
     if (index >= sizeof(CLAY_COMMAND_TYPE_MAP) / sizeof(CLAY_COMMAND_TYPE_MAP[0])) {
@@ -58,8 +56,6 @@ static UiRenderCommandType map_clay_command_type(Clay_RenderCommandType t) {
     }
     return CLAY_COMMAND_TYPE_MAP[index];
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Convert one Clay command into the Clay-independent snapshot type, copying the strings it exposes into
 // arena (the capture fields on FlUiCtx own them; see their declaration).
@@ -140,8 +136,6 @@ void ui_capture_render_commands(FlUiCtx* self, Clay_RenderCommandArray* commands
 static bool render_command_index_valid(i32 index) {
     return index >= 0 && index < g_ui_ctx->last_render_command_count;
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool ui_get_render_command(i32 index, UiRenderCommand* out) {
     if (!render_command_index_valid(index) || !out) {
