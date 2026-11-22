@@ -34,3 +34,4 @@ fl_inspector_snapshot
 
 # vfs/drivers.h
 fl_vfs_register_builtin_drivers
+fl_vfs_register_driver

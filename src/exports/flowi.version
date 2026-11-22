@@ -432,6 +432,7 @@ FLOWI_1.0 {
     fl_vfs_mount_with_options;
     fl_vfs_read;
     fl_vfs_register_builtin_drivers;
+    fl_vfs_register_driver;
     fl_vfs_set_priority;
     fl_vfs_wait;
     fl_viewport3d_begin;

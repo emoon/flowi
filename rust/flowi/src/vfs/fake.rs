@@ -95,6 +95,8 @@ pub(super) struct FakeState {
     pub(super) init_arena: *mut sys::Arena,
     /// How many times fl_vfs_register_builtin_drivers was called.
     pub(super) builtin_registrations: u32,
+    /// The plugin and instance pointers the last fl_vfs_register_driver was handed.
+    pub(super) registered_driver: Option<(usize, usize)>,
     /// Bytes fl_vfs_read copies into the caller's buffer.
     pub(super) prefix: Vec<u8>,
     /// The last size fl_vfs_read was asked for.
@@ -148,6 +150,7 @@ impl Default for FakeState {
             wait_count: 0,
             init_arena: core::ptr::null_mut(),
             builtin_registrations: 0,
+            registered_driver: None,
             prefix: Vec::new(),
             prefix_requested: 0,
             read_pos: 0,
@@ -440,6 +443,7 @@ pub(super) fn fake_table() -> fake::VfsApi {
         fl_vfs_mount_get_job_handle: fake_mount_get_job_handle,
         fl_vfs_init: fake_init,
         fl_vfs_register_builtin_drivers: fake_register_builtin_drivers,
+        fl_vfs_register_driver: fake_register_driver,
         ..fake::VfsApi::unimplemented()
     }
 }
@@ -453,6 +457,10 @@ unsafe extern "C" fn fake_init(arena: *mut sys::Arena) -> bool {
 
 unsafe extern "C" fn fake_register_builtin_drivers() {
     with_fake(|f| f.builtin_registrations += 1);
+}
+
+unsafe extern "C" fn fake_register_driver(plugin: *const sys::VfsPlugin, instance: *mut c_void) {
+    with_fake(|f| f.registered_driver = Some((plugin as usize, instance as usize)));
 }
 
 unsafe extern "C" fn fake_mount_get_job_handle(_mount: *mut sys::FlVfsMount) -> sys::JobHandle {

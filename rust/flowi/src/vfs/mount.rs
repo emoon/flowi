@@ -515,6 +515,22 @@ impl Vfs {
         unsafe { ffi::fl_vfs_register_builtin_drivers() }
     }
 
+    /// Hand the VFS a driver the host built, ahead of the LocalFS fallback. Drivers
+    /// are tried in registration order.
+    ///
+    /// Call it after [`Vfs::init`].
+    ///
+    /// # Safety
+    ///
+    /// `plugin` must point to a valid driver that stays valid until the VFS is torn down, and `instance` must be
+    /// whatever the driver's calls expect (null for a stateless driver) and likewise
+    /// outlive the VFS.
+    #[inline]
+    pub unsafe fn register_driver(plugin: *const crate::sys::VfsPlugin, instance: *mut c_void) {
+        // SAFETY: the caller upholds the lifetime contract above.
+        unsafe { ffi::fl_vfs_register_driver(plugin, instance) }
+    }
+
     /// Mount source_path (a directory, an archive, or a URL); the VFS picks the
     /// driver. Uses the default [`MountOptions`].
     ///

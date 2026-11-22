@@ -121,6 +121,11 @@ extern "C" {
     /// Register every archive driver this build of the library contains, after
     /// fl_vfs_init. A no-op when it contains none.
     pub fn fl_vfs_register_builtin_drivers();
+
+    /// Hand a driver to the VFS, after fl_vfs_init. It is tried before LocalFS, in
+    /// registration order. The plugin must outlive the VFS; instance is passed to
+    /// every driver call.
+    pub fn fl_vfs_register_driver(plugin: *const VfsPlugin, instance: *mut core::ffi::c_void);
 }
 
 mod ergonomics;
