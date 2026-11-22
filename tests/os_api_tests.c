@@ -816,6 +816,10 @@ UTEST(os_public, file_round_trip_through_the_public_calls) {
     ASSERT_EQ(fl_os_file_write(path, (const u8*)content.data, (i64)content.length), (i64)content.length);
     ASSERT_TRUE(fl_os_file_exists(path));
 
+    u8 buffer[32] = { 0 };
+    ASSERT_EQ(file_read_os(buffer, path, sizeof(buffer)), (i64)content.length);
+    ASSERT_EQ(memcmp(buffer, content.data, content.length), 0);
+
     fl_os_file_delete(path);
     ASSERT_FALSE(fl_os_file_exists(path));
     fl_arena_destroy(arena);
@@ -832,7 +836,9 @@ UTEST(os_public, write_handle_appends) {
         fl_os_file_close_handle(fd);
     }
 
-    ASSERT_TRUE(fl_os_file_exists(path));
+    u8 buffer[8] = { 0 };
+    ASSERT_EQ(file_read_os(buffer, path, sizeof(buffer)), 4);
+    ASSERT_EQ(memcmp(buffer, "abab", 4), 0);
     fl_os_file_delete(path);
     fl_arena_destroy(arena);
 }

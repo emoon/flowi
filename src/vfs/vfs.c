@@ -94,6 +94,11 @@ void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
     if (plugin == nullptr) {
         return;
     }
+    if (plugin->api_version != FL_VFS_PLUGIN_API_VERSION) {
+        logc_error(VFS_ID, "VFS driver %S refused: plugin API version %llu, expected %d", plugin->plugin_name,
+                   (unsigned long long)plugin->api_version, FL_VFS_PLUGIN_API_VERSION);
+        return;
+    }
 
     VfsPluginEntry* entry = arena_alloc_zero(self->main_arena, VfsPluginEntry);
     entry->plugin = plugin;
@@ -107,6 +112,18 @@ void vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
     }
 
     logc_info(VFS_ID, "VFS driver registered: %S", plugin->plugin_name);
+}
+
+void fl_vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
+    vfs_register_driver(plugin, instance);
+}
+
+void fl_vfs_destroy(void) {
+    vfs_destroy();
+}
+
+void fl_vfs_wait_all(void) {
+    vfs_wait_all();
 }
 
 // Reference counting

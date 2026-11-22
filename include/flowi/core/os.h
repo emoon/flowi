@@ -45,7 +45,6 @@ FL_API bool fl_os_thread_create(FlOsThread* thread, FlOsThreadFunc func, void* u
 // Wait for the thread to finish and return the value its function returned.
 FL_API void* fl_os_thread_join(FlOsThread* thread);
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Process environment
 
@@ -53,7 +52,6 @@ FL_API uint32_t fl_os_process_id(void);
 
 // The system temp directory.
 FL_API FlString fl_os_temp_directory(FlArena* arena);
-
 
 // The value of an environment variable (do not modify it), or nullptr when it is not set. Not thread-safe
 // against concurrent changes to the environment.
@@ -64,8 +62,6 @@ FL_API const char* fl_os_getenv(const char* name);
 
 FL_API bool fl_os_file_exists(FlString path);
 FL_API bool fl_os_directory_exists(FlString path);
-
-
 
 // Create or truncate path and write size bytes. Returns the number of bytes written, or -1 on failure.
 FL_API int64_t fl_os_file_write(FlString path, const uint8_t* data, int64_t size);
@@ -89,18 +85,18 @@ FL_API bool fl_os_create_directory(FlString path);
 // Create path and any missing parents.
 FL_API bool fl_os_create_directory_recursive(FlString path);
 
-
 // Remove path and everything under it.
 FL_API bool fl_os_remove_directory_recursive(FlString path);
 
 // base_path joined with relative_path using the platform separator.
 FL_API FlString fl_os_build_path(FlArena* arena, FlString base_path, FlString relative_path);
 
-// What a stat or a directory read reports about one entry.
+// What a directory read reports about one entry.
 typedef struct FlOsFileStat {
     // The entry name; only set for directory listings.
     FlString name;
     uint64_t size;
+    // Milliseconds since the Unix epoch.
     uint64_t modification_time;
     bool is_directory;
     bool is_regular_file;
@@ -109,7 +105,6 @@ typedef struct FlOsFileStat {
     bool is_valid;
     uint32_t mode;
 } FlOsFileStat;
-
 
 // An open directory iteration.
 typedef struct FlOsDir {
