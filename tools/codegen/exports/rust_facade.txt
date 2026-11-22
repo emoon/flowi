@@ -24,6 +24,7 @@ fl_hash_sha256_hex
 fl_hash_sha256_init
 fl_hash_sha256_update
 
-# vfs/vfs.h: behind `flowi::Mount::job_handle`. The rest of the VFS is public .def API;
-# this leaf is not. fl_vfs_init is declared in vfs/drivers.h (see handwritten.txt).
+# vfs/vfs.h: behind `flowi::Vfs::init` and `flowi::Mount::job_handle`. The rest of the
+# VFS is public .def API; these two leaves are not.
+fl_vfs_init
 fl_vfs_mount_get_job_handle

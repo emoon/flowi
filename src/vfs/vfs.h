@@ -3,7 +3,6 @@
 #include <core/string.h>
 #include <core/jobsys.h>
 #include <core/types.h>
-#include <flowi/vfs/drivers.h>
 #include <flowi/vfs/vfs_api.h>
 #include <flowi/vfs/vfs_plugin.h>
 
@@ -42,6 +41,12 @@ typedef u32 VfsOpStatus;
 // Callback invoked once per discovered entry during directory listing
 
 typedef void (*VfsListingCallback)(FlVfsEntry entry, void* user_data);
+
+// Initialize the VFS system. Registers the built-in LocalFS driver, which stays the catch-all fallback,
+// tried after every driver registered later via vfs_register_driver().
+// Returns true if this call initialized the VFS (the caller owns it and should call vfs_destroy),
+// false if it was already initialized (first-caller-wins; this call was a no-op).
+bool fl_vfs_init(struct FlArena* arena);
 
 void vfs_destroy(void);
 

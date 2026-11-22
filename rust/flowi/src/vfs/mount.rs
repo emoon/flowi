@@ -518,10 +518,10 @@ impl Vfs {
     /// Hand the VFS a driver the host built, ahead of the LocalFS fallback. Drivers
     /// are tried in registration order.
     ///
-    /// Call it after [`Vfs::init`] and before the first mount: the driver list is
-    /// not locked, so registering while a mount resolves a path races it. A host
-    /// built on the flowi host, which mounts the working directory as it comes up,
-    /// calls [`Vfs::init`] and this before creating the host.
+    /// Call it once the VFS is up and before the first mount: the driver list is
+    /// not locked, so registering while a mount resolves a path races it. The flowi
+    /// host owns the VFS and, with `mount_working_directory` set, starts a mount as
+    /// it comes up, so keep that off if drivers must be in place first.
     ///
     /// Returns false when the driver was refused: the VFS is not up, `plugin` is
     /// null, or its `api_version` is not the one this library was built with.

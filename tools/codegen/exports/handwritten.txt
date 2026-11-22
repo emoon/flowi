@@ -34,8 +34,6 @@ fl_inspector_snapshot
 
 # vfs/drivers.h
 fl_vfs_register_builtin_drivers
-fl_vfs_destroy
-fl_vfs_init
 fl_vfs_register_driver
 
 # core/os.h

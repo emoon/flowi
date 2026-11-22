@@ -119,10 +119,6 @@ bool fl_vfs_register_driver(const FlVfsPlugin* plugin, void* instance) {
     return vfs_register_driver(plugin, instance);
 }
 
-void fl_vfs_destroy(void) {
-    vfs_destroy();
-}
-
 // Reference counting
 
 // Drops one reference to the mount. The last one closes every node handle, children first, and frees it, on whichever
