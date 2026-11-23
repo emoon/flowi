@@ -1,6 +1,6 @@
 #pragma once
 
-// Support shared by the VFS test files (unit_tests_vfs*.c): in-memory zip and LHA writers for archives whose shape a
+// Support shared by the VFS test files (tests/vfs/*.c): in-memory zip and LHA writers for archives whose shape a
 // case controls, the location of the checked-in fixtures, and checks that read, list or fail a path through a mount.
 
 #include "unit_tests_common.h"
@@ -553,4 +553,18 @@ static inline bool vfs_expect_chunked_read(FlVfsMount* mount, FlString path, FlS
                total);
     }
     return ok;
+}
+
+static inline FlVfsMount* vfs_mount_fixture(const char* name) {
+    return vfs_test_mount(vfs_fixture_path(s_arena, string_from_cstr(name)));
+}
+
+static inline bool vfs_expect_reads(FlVfsMount* mount, const char* const* names, const char* const* contents,
+                                    int count) {
+    for (int i = 0; i < count; i++) {
+        if (!vfs_expect_read(mount, string_from_cstr(names[i]), string_from_cstr(contents[i]))) {
+            return false;
+        }
+    }
+    return true;
 }
