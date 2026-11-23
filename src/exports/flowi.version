@@ -129,7 +129,8 @@ FLOWI_1.0 {
     fl_heap_usable_size;
     fl_host_create;
     fl_host_destroy;
-    fl_host_frame_update;
+    fl_host_frame_begin;
+    fl_host_frame_end;
     fl_host_read_pixels;
     fl_icon_get;
     fl_icon_load;

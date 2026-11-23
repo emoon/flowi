@@ -595,8 +595,7 @@ void fl_app_destroy(FlApp* app) {
 // after the pump and before the frame body, so an edge pumped this tick is visible to this tick's widgets and to
 // ui_update_end's hot/active transition.
 //
-// fl_app calls it directly, exactly once per frame, and must not route through ui_frame_end_and_update_input:
-// that helper calls ui_input_update itself, double-updating the input deltas.
+// It runs exactly once per frame: a second call would update the input deltas twice.
 
 static void fl_app_pump_events(FlApp* app) {
     // Pump the shared OS queue once and demux it across every live window by id. Build the parallel

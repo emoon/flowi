@@ -43,8 +43,16 @@ fn draw(buffer: &DynamicImageBuffer) {
         },
         fill_container: false,
     };
-    // SAFETY: buffer outlives the tick_embedded call this runs in and is not written during it.
+    // SAFETY: buffer outlives the frame this runs in and is not written during it.
     unsafe { DynamicImage::new(buffer, opts) };
+}
+
+/// One frame: begin, `ui`, end.
+fn frame<R>(app: &mut Application, ui: impl FnOnce() -> R) -> R {
+    app.begin_frame(1.0 / 60.0);
+    let result = ui();
+    app.end_frame();
+    result
 }
 
 #[test]
@@ -59,7 +67,7 @@ fn the_renderer_reads_the_pixels_the_buffer_owns() {
     );
 
     fill(&mut buffer, RED);
-    app.tick_embedded(1.0 / 60.0, || draw(&buffer));
+    frame(&mut app, || draw(&buffer));
     assert_eq!(
         count_pixels(&app, RED),
         (SIDE * SIDE) as usize,
@@ -67,7 +75,7 @@ fn the_renderer_reads_the_pixels_the_buffer_owns() {
     );
 
     fill(&mut buffer, GREEN);
-    app.tick_embedded(1.0 / 60.0, || draw(&buffer));
+    frame(&mut app, || draw(&buffer));
     assert_eq!(
         count_pixels(&app, GREEN),
         (SIDE * SIDE) as usize,

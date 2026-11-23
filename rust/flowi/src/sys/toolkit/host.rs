@@ -32,8 +32,9 @@ pub enum Host {}
 // A flowi host for a program that owns its own display, input and presentation.
 //
 // Use it instead of `App` when flowi should not open the window. `fl_host_create` brings up the renderer, the
-// resource systems and a UI context. Call `fl_host_frame_update` once per frame and emit the UI between two calls.
-// Then call `fl_host_read_pixels` to get the result. Call `fl_host_destroy` when you are done.
+// resource systems and a UI context. Each frame, push the input you decoded, call `fl_host_frame_begin`, emit the UI
+// and call `fl_host_frame_end`. Then call `fl_host_read_pixels` to get the result. Call `fl_host_destroy` when you are
+// done.
 extern "C" {
     /// Creates a host that allocates from `arena` and returns it, or null if it could not be created.
     ///
@@ -43,11 +44,13 @@ extern "C" {
     ///
     /// Does nothing if `host` is null.
     pub fn fl_host_destroy(host: *mut crate::sys::Host);
-    /// Advances the host by one frame.
+    /// Opens a frame.
     ///
-    /// The first call opens a frame. Each call after that closes the frame you just emitted, feeds `delta_time`
-    /// seconds of input into the next one and opens it. Emit the UI between two calls.
-    pub fn fl_host_frame_update(host: *mut crate::sys::Host, delta_time: f64);
+    /// The input pushed since the last call becomes the input of this frame. `delta_time` is the time since the
+    /// last frame, in seconds. Emit the UI after this call, then call `fl_host_frame_end`.
+    pub fn fl_host_frame_begin(host: *mut crate::sys::Host, delta_time: f64);
+    /// Closes the frame opened by `fl_host_frame_begin` and renders it.
+    pub fn fl_host_frame_end(host: *mut crate::sys::Host);
     /// Fills `out` with the pixels of the last rendered frame and returns true.
     ///
     /// The format is RGB24 for the software renderer and RGBA8 for the GPU. Returns false if the render backend

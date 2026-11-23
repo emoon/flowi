@@ -72,7 +72,7 @@ impl DynamicImage {
     /// # Safety
     /// buffer must stay alive, and must not be written, from this call until the frame it was drawn in has
     /// been rendered: the return of the [`Application::tick`](crate::Application::tick) or
-    /// [`Application::tick_embedded`](crate::Application::tick_embedded) call that ran the frame, or the start
+    /// [`Application::end_frame`](crate::Application::end_frame) call that closed the frame, or the start
     /// of the next frame callback under [`Application::run`](crate::Application::run).
     #[allow(clippy::new_ret_no_self)]
     pub unsafe fn new(buffer: &DynamicImageBuffer, opts: ImageOpts) {

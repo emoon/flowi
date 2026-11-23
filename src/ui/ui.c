@@ -1053,21 +1053,6 @@ void ui_update_end(FlUiCtx* self, float dt) {
     self->frame_open = false;
 }
 
-// Frame end plus input update, used by both the application and tests.
-
-void ui_frame_end_and_update_input(FlUiCtx* ctx, double dt) {
-    ui_update_end(ctx, dt);
-
-    {
-        perf_scope("ui_input_update");
-        ui_input_update(ctx, dt);
-    }
-    {
-        perf_scope("ui_update_begin");
-        ui_update_begin(ctx);
-    }
-}
-
 void ui_text(FlString string) {
     // Default text: theme primary colour, everything else falls back inside ui_text_styled_impl.
     const FlThemeColors* theme = ui_get_theme_colors(g_ui_ctx);

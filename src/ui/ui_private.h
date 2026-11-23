@@ -664,9 +664,6 @@ void ui_set_physical_keyboard_available(FlUiCtx* ctx, bool available);
 void ui_virtual_keyboard_update_and_render(FlUiCtx* ctx);
 void ui_virtual_keyboard_finish_if_inactive(FlUiCtx* ctx);
 
-// Performs: ui_update_end -> input_update -> ui_update_begin
-void ui_frame_end_and_update_input(FlUiCtx* ctx, double dt);
-
 // Format a slider's display value into arena. Int sliders apply the format to the rounded integer value (so
 // arbitrary int formats like "%3d" or "%d ms" are well-defined and a nullptr format falls back to "%d"); float
 // sliders apply it to the float value (nullptr falls back to "%.2f").
