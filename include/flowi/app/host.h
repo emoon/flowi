@@ -34,8 +34,9 @@ typedef struct FlHost FlHost;
 // A flowi host for a program that owns its own display, input and presentation.
 //
 // Use it instead of `FlApp` when flowi should not open the window. `fl_host_create` brings up the renderer, the
-// resource systems and a UI context. Call `fl_host_frame_update` once per frame and emit the UI between two calls.
-// Then call `fl_host_read_pixels` to get the result. Call `fl_host_destroy` when you are done.
+// resource systems and a UI context. Each frame, push the input you decoded, call `fl_host_frame_begin`, emit the UI
+// and call `fl_host_frame_end`. Then call `fl_host_read_pixels` to get the result. Call `fl_host_destroy` when you are
+// done.
 // Creates a host that allocates from `arena` and returns it, or null if it could not be created.
 //
 // The reason is logged. The host never frees `arena`, so keep it alive until after `fl_host_destroy`.
@@ -44,11 +45,13 @@ FL_API FlHost* fl_host_create(FlArena* arena, const FlHostSettings* settings);
 //
 // Does nothing if `host` is null.
 FL_API void fl_host_destroy(FlHost* host);
-// Advances the host by one frame.
+// Opens a frame.
 //
-// The first call opens a frame. Each call after that closes the frame you just emitted, feeds `delta_time`
-// seconds of input into the next one and opens it. Emit the UI between two calls.
-FL_API void fl_host_frame_update(FlHost* host, double delta_time);
+// The input pushed since the last call becomes the input of this frame. `delta_time` is the time since the
+// last frame, in seconds. Emit the UI after this call, then call `fl_host_frame_end`.
+FL_API void fl_host_frame_begin(FlHost* host, double delta_time);
+// Closes the frame opened by `fl_host_frame_begin` and renders it.
+FL_API void fl_host_frame_end(FlHost* host);
 // Fills `out` with the pixels of the last rendered frame and returns true.
 //
 // The format is RGB24 for the software renderer and RGBA8 for the GPU. Returns false if the render backend

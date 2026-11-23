@@ -19,7 +19,9 @@
 //!     .expect("flowi application");
 //!
 //! loop {
-//!     app.tick_embedded(1.0 / 60.0, draw);
+//!     app.begin_frame(1.0 / 60.0);
+//!     draw();
+//!     app.end_frame();
 //!     if let Some(pixels) = app.pixels() {
 //!         present(pixels.row(0));
 //!     }

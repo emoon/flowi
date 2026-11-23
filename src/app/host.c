@@ -5,6 +5,7 @@
 #include <core/assert.h>
 #include <core/log.h>
 #include <core/os/os.h>
+#include <core/perf_scope.h>
 #include <render/software/software_renderer.h>
 #include "ui/font_cache.h"
 #include "ui/image/image.h"
@@ -270,18 +271,30 @@ void fl_host_destroy(FlHost* host) {
     host_destroy(host);
 }
 
-// One call per frame. The first opens the host's frame; every one after it closes the frame the caller just
-// emitted, pumps delta_time seconds of input into the next, and opens that.
+// A frame is begin, the caller's UI, end. Input is snapshotted in begin, so what the caller pushed just before it
+// is seen by this frame's widgets, the same order fl_app's tick uses.
 
-void fl_host_frame_update(FlHost* host, double delta_time) {
+void fl_host_frame_begin(FlHost* host, double delta_time) {
     FL_ASSERT(host != nullptr);
     FL_ASSERT(host->window_ctx != nullptr);
+    FL_ASSERT(!host->window_ctx->frame_open);
 
-    if (host->window_ctx->frame_open) {
-        ui_frame_end_and_update_input(host->window_ctx, delta_time);
-    } else {
+    {
+        perf_scope("ui_input_update");
+        ui_input_update(host->window_ctx, delta_time);
+    }
+    {
+        perf_scope("ui_update_begin");
         ui_update_begin(host->window_ctx);
     }
+}
+
+void fl_host_frame_end(FlHost* host) {
+    FL_ASSERT(host != nullptr);
+    FL_ASSERT(host->window_ctx != nullptr);
+    FL_ASSERT(host->window_ctx->frame_open);
+
+    ui_update_end(host->window_ctx, host->window_ctx->delta_time);
 
     arena_watchdog_update();
 }

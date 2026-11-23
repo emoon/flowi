@@ -29,7 +29,7 @@ enum Backing {
 ///
 /// The two modes share the process-wide foundation and differ only in the frame-driving
 /// surface: [`run`](Self::run) / [`tick`](Self::tick) and the window and injection helpers
-/// belong to the windowed mode, [`tick_embedded`](Self::tick_embedded) /
+/// belong to the windowed mode, [`begin_frame`](Self::begin_frame) / [`end_frame`](Self::end_frame) /
 /// [`push_input`](Self::push_input) to the embedded one. Calling one mode's entry point on
 /// the other panics.
 ///
@@ -76,8 +76,8 @@ impl EmbeddedSettings {
     ///
     /// A zero width or height asks for a surfaceless application: flowi brings the
     /// resource tier, the VFS and the job system up but opens no render surface and no UI
-    /// context. Nothing can be drawn against one: [`tick_embedded`](Application::tick_embedded)
-    /// has no frame to advance and [`pixels`](Application::pixels) reports None.
+    /// context. Nothing can be drawn against one: [`begin_frame`](Application::begin_frame)
+    /// has no frame to open and [`pixels`](Application::pixels) reports None.
     pub fn new(width: u32, height: u32) -> EmbeddedSettings {
         EmbeddedSettings {
             render_width: width,
@@ -319,9 +319,9 @@ impl Application {
     /// rendering to DRM). flowi owns everything below the surface: the render backend, the
     /// resource tier, the VFS and image system, fonts, the surface and the UI context.
     ///
-    /// The frame is the caller's to drive: [`tick_embedded`](Self::tick_embedded) once per
-    /// frame with the UI to draw, [`pixels`](Self::pixels) to present the result, and
-    /// [`push_input`](Self::push_input) to feed the OS events the caller decoded. The
+    /// The frame is the caller's to drive: [`push_input`](Self::push_input) to feed the OS
+    /// events the caller decoded, [`begin_frame`](Self::begin_frame), the UI,
+    /// [`end_frame`](Self::end_frame), and [`pixels`](Self::pixels) to present the result. The
     /// window-owning entry points ([`run`](Self::run), [`tick`](Self::tick),
     /// [`open_window`](Self::open_window), the `inject_*` harness) panic on one of these.
     ///
@@ -345,13 +345,6 @@ impl Application {
         let host = unsafe { sys::fl_host_create(arena.as_raw().cast(), &sys_settings) };
         if host.is_null() {
             return None;
-        }
-
-        // fl_host_create leaves no frame open; open the first one so the first tick_embedded
-        // emits inside it. A surfaceless host has no UI context to open a frame on.
-        if sys_settings.render_width > 0 && sys_settings.render_height > 0 {
-            // SAFETY: a live host with a UI context and no frame open yet.
-            unsafe { sys::fl_host_frame_update(host, 0.0) };
         }
 
         Some(Application {
@@ -383,7 +376,7 @@ impl Application {
             Backing::Embedded(_) => panic!(
                 "flowi: this Application was created with `Application::embedded`, which \
                  leaves the window, the event pump and presentation to the caller — drive \
-                 it with `tick_embedded` / `pixels` / `push_input` instead"
+                 it with `begin_frame` / `end_frame` / `pixels` / `push_input` instead"
             ),
         }
     }
@@ -581,26 +574,35 @@ impl Application {
         unsafe { sys::fl_app_headless_last_warp(self.app()) }
     }
 
-    /// Draw and advance one embedded frame: ui emits into the open frame, then that frame
-    /// closes, delta_time seconds of input are pumped in, and the next frame opens.
-    /// Rendered pixels are available from [`pixels`](Self::pixels) once it returns.
+    /// Open an embedded frame. The input pushed since the last frame becomes this frame's
+    /// input, and delta_time seconds pass on flowi's clock. Emit the UI after this call, then
+    /// call [`end_frame`](Self::end_frame).
     ///
-    /// The embedded counterpart of [`tick`](Self::tick): ui runs directly on the caller's
-    /// stack, captures whatever state it needs, and its return value comes back out.
+    /// The embedded counterpart of [`tick`](Self::tick), split in two so the caller's UI runs
+    /// on its own stack between the calls.
     ///
     /// # Panics
     /// Panics on a window-owning application (use [`tick`](Self::tick) there).
-    pub fn tick_embedded<R>(&mut self, delta_time: f32, ui: impl FnOnce() -> R) -> R {
+    pub fn begin_frame(&mut self, delta_time: f32) {
         let host = self.host();
-        let result = ui();
-        // SAFETY: a live host; the frame boundary is entirely flowi's business.
-        unsafe { sys::fl_host_frame_update(host, f64::from(delta_time)) };
-        result
+        // SAFETY: a live host with no frame open.
+        unsafe { sys::fl_host_frame_begin(host, f64::from(delta_time)) };
+    }
+
+    /// Close the frame [`begin_frame`](Self::begin_frame) opened and render it. The pixels
+    /// are available from [`pixels`](Self::pixels) once it returns.
+    ///
+    /// # Panics
+    /// Panics on a window-owning application.
+    pub fn end_frame(&mut self) {
+        let host = self.host();
+        // SAFETY: a live host with a frame open.
+        unsafe { sys::fl_host_frame_end(host) };
     }
 
     /// Push one decoded OS event in. An embedded application pumps its own OS events and
-    /// delivers input this way; it lands in the frame state [`UiInput`](crate::UiInput) reads on the
-    /// following [`tick_embedded`](Self::tick_embedded).
+    /// delivers input this way; it lands in the frame state [`UiInput`](crate::UiInput) reads from the
+    /// next [`begin_frame`](Self::begin_frame) on.
     ///
     /// # Panics
     /// Panics on a window-owning application, which pumps the OS itself (a headless one
@@ -627,7 +629,7 @@ impl Application {
     pub fn pixels(&self) -> Option<Pixels<'_>> {
         let rb = self.pixel_readback()?;
         // SAFETY: a successful readback of a live backend, whose buffer stays valid until
-        // the next frame. tick / tick_embedded take &mut self, so this shared borrow
+        // the next frame. tick / begin_frame / end_frame take &mut self, so this shared borrow
         // excludes them for as long as the returned Pixels lives.
         Some(unsafe { Pixels::from_readback(&rb) })
     }

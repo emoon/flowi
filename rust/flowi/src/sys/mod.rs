@@ -377,7 +377,7 @@ pub use toolkit::dock::*;
 
 /// The embedded host tier: the opaque `Host` handle, its settings and the `fl_host_*` functions.
 pub use toolkit::host::{
-    fl_host_create, fl_host_destroy, fl_host_frame_update, fl_host_read_pixels, Host, HostSettings,
+    fl_host_create, fl_host_destroy, fl_host_frame_begin, fl_host_frame_end, fl_host_read_pixels, Host, HostSettings,
 };
 
 /// "Let the backend place the window" value for [`WindowSettings::x`] and `y`.

@@ -22,7 +22,8 @@ FL_HOST_FIELD_MATCHES(FlHostSettings, mount_working_directory, bool);
 
 FL_HOST_FN_MATCHES(fl_host_create, FlHost*(FlArena*, const FlHostSettings*));
 FL_HOST_FN_MATCHES(fl_host_destroy, void(FlHost*));
-FL_HOST_FN_MATCHES(fl_host_frame_update, void(FlHost*, double));
+FL_HOST_FN_MATCHES(fl_host_frame_begin, void(FlHost*, double));
+FL_HOST_FN_MATCHES(fl_host_frame_end, void(FlHost*));
 FL_HOST_FN_MATCHES(fl_host_read_pixels, bool(FlHost*, FlPixelReadback*));
 
 #undef FL_HOST_FN_MATCHES

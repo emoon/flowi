@@ -32,12 +32,17 @@ fn button_event(kind: MouseEventType, button: MouseButton) -> InputEvent {
     })
 }
 
-#[test]
-fn embedded_renders_reads_back_and_takes_input() {
-    let mut app =
-        Application::embedded(EmbeddedSettings::new(WIDTH, HEIGHT)).expect("embedded flowi");
+/// One frame: begin, `ui`, end.
+fn frame<R>(app: &mut Application, ui: impl FnOnce() -> R) -> R {
+    app.begin_frame(1.0 / 60.0);
+    let result = ui();
+    app.end_frame();
+    result
+}
 
-    app.tick_embedded(1.0 / 60.0, || {});
+/// An empty frame reads back as the clear colour at the size asked for.
+fn assert_renders_and_reads_back(app: &mut Application) {
+    frame(app, || {});
 
     let pixels = app.pixels().expect("software backend reads back");
     assert_eq!(pixels.width(), WIDTH, "readback width");
@@ -60,42 +65,46 @@ fn embedded_renders_reads_back_and_takes_input() {
             );
         }
     }
+}
 
+/// An event pushed before a frame is that frame's input: an edge shows in the very next
+/// frame and lasts only that one, the held level is sticky.
+fn assert_pushed_input_is_the_next_frames(app: &mut Application) {
     for _ in 0..3 {
-        let state = app.tick_embedded(1.0 / 60.0, || mouse_button(MouseButton::Left));
+        let state = frame(app, || mouse_button(MouseButton::Left));
         assert!(
             !state.pressed && !state.held && !state.released,
             "no button channel should report before any event is pushed"
         );
     }
 
-    // The event is drained by the pump on the next frame boundary; the pressed edge lasts one
-    // frame, the held level is sticky.
     app.push_input(button_event(MouseEventType::Button_Down, MouseButton::Left));
-    let mut pressed_seen = false;
-    let mut held_seen = false;
-    for _ in 0..3 {
-        let state = app.tick_embedded(1.0 / 60.0, || mouse_button(MouseButton::Left));
-        pressed_seen |= state.pressed;
-        held_seen |= state.held;
-    }
+    let state = frame(app, || mouse_button(MouseButton::Left));
     assert!(
-        pressed_seen,
-        "a pushed Button_Down should raise the pressed edge"
+        state.pressed && state.held,
+        "a pushed Button_Down should be pressed and held in the next frame"
     );
-    assert!(held_seen, "a pushed Button_Down should hold the level");
+    let state = frame(app, || mouse_button(MouseButton::Left));
+    assert!(
+        !state.pressed && state.held,
+        "the pressed edge lasts one frame, the held level stays"
+    );
 
     app.push_input(button_event(MouseEventType::Button_Up, MouseButton::Left));
-    let mut released_seen = false;
-    let mut last_held = true;
-    for _ in 0..3 {
-        let state = app.tick_embedded(1.0 / 60.0, || mouse_button(MouseButton::Left));
-        released_seen |= state.released;
-        last_held = state.held;
-    }
+    let state = frame(app, || mouse_button(MouseButton::Left));
     assert!(
-        released_seen,
-        "a pushed Button_Up should raise the released edge"
+        state.released && !state.held,
+        "a pushed Button_Up should be released, and no longer held, in the next frame"
     );
-    assert!(!last_held, "the held level should drop once released");
+    let state = frame(app, || mouse_button(MouseButton::Left));
+    assert!(!state.released, "the released edge lasts one frame");
+}
+
+#[test]
+fn embedded_renders_reads_back_and_takes_input() {
+    let mut app =
+        Application::embedded(EmbeddedSettings::new(WIDTH, HEIGHT)).expect("embedded flowi");
+
+    assert_renders_and_reads_back(&mut app);
+    assert_pushed_input_is_the_next_frames(&mut app);
 }

@@ -28,8 +28,8 @@
 //!
 //! An application that owns its own display and input (a kiosk shell, a plugin inside a host's
 //! window, a frontend rendering to DRM) creates the same type with [`Application::embedded`] and
-//! drives each frame itself with [`Application::tick_embedded`], [`Application::pixels`] and
-//! [`Application::push_input`].
+//! drives each frame itself with [`Application::push_input`], [`Application::begin_frame`],
+//! [`Application::end_frame`] and [`Application::pixels`].
 //!
 //! A caller that must touch the process-wide foundation before there is an application uses the
 //! free [`init`] / [`shutdown`] pair.

@@ -22,7 +22,7 @@ typedef struct FlArena FlArena;
 typedef struct FlUiCtx FlUiCtx;
 
 // These are the internal entry points, and the ones flowi's own code must call. The exported `fl_host_*` set
-// (flowi/app/host.h, generated) is only create / destroy / frame_update / read_pixels; the per-window pieces
+// (flowi/app/host.h, generated) is only create / destroy / frame_begin / frame_end / read_pixels; the per-window pieces
 // below exist for fl_app.
 //
 // `fl_host_*` is on the shared library's exported symbol list. In a process that links flowi statically and also
