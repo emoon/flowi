@@ -15,14 +15,8 @@ pub enum MouseButton {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<MouseButton>() == 4,
-        "MouseButton size drift"
-    );
-    assert!(
-        core::mem::align_of::<MouseButton>() == 4,
-        "MouseButton align drift"
-    );
+    assert!(core::mem::size_of::<MouseButton>() == 4, "MouseButton size drift");
+    assert!(core::mem::align_of::<MouseButton>() == 4, "MouseButton align drift");
 };
 
 /// A gamepad button.
@@ -50,14 +44,8 @@ pub enum GamepadButton {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<GamepadButton>() == 4,
-        "GamepadButton size drift"
-    );
-    assert!(
-        core::mem::align_of::<GamepadButton>() == 4,
-        "GamepadButton align drift"
-    );
+    assert!(core::mem::size_of::<GamepadButton>() == 4, "GamepadButton size drift");
+    assert!(core::mem::align_of::<GamepadButton>() == 4, "GamepadButton align drift");
 };
 
 /// A gamepad analog axis.
@@ -76,14 +64,8 @@ pub enum GamepadAxis {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<GamepadAxis>() == 4,
-        "GamepadAxis size drift"
-    );
-    assert!(
-        core::mem::align_of::<GamepadAxis>() == 4,
-        "GamepadAxis align drift"
-    );
+    assert!(core::mem::size_of::<GamepadAxis>() == 4, "GamepadAxis size drift");
+    assert!(core::mem::align_of::<GamepadAxis>() == 4, "GamepadAxis align drift");
 };
 
 /// What a `KeyEvent` reports.
@@ -96,14 +78,8 @@ pub enum KeyEventType {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<KeyEventType>() == 4,
-        "KeyEventType size drift"
-    );
-    assert!(
-        core::mem::align_of::<KeyEventType>() == 4,
-        "KeyEventType align drift"
-    );
+    assert!(core::mem::size_of::<KeyEventType>() == 4, "KeyEventType size drift");
+    assert!(core::mem::align_of::<KeyEventType>() == 4, "KeyEventType align drift");
 };
 
 /// What a `MouseEvent` reports.
@@ -123,14 +99,8 @@ pub enum MouseEventType {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<MouseEventType>() == 4,
-        "MouseEventType size drift"
-    );
-    assert!(
-        core::mem::align_of::<MouseEventType>() == 4,
-        "MouseEventType align drift"
-    );
+    assert!(core::mem::size_of::<MouseEventType>() == 4, "MouseEventType size drift");
+    assert!(core::mem::align_of::<MouseEventType>() == 4, "MouseEventType align drift");
 };
 
 /// What a `GamepadEvent` reports.
@@ -147,14 +117,8 @@ pub enum GamepadEventType {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<GamepadEventType>() == 4,
-        "GamepadEventType size drift"
-    );
-    assert!(
-        core::mem::align_of::<GamepadEventType>() == 4,
-        "GamepadEventType align drift"
-    );
+    assert!(core::mem::size_of::<GamepadEventType>() == 4, "GamepadEventType size drift");
+    assert!(core::mem::align_of::<GamepadEventType>() == 4, "GamepadEventType align drift");
 };
 
 /// What a `WindowEvent` reports.
@@ -173,14 +137,8 @@ pub enum WindowEventType {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<WindowEventType>() == 4,
-        "WindowEventType size drift"
-    );
-    assert!(
-        core::mem::align_of::<WindowEventType>() == 4,
-        "WindowEventType align drift"
-    );
+    assert!(core::mem::size_of::<WindowEventType>() == 4, "WindowEventType size drift");
+    assert!(core::mem::align_of::<WindowEventType>() == 4, "WindowEventType align drift");
 };
 
 /// The payload of a `MouseEvent` of type `MouseEventType::Move`.
@@ -196,30 +154,12 @@ pub struct MouseMoveData {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<MouseMoveData>() == 16,
-        "MouseMoveData size drift"
-    );
-    assert!(
-        core::mem::align_of::<MouseMoveData>() == 4,
-        "MouseMoveData align drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseMoveData, x) == 0,
-        "MouseMoveData.x offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseMoveData, y) == 4,
-        "MouseMoveData.y offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseMoveData, delta_x) == 8,
-        "MouseMoveData.delta_x offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseMoveData, delta_y) == 12,
-        "MouseMoveData.delta_y offset drift"
-    );
+    assert!(core::mem::size_of::<MouseMoveData>() == 16, "MouseMoveData size drift");
+    assert!(core::mem::align_of::<MouseMoveData>() == 4, "MouseMoveData align drift");
+    assert!(core::mem::offset_of!(MouseMoveData, x) == 0, "MouseMoveData.x offset drift");
+    assert!(core::mem::offset_of!(MouseMoveData, y) == 4, "MouseMoveData.y offset drift");
+    assert!(core::mem::offset_of!(MouseMoveData, delta_x) == 8, "MouseMoveData.delta_x offset drift");
+    assert!(core::mem::offset_of!(MouseMoveData, delta_y) == 12, "MouseMoveData.delta_y offset drift");
 };
 
 /// The payload of a `MouseEvent` of type `MouseEventType::Button_Down` or `MouseEventType::Button_Up`.
@@ -236,30 +176,12 @@ pub struct MouseButtonData {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<MouseButtonData>() == 16,
-        "MouseButtonData size drift"
-    );
-    assert!(
-        core::mem::align_of::<MouseButtonData>() == 4,
-        "MouseButtonData align drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseButtonData, button) == 0,
-        "MouseButtonData.button offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseButtonData, x) == 4,
-        "MouseButtonData.x offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseButtonData, y) == 8,
-        "MouseButtonData.y offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseButtonData, click_count) == 12,
-        "MouseButtonData.click_count offset drift"
-    );
+    assert!(core::mem::size_of::<MouseButtonData>() == 16, "MouseButtonData size drift");
+    assert!(core::mem::align_of::<MouseButtonData>() == 4, "MouseButtonData align drift");
+    assert!(core::mem::offset_of!(MouseButtonData, button) == 0, "MouseButtonData.button offset drift");
+    assert!(core::mem::offset_of!(MouseButtonData, x) == 4, "MouseButtonData.x offset drift");
+    assert!(core::mem::offset_of!(MouseButtonData, y) == 8, "MouseButtonData.y offset drift");
+    assert!(core::mem::offset_of!(MouseButtonData, click_count) == 12, "MouseButtonData.click_count offset drift");
 };
 
 /// The payload of a `MouseEvent` of type `MouseEventType::Wheel`.
@@ -273,22 +195,10 @@ pub struct MouseWheelData {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<MouseWheelData>() == 8,
-        "MouseWheelData size drift"
-    );
-    assert!(
-        core::mem::align_of::<MouseWheelData>() == 4,
-        "MouseWheelData align drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseWheelData, x) == 0,
-        "MouseWheelData.x offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseWheelData, y) == 4,
-        "MouseWheelData.y offset drift"
-    );
+    assert!(core::mem::size_of::<MouseWheelData>() == 8, "MouseWheelData size drift");
+    assert!(core::mem::align_of::<MouseWheelData>() == 4, "MouseWheelData align drift");
+    assert!(core::mem::offset_of!(MouseWheelData, x) == 0, "MouseWheelData.x offset drift");
+    assert!(core::mem::offset_of!(MouseWheelData, y) == 4, "MouseWheelData.y offset drift");
 };
 
 /// The payload of a `MouseEvent` of type `MouseEventType::Relative_Motion`.
@@ -302,22 +212,10 @@ pub struct MouseRelativeData {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<MouseRelativeData>() == 8,
-        "MouseRelativeData size drift"
-    );
-    assert!(
-        core::mem::align_of::<MouseRelativeData>() == 4,
-        "MouseRelativeData align drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseRelativeData, delta_x) == 0,
-        "MouseRelativeData.delta_x offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseRelativeData, delta_y) == 4,
-        "MouseRelativeData.delta_y offset drift"
-    );
+    assert!(core::mem::size_of::<MouseRelativeData>() == 8, "MouseRelativeData size drift");
+    assert!(core::mem::align_of::<MouseRelativeData>() == 4, "MouseRelativeData align drift");
+    assert!(core::mem::offset_of!(MouseRelativeData, delta_x) == 0, "MouseRelativeData.delta_x offset drift");
+    assert!(core::mem::offset_of!(MouseRelativeData, delta_y) == 4, "MouseRelativeData.delta_y offset drift");
 };
 
 /// The payload of a `GamepadEvent` of type `GamepadEventType::Button_Down` or `GamepadEventType::Button_Up`.
@@ -328,18 +226,9 @@ pub struct GamepadButtonData {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<GamepadButtonData>() == 4,
-        "GamepadButtonData size drift"
-    );
-    assert!(
-        core::mem::align_of::<GamepadButtonData>() == 4,
-        "GamepadButtonData align drift"
-    );
-    assert!(
-        core::mem::offset_of!(GamepadButtonData, button) == 0,
-        "GamepadButtonData.button offset drift"
-    );
+    assert!(core::mem::size_of::<GamepadButtonData>() == 4, "GamepadButtonData size drift");
+    assert!(core::mem::align_of::<GamepadButtonData>() == 4, "GamepadButtonData align drift");
+    assert!(core::mem::offset_of!(GamepadButtonData, button) == 0, "GamepadButtonData.button offset drift");
 };
 
 /// The payload of a `GamepadEvent` of type `GamepadEventType::Axis_Motion`.
@@ -353,22 +242,10 @@ pub struct GamepadAxisData {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<GamepadAxisData>() == 8,
-        "GamepadAxisData size drift"
-    );
-    assert!(
-        core::mem::align_of::<GamepadAxisData>() == 4,
-        "GamepadAxisData align drift"
-    );
-    assert!(
-        core::mem::offset_of!(GamepadAxisData, axis) == 0,
-        "GamepadAxisData.axis offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(GamepadAxisData, value) == 4,
-        "GamepadAxisData.value offset drift"
-    );
+    assert!(core::mem::size_of::<GamepadAxisData>() == 8, "GamepadAxisData size drift");
+    assert!(core::mem::align_of::<GamepadAxisData>() == 4, "GamepadAxisData align drift");
+    assert!(core::mem::offset_of!(GamepadAxisData, axis) == 0, "GamepadAxisData.axis offset drift");
+    assert!(core::mem::offset_of!(GamepadAxisData, value) == 4, "GamepadAxisData.value offset drift");
 };
 
 /// The payload of a `WindowEvent` of type `WindowEventType::Resize`.
@@ -382,22 +259,10 @@ pub struct WindowResizeData {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<WindowResizeData>() == 8,
-        "WindowResizeData size drift"
-    );
-    assert!(
-        core::mem::align_of::<WindowResizeData>() == 4,
-        "WindowResizeData align drift"
-    );
-    assert!(
-        core::mem::offset_of!(WindowResizeData, width) == 0,
-        "WindowResizeData.width offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(WindowResizeData, height) == 4,
-        "WindowResizeData.height offset drift"
-    );
+    assert!(core::mem::size_of::<WindowResizeData>() == 8, "WindowResizeData size drift");
+    assert!(core::mem::align_of::<WindowResizeData>() == 4, "WindowResizeData align drift");
+    assert!(core::mem::offset_of!(WindowResizeData, width) == 0, "WindowResizeData.width offset drift");
+    assert!(core::mem::offset_of!(WindowResizeData, height) == 4, "WindowResizeData.height offset drift");
 };
 
 /// The payload of a `WindowEvent` of type `WindowEventType::Drop_File`.
@@ -412,26 +277,11 @@ pub struct WindowDropData {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<WindowDropData>() == 24,
-        "WindowDropData size drift"
-    );
-    assert!(
-        core::mem::align_of::<WindowDropData>() == 8,
-        "WindowDropData align drift"
-    );
-    assert!(
-        core::mem::offset_of!(WindowDropData, path) == 0,
-        "WindowDropData.path offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(WindowDropData, x) == 16,
-        "WindowDropData.x offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(WindowDropData, y) == 20,
-        "WindowDropData.y offset drift"
-    );
+    assert!(core::mem::size_of::<WindowDropData>() == 24, "WindowDropData size drift");
+    assert!(core::mem::align_of::<WindowDropData>() == 8, "WindowDropData align drift");
+    assert!(core::mem::offset_of!(WindowDropData, path) == 0, "WindowDropData.path offset drift");
+    assert!(core::mem::offset_of!(WindowDropData, x) == 16, "WindowDropData.x offset drift");
+    assert!(core::mem::offset_of!(WindowDropData, y) == 20, "WindowDropData.y offset drift");
 };
 
 /// A keyboard event for `fl_input_push_key_event`.
@@ -446,34 +296,13 @@ pub struct KeyEvent {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<KeyEvent>() == 24,
-        "KeyEvent size drift"
-    );
-    assert!(
-        core::mem::align_of::<KeyEvent>() == 8,
-        "KeyEvent align drift"
-    );
-    assert!(
-        core::mem::offset_of!(KeyEvent, r#type) == 0,
-        "KeyEvent.type offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(KeyEvent, key) == 4,
-        "KeyEvent.key offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(KeyEvent, modifiers) == 8,
-        "KeyEvent.modifiers offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(KeyEvent, repeat) == 12,
-        "KeyEvent.repeat offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(KeyEvent, timestamp) == 16,
-        "KeyEvent.timestamp offset drift"
-    );
+    assert!(core::mem::size_of::<KeyEvent>() == 24, "KeyEvent size drift");
+    assert!(core::mem::align_of::<KeyEvent>() == 8, "KeyEvent align drift");
+    assert!(core::mem::offset_of!(KeyEvent, r#type) == 0, "KeyEvent.type offset drift");
+    assert!(core::mem::offset_of!(KeyEvent, key) == 4, "KeyEvent.key offset drift");
+    assert!(core::mem::offset_of!(KeyEvent, modifiers) == 8, "KeyEvent.modifiers offset drift");
+    assert!(core::mem::offset_of!(KeyEvent, repeat) == 12, "KeyEvent.repeat offset drift");
+    assert!(core::mem::offset_of!(KeyEvent, timestamp) == 16, "KeyEvent.timestamp offset drift");
 };
 
 /// A text input event for `fl_input_push_text_input_event`, holding the composed characters.
@@ -485,22 +314,10 @@ pub struct TextInputEvent {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<TextInputEvent>() == 24,
-        "TextInputEvent size drift"
-    );
-    assert!(
-        core::mem::align_of::<TextInputEvent>() == 8,
-        "TextInputEvent align drift"
-    );
-    assert!(
-        core::mem::offset_of!(TextInputEvent, text) == 0,
-        "TextInputEvent.text offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(TextInputEvent, timestamp) == 16,
-        "TextInputEvent.timestamp offset drift"
-    );
+    assert!(core::mem::size_of::<TextInputEvent>() == 24, "TextInputEvent size drift");
+    assert!(core::mem::align_of::<TextInputEvent>() == 8, "TextInputEvent align drift");
+    assert!(core::mem::offset_of!(TextInputEvent, text) == 0, "TextInputEvent.text offset drift");
+    assert!(core::mem::offset_of!(TextInputEvent, timestamp) == 16, "TextInputEvent.timestamp offset drift");
 };
 
 #[repr(C)]
@@ -513,14 +330,8 @@ pub union MouseEventPayload {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<MouseEventPayload>() == 16,
-        "MouseEventPayload size drift"
-    );
-    assert!(
-        core::mem::align_of::<MouseEventPayload>() == 4,
-        "MouseEventPayload align drift"
-    );
+    assert!(core::mem::size_of::<MouseEventPayload>() == 16, "MouseEventPayload size drift");
+    assert!(core::mem::align_of::<MouseEventPayload>() == 4, "MouseEventPayload align drift");
 };
 
 /// A mouse event for `fl_input_push_mouse_event`.
@@ -537,26 +348,11 @@ pub struct MouseEvent {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<MouseEvent>() == 32,
-        "MouseEvent size drift"
-    );
-    assert!(
-        core::mem::align_of::<MouseEvent>() == 8,
-        "MouseEvent align drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseEvent, r#type) == 0,
-        "MouseEvent.type offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseEvent, payload) == 4,
-        "MouseEvent.payload offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(MouseEvent, timestamp) == 24,
-        "MouseEvent.timestamp offset drift"
-    );
+    assert!(core::mem::size_of::<MouseEvent>() == 32, "MouseEvent size drift");
+    assert!(core::mem::align_of::<MouseEvent>() == 8, "MouseEvent align drift");
+    assert!(core::mem::offset_of!(MouseEvent, r#type) == 0, "MouseEvent.type offset drift");
+    assert!(core::mem::offset_of!(MouseEvent, payload) == 4, "MouseEvent.payload offset drift");
+    assert!(core::mem::offset_of!(MouseEvent, timestamp) == 24, "MouseEvent.timestamp offset drift");
 };
 
 /// What a [`MouseEvent`] reports, with the payload its `type` selects.
@@ -596,11 +392,7 @@ pub struct InvalidMouseEvent {
 
 impl core::fmt::Display for InvalidMouseEvent {
     fn fmt(&self, out: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            out,
-            "invalid MouseEvent: field `{}` holds {}",
-            self.field, self.value
-        )
+        write!(out, "invalid MouseEvent: field `{}` holds {}", self.field, self.value)
     }
 }
 
@@ -609,22 +401,10 @@ impl core::error::Error for InvalidMouseEvent {}
 impl From<SafeMouseEvent> for MouseEvent {
     fn from(event: SafeMouseEvent) -> MouseEvent {
         let (r#type, payload) = match event.kind {
-            MouseEventKind::Move(data) => (
-                crate::sys::MouseEventType::Move,
-                MouseEventPayload { r#move: data },
-            ),
-            MouseEventKind::ButtonDown(data) => (
-                crate::sys::MouseEventType::Button_Down,
-                MouseEventPayload { button: data },
-            ),
-            MouseEventKind::ButtonUp(data) => (
-                crate::sys::MouseEventType::Button_Up,
-                MouseEventPayload { button: data },
-            ),
-            MouseEventKind::Wheel(data) => (
-                crate::sys::MouseEventType::Wheel,
-                MouseEventPayload { wheel: data },
-            ),
+            MouseEventKind::Move(data) => (crate::sys::MouseEventType::Move, MouseEventPayload { r#move: data }),
+            MouseEventKind::ButtonDown(data) => (crate::sys::MouseEventType::Button_Down, MouseEventPayload { button: data }),
+            MouseEventKind::ButtonUp(data) => (crate::sys::MouseEventType::Button_Up, MouseEventPayload { button: data }),
+            MouseEventKind::Wheel(data) => (crate::sys::MouseEventType::Wheel, MouseEventPayload { wheel: data }),
             MouseEventKind::Enter => (
                 crate::sys::MouseEventType::Enter,
                 // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
@@ -635,10 +415,7 @@ impl From<SafeMouseEvent> for MouseEvent {
                 // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
                 unsafe { core::mem::zeroed() },
             ),
-            MouseEventKind::RelativeMotion(data) => (
-                crate::sys::MouseEventType::Relative_Motion,
-                MouseEventPayload { relative: data },
-            ),
+            MouseEventKind::RelativeMotion(data) => (crate::sys::MouseEventType::Relative_Motion, MouseEventPayload { relative: data }),
         };
         MouseEvent {
             r#type,
@@ -658,65 +435,29 @@ impl SafeMouseEvent {
     /// # Safety
     /// `raw` must be valid and aligned for reads of a whole [`MouseEvent`], and the payload arm its tag selects must be
     /// set.
-    pub unsafe fn try_from_raw(
-        raw: *const MouseEvent,
-    ) -> Result<SafeMouseEvent, InvalidMouseEvent> {
+    pub unsafe fn try_from_raw(raw: *const MouseEvent) -> Result<SafeMouseEvent, InvalidMouseEvent> {
         let mut copy = core::mem::MaybeUninit::<MouseEvent>::uninit();
         // SAFETY: the caller's contract makes raw readable for a whole struct, and copy is that large and apart from it.
         unsafe {
-            core::ptr::copy_nonoverlapping(
-                raw.cast::<u8>(),
-                copy.as_mut_ptr().cast::<u8>(),
-                core::mem::size_of::<MouseEvent>(),
-            );
+            core::ptr::copy_nonoverlapping(raw.cast::<u8>(), copy.as_mut_ptr().cast::<u8>(), core::mem::size_of::<MouseEvent>());
         }
         let bytes = copy.as_ptr().cast::<u8>();
         // SAFETY: the offset is inside the copy, whose tag the caller's contract has set.
-        let raw_tag = unsafe {
-            bytes
-                .add(core::mem::offset_of!(MouseEvent, r#type))
-                .cast::<u32>()
-                .read_unaligned()
-        };
-        let tag = crate::sys::MouseEventType::from_raw(raw_tag).ok_or(InvalidMouseEvent {
-            field: "type",
-            value: raw_tag,
-        })?;
+        let raw_tag = unsafe { bytes.add(core::mem::offset_of!(MouseEvent, r#type)).cast::<u32>().read_unaligned() };
+        let tag = crate::sys::MouseEventType::from_raw(raw_tag).ok_or(InvalidMouseEvent { field: "type", value: raw_tag })?;
         match tag {
             crate::sys::MouseEventType::Button_Down => {
                 // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
-                let value = unsafe {
-                    bytes
-                        .add(
-                            core::mem::offset_of!(MouseEvent, payload)
-                                + core::mem::offset_of!(crate::sys::MouseButtonData, button),
-                        )
-                        .cast::<u32>()
-                        .read_unaligned()
-                };
+                let value = unsafe { bytes.add(core::mem::offset_of!(MouseEvent, payload) + core::mem::offset_of!(crate::sys::MouseButtonData, button)).cast::<u32>().read_unaligned() };
                 if crate::sys::MouseButton::from_raw(value).is_none() {
-                    return Err(InvalidMouseEvent {
-                        field: "button.button",
-                        value,
-                    });
+                    return Err(InvalidMouseEvent { field: "button.button", value });
                 }
             }
             crate::sys::MouseEventType::Button_Up => {
                 // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
-                let value = unsafe {
-                    bytes
-                        .add(
-                            core::mem::offset_of!(MouseEvent, payload)
-                                + core::mem::offset_of!(crate::sys::MouseButtonData, button),
-                        )
-                        .cast::<u32>()
-                        .read_unaligned()
-                };
+                let value = unsafe { bytes.add(core::mem::offset_of!(MouseEvent, payload) + core::mem::offset_of!(crate::sys::MouseButtonData, button)).cast::<u32>().read_unaligned() };
                 if crate::sys::MouseButton::from_raw(value).is_none() {
-                    return Err(InvalidMouseEvent {
-                        field: "button.button",
-                        value,
-                    });
+                    return Err(InvalidMouseEvent { field: "button.button", value });
                 }
             }
             _ => {}
@@ -730,18 +471,12 @@ impl SafeMouseEvent {
             SafeMouseEvent {
                 kind: match tag {
                     crate::sys::MouseEventType::Move => MouseEventKind::Move(event.payload.r#move),
-                    crate::sys::MouseEventType::Button_Down => {
-                        MouseEventKind::ButtonDown(event.payload.button)
-                    }
-                    crate::sys::MouseEventType::Button_Up => {
-                        MouseEventKind::ButtonUp(event.payload.button)
-                    }
+                    crate::sys::MouseEventType::Button_Down => MouseEventKind::ButtonDown(event.payload.button),
+                    crate::sys::MouseEventType::Button_Up => MouseEventKind::ButtonUp(event.payload.button),
                     crate::sys::MouseEventType::Wheel => MouseEventKind::Wheel(event.payload.wheel),
                     crate::sys::MouseEventType::Enter => MouseEventKind::Enter,
                     crate::sys::MouseEventType::Leave => MouseEventKind::Leave,
-                    crate::sys::MouseEventType::Relative_Motion => {
-                        MouseEventKind::RelativeMotion(event.payload.relative)
-                    }
+                    crate::sys::MouseEventType::Relative_Motion => MouseEventKind::RelativeMotion(event.payload.relative),
                 },
                 timestamp: event.timestamp,
             }
@@ -758,14 +493,8 @@ pub union GamepadEventPayload {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<GamepadEventPayload>() == 8,
-        "GamepadEventPayload size drift"
-    );
-    assert!(
-        core::mem::align_of::<GamepadEventPayload>() == 4,
-        "GamepadEventPayload align drift"
-    );
+    assert!(core::mem::size_of::<GamepadEventPayload>() == 8, "GamepadEventPayload size drift");
+    assert!(core::mem::align_of::<GamepadEventPayload>() == 4, "GamepadEventPayload align drift");
 };
 
 /// A gamepad event for `fl_input_push_gamepad_event`.
@@ -783,30 +512,12 @@ pub struct GamepadEvent {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<GamepadEvent>() == 24,
-        "GamepadEvent size drift"
-    );
-    assert!(
-        core::mem::align_of::<GamepadEvent>() == 8,
-        "GamepadEvent align drift"
-    );
-    assert!(
-        core::mem::offset_of!(GamepadEvent, r#type) == 0,
-        "GamepadEvent.type offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(GamepadEvent, gamepad_id) == 4,
-        "GamepadEvent.gamepad_id offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(GamepadEvent, payload) == 8,
-        "GamepadEvent.payload offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(GamepadEvent, timestamp) == 16,
-        "GamepadEvent.timestamp offset drift"
-    );
+    assert!(core::mem::size_of::<GamepadEvent>() == 24, "GamepadEvent size drift");
+    assert!(core::mem::align_of::<GamepadEvent>() == 8, "GamepadEvent align drift");
+    assert!(core::mem::offset_of!(GamepadEvent, r#type) == 0, "GamepadEvent.type offset drift");
+    assert!(core::mem::offset_of!(GamepadEvent, gamepad_id) == 4, "GamepadEvent.gamepad_id offset drift");
+    assert!(core::mem::offset_of!(GamepadEvent, payload) == 8, "GamepadEvent.payload offset drift");
+    assert!(core::mem::offset_of!(GamepadEvent, timestamp) == 16, "GamepadEvent.timestamp offset drift");
 };
 
 /// What a [`GamepadEvent`] reports, with the payload its `type` selects.
@@ -844,11 +555,7 @@ pub struct InvalidGamepadEvent {
 
 impl core::fmt::Display for InvalidGamepadEvent {
     fn fmt(&self, out: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            out,
-            "invalid GamepadEvent: field `{}` holds {}",
-            self.field, self.value
-        )
+        write!(out, "invalid GamepadEvent: field `{}` holds {}", self.field, self.value)
     }
 }
 
@@ -857,18 +564,9 @@ impl core::error::Error for InvalidGamepadEvent {}
 impl From<SafeGamepadEvent> for GamepadEvent {
     fn from(event: SafeGamepadEvent) -> GamepadEvent {
         let (r#type, payload) = match event.kind {
-            GamepadEventKind::ButtonDown(data) => (
-                crate::sys::GamepadEventType::Button_Down,
-                GamepadEventPayload { button: data },
-            ),
-            GamepadEventKind::ButtonUp(data) => (
-                crate::sys::GamepadEventType::Button_Up,
-                GamepadEventPayload { button: data },
-            ),
-            GamepadEventKind::AxisMotion(data) => (
-                crate::sys::GamepadEventType::Axis_Motion,
-                GamepadEventPayload { axis: data },
-            ),
+            GamepadEventKind::ButtonDown(data) => (crate::sys::GamepadEventType::Button_Down, GamepadEventPayload { button: data }),
+            GamepadEventKind::ButtonUp(data) => (crate::sys::GamepadEventType::Button_Up, GamepadEventPayload { button: data }),
+            GamepadEventKind::AxisMotion(data) => (crate::sys::GamepadEventType::Axis_Motion, GamepadEventPayload { axis: data }),
             GamepadEventKind::Connected => (
                 crate::sys::GamepadEventType::Connected,
                 // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
@@ -899,83 +597,36 @@ impl SafeGamepadEvent {
     /// # Safety
     /// `raw` must be valid and aligned for reads of a whole [`GamepadEvent`], and the payload arm its tag selects must be
     /// set.
-    pub unsafe fn try_from_raw(
-        raw: *const GamepadEvent,
-    ) -> Result<SafeGamepadEvent, InvalidGamepadEvent> {
+    pub unsafe fn try_from_raw(raw: *const GamepadEvent) -> Result<SafeGamepadEvent, InvalidGamepadEvent> {
         let mut copy = core::mem::MaybeUninit::<GamepadEvent>::uninit();
         // SAFETY: the caller's contract makes raw readable for a whole struct, and copy is that large and apart from it.
         unsafe {
-            core::ptr::copy_nonoverlapping(
-                raw.cast::<u8>(),
-                copy.as_mut_ptr().cast::<u8>(),
-                core::mem::size_of::<GamepadEvent>(),
-            );
+            core::ptr::copy_nonoverlapping(raw.cast::<u8>(), copy.as_mut_ptr().cast::<u8>(), core::mem::size_of::<GamepadEvent>());
         }
         let bytes = copy.as_ptr().cast::<u8>();
         // SAFETY: the offset is inside the copy, whose tag the caller's contract has set.
-        let raw_tag = unsafe {
-            bytes
-                .add(core::mem::offset_of!(GamepadEvent, r#type))
-                .cast::<u32>()
-                .read_unaligned()
-        };
-        let tag = crate::sys::GamepadEventType::from_raw(raw_tag).ok_or(InvalidGamepadEvent {
-            field: "type",
-            value: raw_tag,
-        })?;
+        let raw_tag = unsafe { bytes.add(core::mem::offset_of!(GamepadEvent, r#type)).cast::<u32>().read_unaligned() };
+        let tag = crate::sys::GamepadEventType::from_raw(raw_tag).ok_or(InvalidGamepadEvent { field: "type", value: raw_tag })?;
         match tag {
             crate::sys::GamepadEventType::Button_Down => {
                 // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
-                let value = unsafe {
-                    bytes
-                        .add(
-                            core::mem::offset_of!(GamepadEvent, payload)
-                                + core::mem::offset_of!(crate::sys::GamepadButtonData, button),
-                        )
-                        .cast::<u32>()
-                        .read_unaligned()
-                };
+                let value = unsafe { bytes.add(core::mem::offset_of!(GamepadEvent, payload) + core::mem::offset_of!(crate::sys::GamepadButtonData, button)).cast::<u32>().read_unaligned() };
                 if crate::sys::GamepadButton::from_raw(value).is_none() {
-                    return Err(InvalidGamepadEvent {
-                        field: "button.button",
-                        value,
-                    });
+                    return Err(InvalidGamepadEvent { field: "button.button", value });
                 }
             }
             crate::sys::GamepadEventType::Button_Up => {
                 // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
-                let value = unsafe {
-                    bytes
-                        .add(
-                            core::mem::offset_of!(GamepadEvent, payload)
-                                + core::mem::offset_of!(crate::sys::GamepadButtonData, button),
-                        )
-                        .cast::<u32>()
-                        .read_unaligned()
-                };
+                let value = unsafe { bytes.add(core::mem::offset_of!(GamepadEvent, payload) + core::mem::offset_of!(crate::sys::GamepadButtonData, button)).cast::<u32>().read_unaligned() };
                 if crate::sys::GamepadButton::from_raw(value).is_none() {
-                    return Err(InvalidGamepadEvent {
-                        field: "button.button",
-                        value,
-                    });
+                    return Err(InvalidGamepadEvent { field: "button.button", value });
                 }
             }
             crate::sys::GamepadEventType::Axis_Motion => {
                 // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
-                let value = unsafe {
-                    bytes
-                        .add(
-                            core::mem::offset_of!(GamepadEvent, payload)
-                                + core::mem::offset_of!(crate::sys::GamepadAxisData, axis),
-                        )
-                        .cast::<u32>()
-                        .read_unaligned()
-                };
+                let value = unsafe { bytes.add(core::mem::offset_of!(GamepadEvent, payload) + core::mem::offset_of!(crate::sys::GamepadAxisData, axis)).cast::<u32>().read_unaligned() };
                 if crate::sys::GamepadAxis::from_raw(value).is_none() {
-                    return Err(InvalidGamepadEvent {
-                        field: "axis.axis",
-                        value,
-                    });
+                    return Err(InvalidGamepadEvent { field: "axis.axis", value });
                 }
             }
             _ => {}
@@ -988,15 +639,9 @@ impl SafeGamepadEvent {
         let safe = unsafe {
             SafeGamepadEvent {
                 kind: match tag {
-                    crate::sys::GamepadEventType::Button_Down => {
-                        GamepadEventKind::ButtonDown(event.payload.button)
-                    }
-                    crate::sys::GamepadEventType::Button_Up => {
-                        GamepadEventKind::ButtonUp(event.payload.button)
-                    }
-                    crate::sys::GamepadEventType::Axis_Motion => {
-                        GamepadEventKind::AxisMotion(event.payload.axis)
-                    }
+                    crate::sys::GamepadEventType::Button_Down => GamepadEventKind::ButtonDown(event.payload.button),
+                    crate::sys::GamepadEventType::Button_Up => GamepadEventKind::ButtonUp(event.payload.button),
+                    crate::sys::GamepadEventType::Axis_Motion => GamepadEventKind::AxisMotion(event.payload.axis),
                     crate::sys::GamepadEventType::Connected => GamepadEventKind::Connected,
                     crate::sys::GamepadEventType::Disconnected => GamepadEventKind::Disconnected,
                 },
@@ -1016,14 +661,8 @@ pub union WindowEventPayload {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<WindowEventPayload>() == 24,
-        "WindowEventPayload size drift"
-    );
-    assert!(
-        core::mem::align_of::<WindowEventPayload>() == 8,
-        "WindowEventPayload align drift"
-    );
+    assert!(core::mem::size_of::<WindowEventPayload>() == 24, "WindowEventPayload size drift");
+    assert!(core::mem::align_of::<WindowEventPayload>() == 8, "WindowEventPayload align drift");
 };
 
 /// A window event for `fl_input_push_window_event`.
@@ -1039,26 +678,11 @@ pub struct WindowEvent {
 }
 
 const _: () = {
-    assert!(
-        core::mem::size_of::<WindowEvent>() == 40,
-        "WindowEvent size drift"
-    );
-    assert!(
-        core::mem::align_of::<WindowEvent>() == 8,
-        "WindowEvent align drift"
-    );
-    assert!(
-        core::mem::offset_of!(WindowEvent, r#type) == 0,
-        "WindowEvent.type offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(WindowEvent, payload) == 8,
-        "WindowEvent.payload offset drift"
-    );
-    assert!(
-        core::mem::offset_of!(WindowEvent, timestamp) == 32,
-        "WindowEvent.timestamp offset drift"
-    );
+    assert!(core::mem::size_of::<WindowEvent>() == 40, "WindowEvent size drift");
+    assert!(core::mem::align_of::<WindowEvent>() == 8, "WindowEvent align drift");
+    assert!(core::mem::offset_of!(WindowEvent, r#type) == 0, "WindowEvent.type offset drift");
+    assert!(core::mem::offset_of!(WindowEvent, payload) == 8, "WindowEvent.payload offset drift");
+    assert!(core::mem::offset_of!(WindowEvent, timestamp) == 32, "WindowEvent.timestamp offset drift");
 };
 
 /// What a [`WindowEvent`] reports, with the payload its `type` selects.
@@ -1101,11 +725,7 @@ pub struct InvalidWindowEvent {
 
 impl core::fmt::Display for InvalidWindowEvent {
     fn fmt(&self, out: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            out,
-            "invalid WindowEvent: field `{}` holds {}",
-            self.field, self.value
-        )
+        write!(out, "invalid WindowEvent: field `{}` holds {}", self.field, self.value)
     }
 }
 
@@ -1129,25 +749,13 @@ impl<'a> From<SafeWindowEvent<'a>> for WindowEvent {
                 // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
                 unsafe { core::mem::zeroed() },
             ),
-            WindowEventKind::Resize(data) => (
-                crate::sys::WindowEventType::Resize,
-                WindowEventPayload { resize: data },
-            ),
+            WindowEventKind::Resize(data) => (crate::sys::WindowEventType::Resize, WindowEventPayload { resize: data }),
             WindowEventKind::Close => (
                 crate::sys::WindowEventType::Close,
                 // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
                 unsafe { core::mem::zeroed() },
             ),
-            WindowEventKind::DropFile { path, x, y } => (
-                crate::sys::WindowEventType::Drop_File,
-                WindowEventPayload {
-                    drop: crate::sys::WindowDropData {
-                        path: crate::sys::RawStr::borrow(path),
-                        x,
-                        y,
-                    },
-                },
-            ),
+            WindowEventKind::DropFile { path, x, y } => (crate::sys::WindowEventType::Drop_File, WindowEventPayload { drop: crate::sys::WindowDropData { path: crate::sys::RawStr::borrow(path), x, y } }),
         };
         WindowEvent {
             r#type,
@@ -1167,30 +775,16 @@ impl<'a> SafeWindowEvent<'a> {
     /// # Safety
     /// `raw` must be valid and aligned for reads of a whole [`WindowEvent`], and the payload arm its tag selects must be
     /// set. A string in that arm must stay valid and unmodified for `'a`.
-    pub unsafe fn try_from_raw(
-        raw: *const WindowEvent,
-    ) -> Result<SafeWindowEvent<'a>, InvalidWindowEvent> {
+    pub unsafe fn try_from_raw(raw: *const WindowEvent) -> Result<SafeWindowEvent<'a>, InvalidWindowEvent> {
         let mut copy = core::mem::MaybeUninit::<WindowEvent>::uninit();
         // SAFETY: the caller's contract makes raw readable for a whole struct, and copy is that large and apart from it.
         unsafe {
-            core::ptr::copy_nonoverlapping(
-                raw.cast::<u8>(),
-                copy.as_mut_ptr().cast::<u8>(),
-                core::mem::size_of::<WindowEvent>(),
-            );
+            core::ptr::copy_nonoverlapping(raw.cast::<u8>(), copy.as_mut_ptr().cast::<u8>(), core::mem::size_of::<WindowEvent>());
         }
         let bytes = copy.as_ptr().cast::<u8>();
         // SAFETY: the offset is inside the copy, whose tag the caller's contract has set.
-        let raw_tag = unsafe {
-            bytes
-                .add(core::mem::offset_of!(WindowEvent, r#type))
-                .cast::<u32>()
-                .read_unaligned()
-        };
-        let tag = crate::sys::WindowEventType::from_raw(raw_tag).ok_or(InvalidWindowEvent {
-            field: "type",
-            value: raw_tag,
-        })?;
+        let raw_tag = unsafe { bytes.add(core::mem::offset_of!(WindowEvent, r#type)).cast::<u32>().read_unaligned() };
+        let tag = crate::sys::WindowEventType::from_raw(raw_tag).ok_or(InvalidWindowEvent { field: "type", value: raw_tag })?;
         // SAFETY: the copy is a whole struct, and the tag and every enum and bool the read below
         // touches were checked above; the rest is plain data.
         let event = unsafe { copy.assume_init() };
@@ -1202,15 +796,9 @@ impl<'a> SafeWindowEvent<'a> {
                     crate::sys::WindowEventType::None => WindowEventKind::None,
                     crate::sys::WindowEventType::Focus_Gained => WindowEventKind::FocusGained,
                     crate::sys::WindowEventType::Focus_Lost => WindowEventKind::FocusLost,
-                    crate::sys::WindowEventType::Resize => {
-                        WindowEventKind::Resize(event.payload.resize)
-                    }
+                    crate::sys::WindowEventType::Resize => WindowEventKind::Resize(event.payload.resize),
                     crate::sys::WindowEventType::Close => WindowEventKind::Close,
-                    crate::sys::WindowEventType::Drop_File => WindowEventKind::DropFile {
-                        path: event.payload.drop.path.as_str(),
-                        x: event.payload.drop.x,
-                        y: event.payload.drop.y,
-                    },
+                    crate::sys::WindowEventType::Drop_File => WindowEventKind::DropFile { path: event.payload.drop.path.as_str(), x: event.payload.drop.x, y: event.payload.drop.y },
                 },
                 timestamp: event.timestamp,
             }
@@ -1219,136 +807,69 @@ impl<'a> SafeWindowEvent<'a> {
     }
 }
 
-const _: () = assert!(
-    core::mem::size_of::<GamepadAxis>() == 4,
-    "GamepadAxis is read as a u32"
-);
+const _: () = assert!(core::mem::size_of::<GamepadAxis>() == 4, "GamepadAxis is read as a u32");
 
 impl GamepadAxis {
     /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
     /// before it is a [`GamepadAxis`].
     pub fn from_raw(raw: u32) -> Option<GamepadAxis> {
-        const VALUES: [GamepadAxis; 6] = [
-            GamepadAxis::Left_X,
-            GamepadAxis::Left_Y,
-            GamepadAxis::Right_X,
-            GamepadAxis::Right_Y,
-            GamepadAxis::Left_Trigger,
-            GamepadAxis::Right_Trigger,
-        ];
+        const VALUES: [GamepadAxis; 6] = [GamepadAxis::Left_X, GamepadAxis::Left_Y, GamepadAxis::Right_X, GamepadAxis::Right_Y, GamepadAxis::Left_Trigger, GamepadAxis::Right_Trigger];
         VALUES.into_iter().find(|value| *value as u32 == raw)
     }
 }
 
-const _: () = assert!(
-    core::mem::size_of::<GamepadButton>() == 4,
-    "GamepadButton is read as a u32"
-);
+const _: () = assert!(core::mem::size_of::<GamepadButton>() == 4, "GamepadButton is read as a u32");
 
 impl GamepadButton {
     /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
     /// before it is a [`GamepadButton`].
     pub fn from_raw(raw: u32) -> Option<GamepadButton> {
-        const VALUES: [GamepadButton; 15] = [
-            GamepadButton::A,
-            GamepadButton::B,
-            GamepadButton::X,
-            GamepadButton::Y,
-            GamepadButton::Left_Bumper,
-            GamepadButton::Right_Bumper,
-            GamepadButton::Back,
-            GamepadButton::Start,
-            GamepadButton::Guide,
-            GamepadButton::Left_Thumb,
-            GamepadButton::Right_Thumb,
-            GamepadButton::Dpad_Up,
-            GamepadButton::Dpad_Right,
-            GamepadButton::Dpad_Down,
-            GamepadButton::Dpad_Left,
-        ];
+        const VALUES: [GamepadButton; 15] = [GamepadButton::A, GamepadButton::B, GamepadButton::X, GamepadButton::Y, GamepadButton::Left_Bumper, GamepadButton::Right_Bumper, GamepadButton::Back, GamepadButton::Start, GamepadButton::Guide, GamepadButton::Left_Thumb, GamepadButton::Right_Thumb, GamepadButton::Dpad_Up, GamepadButton::Dpad_Right, GamepadButton::Dpad_Down, GamepadButton::Dpad_Left];
         VALUES.into_iter().find(|value| *value as u32 == raw)
     }
 }
 
-const _: () = assert!(
-    core::mem::size_of::<GamepadEventType>() == 4,
-    "GamepadEventType is read as a u32"
-);
+const _: () = assert!(core::mem::size_of::<GamepadEventType>() == 4, "GamepadEventType is read as a u32");
 
 impl GamepadEventType {
     /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
     /// before it is a [`GamepadEventType`].
     pub fn from_raw(raw: u32) -> Option<GamepadEventType> {
-        const VALUES: [GamepadEventType; 5] = [
-            GamepadEventType::Button_Down,
-            GamepadEventType::Button_Up,
-            GamepadEventType::Axis_Motion,
-            GamepadEventType::Connected,
-            GamepadEventType::Disconnected,
-        ];
+        const VALUES: [GamepadEventType; 5] = [GamepadEventType::Button_Down, GamepadEventType::Button_Up, GamepadEventType::Axis_Motion, GamepadEventType::Connected, GamepadEventType::Disconnected];
         VALUES.into_iter().find(|value| *value as u32 == raw)
     }
 }
 
-const _: () = assert!(
-    core::mem::size_of::<MouseButton>() == 4,
-    "MouseButton is read as a u32"
-);
+const _: () = assert!(core::mem::size_of::<MouseButton>() == 4, "MouseButton is read as a u32");
 
 impl MouseButton {
     /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
     /// before it is a [`MouseButton`].
     pub fn from_raw(raw: u32) -> Option<MouseButton> {
-        const VALUES: [MouseButton; 5] = [
-            MouseButton::Left,
-            MouseButton::Right,
-            MouseButton::Middle,
-            MouseButton::X1,
-            MouseButton::X2,
-        ];
+        const VALUES: [MouseButton; 5] = [MouseButton::Left, MouseButton::Right, MouseButton::Middle, MouseButton::X1, MouseButton::X2];
         VALUES.into_iter().find(|value| *value as u32 == raw)
     }
 }
 
-const _: () = assert!(
-    core::mem::size_of::<MouseEventType>() == 4,
-    "MouseEventType is read as a u32"
-);
+const _: () = assert!(core::mem::size_of::<MouseEventType>() == 4, "MouseEventType is read as a u32");
 
 impl MouseEventType {
     /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
     /// before it is a [`MouseEventType`].
     pub fn from_raw(raw: u32) -> Option<MouseEventType> {
-        const VALUES: [MouseEventType; 7] = [
-            MouseEventType::Move,
-            MouseEventType::Button_Down,
-            MouseEventType::Button_Up,
-            MouseEventType::Wheel,
-            MouseEventType::Enter,
-            MouseEventType::Leave,
-            MouseEventType::Relative_Motion,
-        ];
+        const VALUES: [MouseEventType; 7] = [MouseEventType::Move, MouseEventType::Button_Down, MouseEventType::Button_Up, MouseEventType::Wheel, MouseEventType::Enter, MouseEventType::Leave, MouseEventType::Relative_Motion];
         VALUES.into_iter().find(|value| *value as u32 == raw)
     }
 }
 
-const _: () = assert!(
-    core::mem::size_of::<WindowEventType>() == 4,
-    "WindowEventType is read as a u32"
-);
+const _: () = assert!(core::mem::size_of::<WindowEventType>() == 4, "WindowEventType is read as a u32");
 
 impl WindowEventType {
     /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
     /// before it is a [`WindowEventType`].
     pub fn from_raw(raw: u32) -> Option<WindowEventType> {
-        const VALUES: [WindowEventType; 6] = [
-            WindowEventType::None,
-            WindowEventType::Focus_Gained,
-            WindowEventType::Focus_Lost,
-            WindowEventType::Resize,
-            WindowEventType::Close,
-            WindowEventType::Drop_File,
-        ];
+        const VALUES: [WindowEventType; 6] = [WindowEventType::None, WindowEventType::Focus_Gained, WindowEventType::Focus_Lost, WindowEventType::Resize, WindowEventType::Close, WindowEventType::Drop_File];
         VALUES.into_iter().find(|value| *value as u32 == raw)
     }
 }
+
