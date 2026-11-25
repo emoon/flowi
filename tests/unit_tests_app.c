@@ -1,6 +1,7 @@
 // app lifecycle, window-backend and shared-ABI tests
 
 #include "unit_tests_common.h"
+#include "app/host.h"
 #include "platform/sdl/sdl_input_common.h"
 
 // Each window owns its own Clay context. ui_make_current swaps both the core singleton and Clay's current context,
@@ -1180,7 +1181,7 @@ UTEST(sdl_input, startup_gamepad_reports_connected_once) {
     }
 
     SdlInputCommon input;
-    sdl_input_common_init(&input);
+    sdl_input_common_init(&input, (SdlPadSink) { 0 });
     FlUiCtx* contexts[1] = { ctx };
     const u32 window_ids[1] = { 0 };
 
@@ -1217,7 +1218,7 @@ UTEST(sdl_input, unmapped_mouse_button_produces_no_event) {
 
     ASSERT_EQ(SDL_InitSubSystem(SDL_INIT_EVENTS), 0);
     SdlInputCommon input;
-    sdl_input_common_init(&input);
+    sdl_input_common_init(&input, (SdlPadSink) { 0 });
     FlUiCtx* contexts[1] = { ctx };
     const u32 window_ids[1] = { 0 };
     MouseState* mouse = &ctx->input_state.mouse;
@@ -1242,6 +1243,225 @@ UTEST(sdl_input, unmapped_mouse_button_produces_no_event) {
 
     sdl_input_common_destroy(&input);
     SDL_QuitSubSystem(SDL_INIT_EVENTS);
+}
+
+// The embedded host's pump, driven through a real FlHost with a virtual controller and synthetic events.
+
+typedef struct PadLog {
+    int events;
+    int connects;
+    int disconnects;
+    int buttons;
+    char name[64];
+    bool has_name_at_disconnect;
+    int button_ups;
+    int axes;
+    u32 connected_id;
+    u32 last_gamepad_id;
+    u16 vendor;
+    u16 product;
+    bool has_guide;
+    FlPadType pad_type;
+} PadLog;
+
+static void pad_log_record(void* user_data, const FlGamepadEvent* event, const FlPadIdentity* pad) {
+    PadLog* log = (PadLog*)user_data;
+    log->events++;
+    log->connects += event->type == FlGamepadEvent_Connected ? 1 : 0;
+    log->buttons += event->type == FlGamepadEvent_Button_Down ? 1 : 0;
+    snprintf(log->name, sizeof(log->name), "%.*s", (int)pad->name.length, pad->name.data);
+    log->pad_type = pad->pad_type;
+    log->vendor = pad->vendor;
+    log->product = pad->product;
+    log->has_guide = pad->has_guide;
+    log->button_ups += event->type == FlGamepadEvent_Button_Up ? 1 : 0;
+    log->axes += event->type == FlGamepadEvent_Axis_Motion ? 1 : 0;
+    log->last_gamepad_id = event->gamepad_id;
+    if (event->type == FlGamepadEvent_Connected) {
+        log->connected_id = event->gamepad_id;
+    }
+    if (event->type == FlGamepadEvent_Disconnected) {
+        log->disconnects++;
+        log->has_name_at_disconnect = pad->name.length > 0;
+    }
+}
+
+static FlHost* sdl_pump_test_host(void) {
+    const FlHostSettings settings = { .render_width = 128, .render_height = 96 };
+    return fl_host_create(s_arena, &settings);
+}
+
+UTEST(sdl_pump, raw_pads_reach_the_callback_and_not_the_context) {
+    ASSERT_EQ(SDL_InitSubSystem(SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER), 0);
+    FlHost* host = sdl_pump_test_host();
+    ASSERT_TRUE(host != nullptr);
+    FlUiCtx* ctx = host_window_context(host);
+    const SDL_VirtualJoystickDesc desc = { .version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION,
+                                           .type = SDL_JOYSTICK_TYPE_GAMECONTROLLER,
+                                           .naxes = 6,
+                                           .nbuttons = 15,
+                                           .vendor_id = 0x1234,
+                                           .product_id = 0x5678,
+                                           .name = "Pump Test Pad" };
+    const int device = SDL_JoystickAttachVirtualEx(&desc);
+    ASSERT_TRUE_MSG(device >= 0, "virtual joystick unavailable");
+
+    PadLog log = { 0 };
+    const FlSdlPumpSettings settings = { .raw_pads = true };
+    FlSdlPump* pump = fl_sdl_pump_create(s_arena, &settings, pad_log_record, &log);
+    ASSERT_TRUE(pump != nullptr);
+
+    EXPECT_TRUE(fl_sdl_pump_pump(pump, host, 1.0f));
+    EXPECT_EQ(log.connects, 1);
+    EXPECT_EQ(sdl_input_connected_count(ctx), 0);
+
+    SDL_Joystick* joystick = SDL_JoystickFromInstanceID(SDL_JoystickGetDeviceInstanceID(device));
+    ASSERT_TRUE(joystick != nullptr);
+    SDL_JoystickSetVirtualButton(joystick, 0, 1);
+    EXPECT_TRUE(fl_sdl_pump_pump(pump, host, 1.0f));
+    EXPECT_EQ(log.buttons, 1);
+    EXPECT_FALSE(ctx->input_state.gamepads[0].connected);
+    EXPECT_STREQ(log.name, "Pump Test Pad");
+    EXPECT_EQ(log.vendor, 0x1234);
+    EXPECT_EQ(log.product, 0x5678);
+    EXPECT_EQ(log.last_gamepad_id, log.connected_id);
+
+    SDL_JoystickSetVirtualButton(joystick, 0, 0);
+    log.axes = 0;
+    SDL_JoystickSetVirtualAxis(joystick, 0, 20000);
+    EXPECT_TRUE(fl_sdl_pump_pump(pump, host, 1.0f));
+    EXPECT_EQ(log.button_ups, 1);
+    EXPECT_TRUE(log.axes > 0);
+    EXPECT_FALSE(ctx->input_state.gamepads[0].buttons[FlGamepadButton_A]);
+    EXPECT_NEAR(ctx->input_state.gamepads[0].axes[FlGamepadAxis_Left_X], 0.0f, 0.0001f);
+
+    SDL_JoystickDetachVirtual(device);
+    EXPECT_TRUE(fl_sdl_pump_pump(pump, host, 1.0f));
+    EXPECT_EQ(log.disconnects, 1);
+    EXPECT_TRUE(log.has_name_at_disconnect);
+
+    fl_sdl_pump_destroy(pump);
+    fl_host_destroy(host);
+    SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+    SDL_QuitSubSystem(SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
+}
+
+UTEST(sdl_pump, pads_reach_the_context_when_raw_pads_is_off) {
+    ASSERT_EQ(SDL_InitSubSystem(SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER), 0);
+    FlHost* host = sdl_pump_test_host();
+    ASSERT_TRUE(host != nullptr);
+    FlUiCtx* ctx = host_window_context(host);
+    const int device = SDL_JoystickAttachVirtual(SDL_JOYSTICK_TYPE_GAMECONTROLLER, 6, 15, 0);
+    ASSERT_TRUE_MSG(device >= 0, "virtual joystick unavailable");
+
+    const FlSdlPumpSettings settings = { 0 };
+    FlSdlPump* pump = fl_sdl_pump_create(s_arena, &settings, nullptr, nullptr);
+    ASSERT_TRUE(pump != nullptr);
+    EXPECT_TRUE(fl_sdl_pump_pump(pump, host, 1.0f));
+    EXPECT_EQ(sdl_input_connected_count(ctx), 1);
+
+    fl_sdl_pump_destroy(pump);
+    SDL_JoystickDetachVirtual(device);
+    fl_host_destroy(host);
+    SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+    SDL_QuitSubSystem(SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
+}
+
+UTEST(sdl_pump, mouse_positions_use_the_scale_the_host_passes) {
+    ASSERT_EQ(SDL_InitSubSystem(SDL_INIT_EVENTS), 0);
+    FlHost* host = sdl_pump_test_host();
+    ASSERT_TRUE(host != nullptr);
+    FlUiCtx* ctx = host_window_context(host);
+    const FlSdlPumpSettings settings = { 0 };
+    FlSdlPump* pump = fl_sdl_pump_create(s_arena, &settings, nullptr, nullptr);
+    ASSERT_TRUE(pump != nullptr);
+
+    SDL_Event e;
+    memset(&e, 0, sizeof(e));
+    e.type = SDL_MOUSEMOTION;
+    e.motion.x = 10;
+    e.motion.y = 20;
+    ASSERT_EQ(SDL_PushEvent(&e), 1);
+    fl_sdl_pump_pump(pump, host, 2.0f);
+    EXPECT_NEAR(ctx->input_state.mouse.x, 20.0f, 0.001f);
+    EXPECT_NEAR(ctx->input_state.mouse.y, 40.0f, 0.001f);
+
+    ASSERT_EQ(SDL_PushEvent(&e), 1);
+    fl_sdl_pump_pump(pump, host, 0.5f);
+    EXPECT_NEAR(ctx->input_state.mouse.x, 5.0f, 0.001f);
+    EXPECT_NEAR(ctx->input_state.mouse.y, 10.0f, 0.001f);
+
+    fl_sdl_pump_destroy(pump);
+    fl_host_destroy(host);
+    SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+    SDL_QuitSubSystem(SDL_INIT_EVENTS);
+}
+
+UTEST(sdl_pump, quit_and_window_close_are_reported) {
+    ASSERT_EQ(SDL_InitSubSystem(SDL_INIT_EVENTS), 0);
+    FlHost* host = sdl_pump_test_host();
+    ASSERT_TRUE(host != nullptr);
+    const FlSdlPumpSettings settings = { 0 };
+    FlSdlPump* pump = fl_sdl_pump_create(s_arena, &settings, nullptr, nullptr);
+    ASSERT_TRUE(pump != nullptr);
+
+    EXPECT_TRUE(fl_sdl_pump_pump(pump, host, 1.0f));
+
+    SDL_Event e;
+    memset(&e, 0, sizeof(e));
+    e.type = SDL_QUIT;
+    ASSERT_EQ(SDL_PushEvent(&e), 1);
+    EXPECT_FALSE(fl_sdl_pump_pump(pump, host, 1.0f));
+    EXPECT_TRUE(fl_sdl_pump_pump(pump, host, 1.0f));
+
+    memset(&e, 0, sizeof(e));
+    e.type = SDL_WINDOWEVENT;
+    e.window.event = SDL_WINDOWEVENT_CLOSE;
+    ASSERT_EQ(SDL_PushEvent(&e), 1);
+    EXPECT_FALSE(fl_sdl_pump_pump(pump, host, 1.0f));
+
+    // With a window id set, only that window's close is a quit.
+    fl_sdl_pump_destroy(pump);
+    SDL_InitSubSystem(SDL_INIT_EVENTS);
+    const FlSdlPumpSettings bound = { .window_id = 7 };
+    pump = fl_sdl_pump_create(s_arena, &bound, nullptr, nullptr);
+    ASSERT_TRUE(pump != nullptr);
+    e.window.windowID = 9;
+    ASSERT_EQ(SDL_PushEvent(&e), 1);
+    EXPECT_TRUE(fl_sdl_pump_pump(pump, host, 1.0f));
+    e.window.windowID = 7;
+    ASSERT_EQ(SDL_PushEvent(&e), 1);
+    EXPECT_FALSE(fl_sdl_pump_pump(pump, host, 1.0f));
+
+    fl_sdl_pump_destroy(pump);
+    fl_host_destroy(host);
+    SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+    SDL_QuitSubSystem(SDL_INIT_EVENTS);
+}
+
+UTEST(sdl_pump, controller_database_applies_to_pads_opened_afterwards) {
+    ASSERT_EQ(SDL_InitSubSystem(SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER), 0);
+    FlHost* host = sdl_pump_test_host();
+    ASSERT_TRUE(host != nullptr);
+
+    const char* guid_text = "00110000445566778899aabbccddeeff";
+    const SDL_JoystickGUID guid = SDL_JoystickGetGUIDFromString(guid_text);
+    ASSERT_TRUE(SDL_GameControllerMappingForGUID(guid) == nullptr);
+
+    // SDL ignores a mapping whose platform is not the running one.
+    char db[128];
+    snprintf(db, sizeof(db), "00110000445566778899aabbccddeeff,Pump Test Pad,a:b0,b:b1,platform:%s,\n",
+             SDL_GetPlatform());
+    const FlSdlPumpSettings settings = { .controller_db = { .data = db, .length = strlen(db), .is_static = 1 } };
+    FlSdlPump* pump = fl_sdl_pump_create(s_arena, &settings, nullptr, nullptr);
+    ASSERT_TRUE(pump != nullptr);
+    char* mapping = SDL_GameControllerMappingForGUID(guid);
+    ASSERT_TRUE_MSG(mapping != nullptr, "database text must be applied by create");
+    SDL_free(mapping);
+
+    fl_sdl_pump_destroy(pump);
+    fl_host_destroy(host);
+    SDL_QuitSubSystem(SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER);
 }
 
 #endif // BACKEND_USE_SDL

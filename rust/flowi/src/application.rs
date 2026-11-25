@@ -622,6 +622,21 @@ impl Application {
         }
     }
 
+    /// Move the SDL events queued since the last call into this application and return false once the
+    /// user asked to quit (closing the window counts).
+    ///
+    /// `mouse_scale` multiplies SDL's mouse coordinates to give positions in the render size: pass the
+    /// render width divided by the window width.
+    ///
+    /// # Panics
+    /// Panics on a window-owning application, which pumps the OS itself, and if `mouse_scale` is not above 0.
+    pub fn pump_sdl_events(&mut self, pump: &mut crate::SdlEventPump, mouse_scale: f32) -> bool {
+        assert!(mouse_scale > 0.0, "flowi: mouse_scale must be above 0");
+        let host = self.host();
+        // SAFETY: a live pump and a live host; the pad callback runs inside this call, under `&mut pump`.
+        unsafe { sys::fl_sdl_pump_pump(pump.raw(), host, mouse_scale) }
+    }
+
     /// The pixels of the frame just rendered, borrowed from the render backend until the
     /// next frame overwrites them. This is the zero-copy sibling of [`read_pixels`](Self::read_pixels),
     /// for an embedded application presenting every frame itself. [`None`] when the render

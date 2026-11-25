@@ -17,13 +17,24 @@ typedef struct SdlInputCommon {
     // deltas rather than absolute FlMouseEvent_Move, and SDL has hidden + unbounded the cursor.
     bool relative_mouse_mode;
 
+    // Multiplier from SDL mouse coordinates to the host's UI, set by a host that owns its window. 0 derives it from
+    // the event's window (drawable size over window size).
+    float mouse_scale;
+
+    // The window whose close counts as a quit (0 for any window).
+    u32 quit_window_id;
+
+    // Set once SDL_QUIT or a window close has been seen; the embedded pump reads and clears it.
+    bool quit_requested;
+
     // System cursors, created lazily and cached by shape.
     SDL_Cursor* system_cursors[FlCursorShape_Count];
 } SdlInputCommon;
 
 // Zero the device state and open any already-connected controllers. The caller is responsible for having
-// brought up the SDL event + game-controller subsystems.
-void sdl_input_common_init(SdlInputCommon* self);
+// brought up the SDL event + game-controller subsystems. A raw_pads sink with a fn takes the gamepad events
+// instead of the contexts; a zeroed one leaves them with the contexts.
+void sdl_input_common_init(SdlInputCommon* self, SdlPadSink raw_pads);
 
 // Multi-window pump: drain the shared SDL queue once and demux each window-addressed event to its window's context
 // by SDL windowID, window_ids[i] pairing with contexts[i]. Non-window-addressed events (SDL_QUIT, gamepad) and any

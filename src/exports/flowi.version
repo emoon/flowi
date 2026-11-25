@@ -353,6 +353,9 @@ FLOWI_1.0 {
     fl_scroll_area_begin;
     fl_scroll_area_end;
     fl_scrollbar_impl;
+    fl_sdl_pump_create;
+    fl_sdl_pump_destroy;
+    fl_sdl_pump_pump;
     fl_selection_set_apply;
     fl_selection_set_clear_all;
     fl_selection_set_contains;

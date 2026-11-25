@@ -53,6 +53,7 @@ pub mod radio_group;
 pub mod scroll;
 pub mod scrollbar;
 pub mod scrollbar_display;
+pub mod sdl_pump;
 pub mod selection;
 pub mod signal;
 pub mod slider;

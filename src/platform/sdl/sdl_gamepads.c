@@ -6,6 +6,7 @@
 #include <core/log.h>
 #include <core/memory.h>
 #include <core/os/os.h>
+#include <string.h>
 
 static int find_slot(const SdlGamepads* self, SDL_JoystickID id) {
     for_count(i, UI_INPUT_MAX_GAMEPADS) {
@@ -25,8 +26,47 @@ static int find_free_slot(const SdlGamepads* self) {
     return -1;
 }
 
-void sdl_gamepads_init(SdlGamepads* self) {
+static FlPadType pad_type_of(SDL_GameControllerType type) {
+    switch (type) {
+        case SDL_CONTROLLER_TYPE_XBOX360:
+        case SDL_CONTROLLER_TYPE_XBOXONE:
+            return FlPadType_Xbox;
+        case SDL_CONTROLLER_TYPE_PS3:
+        case SDL_CONTROLLER_TYPE_PS4:
+        case SDL_CONTROLLER_TYPE_PS5:
+            return FlPadType_PlayStation;
+        case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_PRO:
+            return FlPadType_Nintendo;
+        default:
+            return FlPadType_Unknown;
+    }
+}
+
+static FlPadIdentity pad_identity(SDL_GameController* controller) {
+    const char* name = SDL_GameControllerName(controller);
+    if (name == nullptr) {
+        name = "";
+    }
+    return (FlPadIdentity) { .name = { .data = name, .length = strlen(name), .is_static = 1 },
+                             .vendor = SDL_GameControllerGetVendor(controller),
+                             .product = SDL_GameControllerGetProduct(controller),
+                             .pad_type = pad_type_of(SDL_GameControllerGetType(controller)),
+                             .has_guide = SDL_GameControllerHasButton(controller, SDL_CONTROLLER_BUTTON_GUIDE) };
+}
+
+// Hand the event of the pad in slot to the raw sink, or push it onto ctx when there is none.
+static void emit(const SdlGamepads* self, FlUiCtx* ctx, int slot, FlGamepadEvent event) {
+    if (self->raw_sink.fn == nullptr) {
+        platform_input_push_gamepad_event(ctx, event);
+        return;
+    }
+    const FlPadIdentity identity = pad_identity(self->controllers[slot]);
+    self->raw_sink.fn(self->raw_sink.user_data, &event, &identity);
+}
+
+void sdl_gamepads_init(SdlGamepads* self, SdlPadSink raw_sink) {
     memory_zero(self, sizeof(SdlGamepads));
+    self->raw_sink = raw_sink;
 
     for_count(i, UI_INPUT_MAX_GAMEPADS) {
         self->ids[i] = -1;
@@ -55,7 +95,7 @@ void sdl_gamepads_flush_pending(SdlGamepads* self, FlUiCtx* ctx) {
         self->connect_pending[i] = false;
         FlGamepadEvent event
             = { .type = FlGamepadEvent_Connected, .gamepad_id = (u32)i, .timestamp = get_current_time_ms_os() };
-        platform_input_push_gamepad_event(ctx, event);
+        emit(self, ctx, i, event);
     }
 }
 
@@ -79,7 +119,7 @@ static void handle_device_added(SdlGamepads* self, FlUiCtx* ctx, int device_inde
     log_info("Gamepad connected: %s (slot %d)", SDL_GameControllerName(controller), slot);
 
     FlGamepadEvent event = { .type = FlGamepadEvent_Connected, .gamepad_id = (u32)slot, .timestamp = timestamp };
-    platform_input_push_gamepad_event(ctx, event);
+    emit(self, ctx, slot, event);
 }
 
 static void handle_device_removed(SdlGamepads* self, FlUiCtx* ctx, SDL_JoystickID id, u64 timestamp) {
@@ -88,12 +128,12 @@ static void handle_device_removed(SdlGamepads* self, FlUiCtx* ctx, SDL_JoystickI
         return;
     }
     log_info("Gamepad disconnected (slot %d)", slot);
+    // The raw sink reads the identity from the open handle, so the event goes out before the close.
+    FlGamepadEvent event = { .type = FlGamepadEvent_Disconnected, .gamepad_id = (u32)slot, .timestamp = timestamp };
+    emit(self, ctx, slot, event);
     SDL_GameControllerClose(self->controllers[slot]);
     self->controllers[slot] = nullptr;
     self->ids[slot] = -1;
-
-    FlGamepadEvent event = { .type = FlGamepadEvent_Disconnected, .gamepad_id = (u32)slot, .timestamp = timestamp };
-    platform_input_push_gamepad_event(ctx, event);
 }
 
 static void handle_button(const SdlGamepads* self, FlUiCtx* ctx, const SDL_ControllerButtonEvent* e, u64 timestamp) {
@@ -106,7 +146,7 @@ static void handle_button(const SdlGamepads* self, FlUiCtx* ctx, const SDL_Contr
             .gamepad_id = (u32)slot,
             .button = { .button = sdl_gamepad_button_to_ui_button(e->button) },
             .timestamp = timestamp };
-    platform_input_push_gamepad_event(ctx, event);
+    emit(self, ctx, slot, event);
 }
 
 static void handle_axis(const SdlGamepads* self, FlUiCtx* ctx, const SDL_ControllerAxisEvent* e, u64 timestamp) {
@@ -120,7 +160,7 @@ static void handle_axis(const SdlGamepads* self, FlUiCtx* ctx, const SDL_Control
                              .gamepad_id = (u32)slot,
                              .axis = { .axis = sdl_gamepad_axis_to_fl_axis(e->axis), .value = value },
                              .timestamp = timestamp };
-    platform_input_push_gamepad_event(ctx, event);
+    emit(self, ctx, slot, event);
 }
 
 void sdl_gamepads_handle_event(SdlGamepads* self, FlUiCtx* ctx, const SDL_Event* e, u64 timestamp) {

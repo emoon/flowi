@@ -63,7 +63,11 @@ static float sdl_window_pixel_scale(SDL_Window* window) {
     return (float)px_w / (float)win_w;
 }
 
-static float sdl_pointer_scale(Uint32 window_id) {
+// A host that owns its window sets mouse_scale; otherwise the scale is the window's own.
+static float sdl_pointer_scale(const SdlInputCommon* self, Uint32 window_id) {
+    if (self->mouse_scale > 0.0f) {
+        return self->mouse_scale;
+    }
     return sdl_window_pixel_scale(SDL_GetWindowFromID(window_id));
 }
 
@@ -121,12 +125,17 @@ static void translate_drop_file(FlUiCtx* ctx, const SDL_DropEvent* drop, u64 tim
 
 // SDL_QUIT and a per-window close both push FlWindowEvent_Close; neither controls the drain loop, so one window's
 // close does not stop the others' events being routed in the same pump.
-static bool translate_window_family(FlUiCtx* ctx, const SDL_Event* e, u64 timestamp) {
+static bool translate_window_family(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event* e, u64 timestamp) {
     switch (e->type) {
         case SDL_QUIT:
+            self->quit_requested = true;
             push_window_event(ctx, FlWindowEvent_Close, timestamp);
             return true;
         case SDL_WINDOWEVENT:
+            if (e->window.event == SDL_WINDOWEVENT_CLOSE
+                && (self->quit_window_id == 0 || e->window.windowID == self->quit_window_id)) {
+                self->quit_requested = true;
+            }
             translate_window_subevent(ctx, &e->window, timestamp);
             return true;
         case SDL_DROPFILE:
@@ -183,7 +192,7 @@ static void translate_mouse_motion(SdlInputCommon* self, FlUiCtx* ctx, const SDL
         platform_input_push_mouse_event(ctx, event);
         return;
     }
-    const float scale = sdl_pointer_scale(m->windowID);
+    const float scale = sdl_pointer_scale(self, m->windowID);
     FlMouseEvent event = { .type = FlMouseEvent_Move,
                            .move = { .x = (float)m->x * scale,
                                      .y = (float)m->y * scale,
@@ -193,12 +202,13 @@ static void translate_mouse_motion(SdlInputCommon* self, FlUiCtx* ctx, const SDL
     platform_input_push_mouse_event(ctx, event);
 }
 
-static void translate_mouse_button(FlUiCtx* ctx, const SDL_MouseButtonEvent* b, bool is_down, u64 timestamp) {
+static void translate_mouse_button(const SdlInputCommon* self, FlUiCtx* ctx, const SDL_MouseButtonEvent* b,
+                                   bool is_down, u64 timestamp) {
     const FlMouseButton button = sdl_mouse_button_to_ui_button(b->button);
     if (button == FlMouseButton_Count) {
         return;
     }
-    const float scale = sdl_pointer_scale(b->windowID);
+    const float scale = sdl_pointer_scale(self, b->windowID);
     FlMouseEvent event = { .type = is_down ? FlMouseEvent_Button_Down : FlMouseEvent_Button_Up,
                            .button = { .button = button,
                                        .x = (float)b->x * scale,
@@ -220,10 +230,10 @@ static bool translate_mouse_family(SdlInputCommon* self, FlUiCtx* ctx, const SDL
             translate_mouse_motion(self, ctx, &e->motion, timestamp);
             return true;
         case SDL_MOUSEBUTTONDOWN:
-            translate_mouse_button(ctx, &e->button, true, timestamp);
+            translate_mouse_button(self, ctx, &e->button, true, timestamp);
             return true;
         case SDL_MOUSEBUTTONUP:
-            translate_mouse_button(ctx, &e->button, false, timestamp);
+            translate_mouse_button(self, ctx, &e->button, false, timestamp);
             return true;
         case SDL_MOUSEWHEEL:
             translate_mouse_wheel(ctx, &e->wheel, timestamp);
@@ -233,7 +243,7 @@ static bool translate_mouse_family(SdlInputCommon* self, FlUiCtx* ctx, const SDL
 }
 
 static void translate_event(SdlInputCommon* self, FlUiCtx* ctx, const SDL_Event* e, u64 timestamp) {
-    if (translate_window_family(ctx, e, timestamp)) {
+    if (translate_window_family(self, ctx, e, timestamp)) {
         return;
     }
     if (translate_keyboard_family(ctx, e, timestamp)) {
@@ -260,12 +270,12 @@ static FlUiCtx* route_context(const SDL_Event* e, const u32* window_ids, FlUiCtx
     return contexts[0];
 }
 
-void sdl_input_common_init(SdlInputCommon* self) {
+void sdl_input_common_init(SdlInputCommon* self, SdlPadSink raw_pads) {
     memory_zero(self, sizeof(SdlInputCommon));
 
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
-    sdl_gamepads_init(&self->gamepads);
+    sdl_gamepads_init(&self->gamepads, raw_pads);
 }
 
 // Multi-window pump (the WindowBackend). Drains the shared queue once, demuxing each event to its window's FlUiCtx

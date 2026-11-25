@@ -227,7 +227,7 @@ FlWindowBackend sdl_window_backend_create(struct FlArena* arena, FlWindowBackend
     SdlWindowContext* self = arena_alloc_zero(arena, SdlWindowContext);
     self->arena = arena;
     self->ops = mode_ops;
-    sdl_input_common_init(&self->input);
+    sdl_input_common_init(&self->input, (SdlPadSink) { 0 });
 
     log_info("Window Backend: SDL initialized (%s mode)", mode_ops->name);
 
