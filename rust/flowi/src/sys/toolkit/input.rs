@@ -355,6 +355,136 @@ const _: () = {
     assert!(core::mem::offset_of!(MouseEvent, timestamp) == 24, "MouseEvent.timestamp offset drift");
 };
 
+/// What a [`MouseEvent`] reports, with the payload its `type` selects.
+///
+/// The safe form of the tag and the payload union: a variant holds the payload of its tag, and one without a payload
+/// has none to read.
+#[derive(Copy, Clone, Debug)]
+pub enum MouseEventKind {
+    Move(crate::sys::MouseMoveData),
+    ButtonDown(crate::sys::MouseButtonData),
+    ButtonUp(crate::sys::MouseButtonData),
+    Wheel(crate::sys::MouseWheelData),
+    Enter,
+    Leave,
+    /// Raw motion during a hidden drag. It has a delta and no position.
+    RelativeMotion(crate::sys::MouseRelativeData),
+}
+
+/// A [`MouseEvent`] as safe Rust: its [`MouseEventKind`] and the fields that do not depend on it.
+///
+/// `SafeMouseEvent` converts into a [`MouseEvent`] with `From`, and a [`MouseEvent`] from C converts back with
+/// [`SafeMouseEvent::try_from_raw`].
+#[derive(Copy, Clone, Debug)]
+pub struct SafeMouseEvent {
+    pub kind: MouseEventKind,
+    pub timestamp: u64,
+}
+
+/// Why [`SafeMouseEvent::try_from_raw`] refused a [`MouseEvent`]: `field` holds `value`, which no variant of its type has.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct InvalidMouseEvent {
+    /// The field, as the IDL names it. A field of the payload is `arm.field`.
+    pub field: &'static str,
+    /// The value C wrote there.
+    pub value: u32,
+}
+
+impl core::fmt::Display for InvalidMouseEvent {
+    fn fmt(&self, out: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(out, "invalid MouseEvent: field `{}` holds {}", self.field, self.value)
+    }
+}
+
+impl core::error::Error for InvalidMouseEvent {}
+
+impl From<SafeMouseEvent> for MouseEvent {
+    fn from(event: SafeMouseEvent) -> MouseEvent {
+        let (r#type, payload) = match event.kind {
+            MouseEventKind::Move(data) => (crate::sys::MouseEventType::Move, MouseEventPayload { r#move: data }),
+            MouseEventKind::ButtonDown(data) => (crate::sys::MouseEventType::Button_Down, MouseEventPayload { button: data }),
+            MouseEventKind::ButtonUp(data) => (crate::sys::MouseEventType::Button_Up, MouseEventPayload { button: data }),
+            MouseEventKind::Wheel(data) => (crate::sys::MouseEventType::Wheel, MouseEventPayload { wheel: data }),
+            MouseEventKind::Enter => (
+                crate::sys::MouseEventType::Enter,
+                // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
+                unsafe { core::mem::zeroed() },
+            ),
+            MouseEventKind::Leave => (
+                crate::sys::MouseEventType::Leave,
+                // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
+                unsafe { core::mem::zeroed() },
+            ),
+            MouseEventKind::RelativeMotion(data) => (crate::sys::MouseEventType::Relative_Motion, MouseEventPayload { relative: data }),
+        };
+        MouseEvent {
+            r#type,
+            payload,
+            timestamp: event.timestamp,
+        }
+    }
+}
+
+impl SafeMouseEvent {
+    /// Read a [`MouseEvent`] that C wrote as a safe event, or say which field holds a value no variant has.
+    ///
+    /// The struct is copied once, and the tag and every enum and bool in the payload it selects are checked as
+    /// integers in that copy before any of them is read as its Rust type, so a stray value is an error and not
+    /// undefined behavior.
+    ///
+    /// # Safety
+    /// `raw` must be valid and aligned for reads of a whole [`MouseEvent`], and the payload arm its tag selects must be
+    /// set.
+    pub unsafe fn try_from_raw(raw: *const MouseEvent) -> Result<SafeMouseEvent, InvalidMouseEvent> {
+        let mut copy = core::mem::MaybeUninit::<MouseEvent>::uninit();
+        // SAFETY: the caller's contract makes raw readable for a whole struct, and copy is that large and apart from it.
+        unsafe {
+            core::ptr::copy_nonoverlapping(raw.cast::<u8>(), copy.as_mut_ptr().cast::<u8>(), core::mem::size_of::<MouseEvent>());
+        }
+        let bytes = copy.as_ptr().cast::<u8>();
+        // SAFETY: the offset is inside the copy, whose tag the caller's contract has set.
+        let raw_tag = unsafe { bytes.add(core::mem::offset_of!(MouseEvent, r#type)).cast::<u32>().read_unaligned() };
+        let tag = crate::sys::MouseEventType::from_raw(raw_tag).ok_or(InvalidMouseEvent { field: "type", value: raw_tag })?;
+        match tag {
+            crate::sys::MouseEventType::Button_Down => {
+                // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
+                let value = unsafe { bytes.add(core::mem::offset_of!(MouseEvent, payload) + core::mem::offset_of!(crate::sys::MouseButtonData, button)).cast::<u32>().read_unaligned() };
+                if crate::sys::MouseButton::from_raw(value).is_none() {
+                    return Err(InvalidMouseEvent { field: "button.button", value });
+                }
+            }
+            crate::sys::MouseEventType::Button_Up => {
+                // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
+                let value = unsafe { bytes.add(core::mem::offset_of!(MouseEvent, payload) + core::mem::offset_of!(crate::sys::MouseButtonData, button)).cast::<u32>().read_unaligned() };
+                if crate::sys::MouseButton::from_raw(value).is_none() {
+                    return Err(InvalidMouseEvent { field: "button.button", value });
+                }
+            }
+            _ => {}
+        }
+        // SAFETY: the copy is a whole struct, and the tag and every enum and bool the read below
+        // touches were checked above; the rest is plain data.
+        let event = unsafe { copy.assume_init() };
+        // SAFETY: the tag selects the payload arm that C set and that arm was checked above, and the
+        // caller's contract keeps any string in it valid for the result.
+        let safe = unsafe {
+            SafeMouseEvent {
+                kind: match tag {
+                    crate::sys::MouseEventType::Move => MouseEventKind::Move(event.payload.r#move),
+                    crate::sys::MouseEventType::Button_Down => MouseEventKind::ButtonDown(event.payload.button),
+                    crate::sys::MouseEventType::Button_Up => MouseEventKind::ButtonUp(event.payload.button),
+                    crate::sys::MouseEventType::Wheel => MouseEventKind::Wheel(event.payload.wheel),
+                    crate::sys::MouseEventType::Enter => MouseEventKind::Enter,
+                    crate::sys::MouseEventType::Leave => MouseEventKind::Leave,
+                    crate::sys::MouseEventType::Relative_Motion => MouseEventKind::RelativeMotion(event.payload.relative),
+                },
+                timestamp: event.timestamp,
+            }
+        };
+        Ok(safe)
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union GamepadEventPayload {
@@ -390,6 +520,139 @@ const _: () = {
     assert!(core::mem::offset_of!(GamepadEvent, timestamp) == 16, "GamepadEvent.timestamp offset drift");
 };
 
+/// What a [`GamepadEvent`] reports, with the payload its `type` selects.
+///
+/// The safe form of the tag and the payload union: a variant holds the payload of its tag, and one without a payload
+/// has none to read.
+#[derive(Copy, Clone, Debug)]
+pub enum GamepadEventKind {
+    ButtonDown(crate::sys::GamepadButtonData),
+    ButtonUp(crate::sys::GamepadButtonData),
+    AxisMotion(crate::sys::GamepadAxisData),
+    Connected,
+    Disconnected,
+}
+
+/// A [`GamepadEvent`] as safe Rust: its [`GamepadEventKind`] and the fields that do not depend on it.
+///
+/// `SafeGamepadEvent` converts into a [`GamepadEvent`] with `From`, and a [`GamepadEvent`] from C converts back with
+/// [`SafeGamepadEvent::try_from_raw`].
+#[derive(Copy, Clone, Debug)]
+pub struct SafeGamepadEvent {
+    pub kind: GamepadEventKind,
+    pub gamepad_id: u32,
+    pub timestamp: u64,
+}
+
+/// Why [`SafeGamepadEvent::try_from_raw`] refused a [`GamepadEvent`]: `field` holds `value`, which no variant of its type has.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct InvalidGamepadEvent {
+    /// The field, as the IDL names it. A field of the payload is `arm.field`.
+    pub field: &'static str,
+    /// The value C wrote there.
+    pub value: u32,
+}
+
+impl core::fmt::Display for InvalidGamepadEvent {
+    fn fmt(&self, out: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(out, "invalid GamepadEvent: field `{}` holds {}", self.field, self.value)
+    }
+}
+
+impl core::error::Error for InvalidGamepadEvent {}
+
+impl From<SafeGamepadEvent> for GamepadEvent {
+    fn from(event: SafeGamepadEvent) -> GamepadEvent {
+        let (r#type, payload) = match event.kind {
+            GamepadEventKind::ButtonDown(data) => (crate::sys::GamepadEventType::Button_Down, GamepadEventPayload { button: data }),
+            GamepadEventKind::ButtonUp(data) => (crate::sys::GamepadEventType::Button_Up, GamepadEventPayload { button: data }),
+            GamepadEventKind::AxisMotion(data) => (crate::sys::GamepadEventType::Axis_Motion, GamepadEventPayload { axis: data }),
+            GamepadEventKind::Connected => (
+                crate::sys::GamepadEventType::Connected,
+                // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
+                unsafe { core::mem::zeroed() },
+            ),
+            GamepadEventKind::Disconnected => (
+                crate::sys::GamepadEventType::Disconnected,
+                // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
+                unsafe { core::mem::zeroed() },
+            ),
+        };
+        GamepadEvent {
+            r#type,
+            payload,
+            gamepad_id: event.gamepad_id,
+            timestamp: event.timestamp,
+        }
+    }
+}
+
+impl SafeGamepadEvent {
+    /// Read a [`GamepadEvent`] that C wrote as a safe event, or say which field holds a value no variant has.
+    ///
+    /// The struct is copied once, and the tag and every enum and bool in the payload it selects are checked as
+    /// integers in that copy before any of them is read as its Rust type, so a stray value is an error and not
+    /// undefined behavior.
+    ///
+    /// # Safety
+    /// `raw` must be valid and aligned for reads of a whole [`GamepadEvent`], and the payload arm its tag selects must be
+    /// set.
+    pub unsafe fn try_from_raw(raw: *const GamepadEvent) -> Result<SafeGamepadEvent, InvalidGamepadEvent> {
+        let mut copy = core::mem::MaybeUninit::<GamepadEvent>::uninit();
+        // SAFETY: the caller's contract makes raw readable for a whole struct, and copy is that large and apart from it.
+        unsafe {
+            core::ptr::copy_nonoverlapping(raw.cast::<u8>(), copy.as_mut_ptr().cast::<u8>(), core::mem::size_of::<GamepadEvent>());
+        }
+        let bytes = copy.as_ptr().cast::<u8>();
+        // SAFETY: the offset is inside the copy, whose tag the caller's contract has set.
+        let raw_tag = unsafe { bytes.add(core::mem::offset_of!(GamepadEvent, r#type)).cast::<u32>().read_unaligned() };
+        let tag = crate::sys::GamepadEventType::from_raw(raw_tag).ok_or(InvalidGamepadEvent { field: "type", value: raw_tag })?;
+        match tag {
+            crate::sys::GamepadEventType::Button_Down => {
+                // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
+                let value = unsafe { bytes.add(core::mem::offset_of!(GamepadEvent, payload) + core::mem::offset_of!(crate::sys::GamepadButtonData, button)).cast::<u32>().read_unaligned() };
+                if crate::sys::GamepadButton::from_raw(value).is_none() {
+                    return Err(InvalidGamepadEvent { field: "button.button", value });
+                }
+            }
+            crate::sys::GamepadEventType::Button_Up => {
+                // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
+                let value = unsafe { bytes.add(core::mem::offset_of!(GamepadEvent, payload) + core::mem::offset_of!(crate::sys::GamepadButtonData, button)).cast::<u32>().read_unaligned() };
+                if crate::sys::GamepadButton::from_raw(value).is_none() {
+                    return Err(InvalidGamepadEvent { field: "button.button", value });
+                }
+            }
+            crate::sys::GamepadEventType::Axis_Motion => {
+                // SAFETY: the caller's contract makes the struct readable, and the offset is inside it.
+                let value = unsafe { bytes.add(core::mem::offset_of!(GamepadEvent, payload) + core::mem::offset_of!(crate::sys::GamepadAxisData, axis)).cast::<u32>().read_unaligned() };
+                if crate::sys::GamepadAxis::from_raw(value).is_none() {
+                    return Err(InvalidGamepadEvent { field: "axis.axis", value });
+                }
+            }
+            _ => {}
+        }
+        // SAFETY: the copy is a whole struct, and the tag and every enum and bool the read below
+        // touches were checked above; the rest is plain data.
+        let event = unsafe { copy.assume_init() };
+        // SAFETY: the tag selects the payload arm that C set and that arm was checked above, and the
+        // caller's contract keeps any string in it valid for the result.
+        let safe = unsafe {
+            SafeGamepadEvent {
+                kind: match tag {
+                    crate::sys::GamepadEventType::Button_Down => GamepadEventKind::ButtonDown(event.payload.button),
+                    crate::sys::GamepadEventType::Button_Up => GamepadEventKind::ButtonUp(event.payload.button),
+                    crate::sys::GamepadEventType::Axis_Motion => GamepadEventKind::AxisMotion(event.payload.axis),
+                    crate::sys::GamepadEventType::Connected => GamepadEventKind::Connected,
+                    crate::sys::GamepadEventType::Disconnected => GamepadEventKind::Disconnected,
+                },
+                gamepad_id: event.gamepad_id,
+                timestamp: event.timestamp,
+            }
+        };
+        Ok(safe)
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union WindowEventPayload {
@@ -421,4 +684,192 @@ const _: () = {
     assert!(core::mem::offset_of!(WindowEvent, payload) == 8, "WindowEvent.payload offset drift");
     assert!(core::mem::offset_of!(WindowEvent, timestamp) == 32, "WindowEvent.timestamp offset drift");
 };
+
+/// What a [`WindowEvent`] reports, with the payload its `type` selects.
+///
+/// The safe form of the tag and the payload union: a variant holds the payload of its tag, and one without a payload
+/// has none to read.
+#[derive(Copy, Clone, Debug)]
+pub enum WindowEventKind<'a> {
+    None,
+    FocusGained,
+    FocusLost,
+    Resize(crate::sys::WindowResizeData),
+    Close,
+    /// A file was dropped onto the window. A drop of several files gives one event per file.
+    DropFile {
+        path: &'a str,
+        x: f32,
+        y: f32,
+    },
+}
+
+/// A [`WindowEvent`] as safe Rust: its [`WindowEventKind`] and the fields that do not depend on it.
+///
+/// `SafeWindowEvent` converts into a [`WindowEvent`] with `From`, and a [`WindowEvent`] from C converts back with
+/// [`SafeWindowEvent::try_from_raw`].
+#[derive(Copy, Clone, Debug)]
+pub struct SafeWindowEvent<'a> {
+    pub kind: WindowEventKind<'a>,
+    pub timestamp: u64,
+}
+
+/// Why [`SafeWindowEvent::try_from_raw`] refused a [`WindowEvent`]: `field` holds `value`, which no variant of its type has.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct InvalidWindowEvent {
+    /// The field, as the IDL names it. A field of the payload is `arm.field`.
+    pub field: &'static str,
+    /// The value C wrote there.
+    pub value: u32,
+}
+
+impl core::fmt::Display for InvalidWindowEvent {
+    fn fmt(&self, out: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(out, "invalid WindowEvent: field `{}` holds {}", self.field, self.value)
+    }
+}
+
+impl core::error::Error for InvalidWindowEvent {}
+
+impl<'a> From<SafeWindowEvent<'a>> for WindowEvent {
+    fn from(event: SafeWindowEvent<'a>) -> WindowEvent {
+        let (r#type, payload) = match event.kind {
+            WindowEventKind::None => (
+                crate::sys::WindowEventType::None,
+                // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
+                unsafe { core::mem::zeroed() },
+            ),
+            WindowEventKind::FocusGained => (
+                crate::sys::WindowEventType::Focus_Gained,
+                // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
+                unsafe { core::mem::zeroed() },
+            ),
+            WindowEventKind::FocusLost => (
+                crate::sys::WindowEventType::Focus_Lost,
+                // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
+                unsafe { core::mem::zeroed() },
+            ),
+            WindowEventKind::Resize(data) => (crate::sys::WindowEventType::Resize, WindowEventPayload { resize: data }),
+            WindowEventKind::Close => (
+                crate::sys::WindowEventType::Close,
+                // SAFETY: every bit pattern is a valid union value, and no arm is read for this tag.
+                unsafe { core::mem::zeroed() },
+            ),
+            WindowEventKind::DropFile { path, x, y } => (crate::sys::WindowEventType::Drop_File, WindowEventPayload { drop: crate::sys::WindowDropData { path: crate::sys::RawStr::borrow(path), x, y } }),
+        };
+        WindowEvent {
+            r#type,
+            payload,
+            timestamp: event.timestamp,
+        }
+    }
+}
+
+impl<'a> SafeWindowEvent<'a> {
+    /// Read a [`WindowEvent`] that C wrote as a safe event, or say which field holds a value no variant has.
+    ///
+    /// The struct is copied once, and the tag and every enum and bool in the payload it selects are checked as
+    /// integers in that copy before any of them is read as its Rust type, so a stray value is an error and not
+    /// undefined behavior.
+    ///
+    /// # Safety
+    /// `raw` must be valid and aligned for reads of a whole [`WindowEvent`], and the payload arm its tag selects must be
+    /// set. A string in that arm must stay valid and unmodified for `'a`.
+    pub unsafe fn try_from_raw(raw: *const WindowEvent) -> Result<SafeWindowEvent<'a>, InvalidWindowEvent> {
+        let mut copy = core::mem::MaybeUninit::<WindowEvent>::uninit();
+        // SAFETY: the caller's contract makes raw readable for a whole struct, and copy is that large and apart from it.
+        unsafe {
+            core::ptr::copy_nonoverlapping(raw.cast::<u8>(), copy.as_mut_ptr().cast::<u8>(), core::mem::size_of::<WindowEvent>());
+        }
+        let bytes = copy.as_ptr().cast::<u8>();
+        // SAFETY: the offset is inside the copy, whose tag the caller's contract has set.
+        let raw_tag = unsafe { bytes.add(core::mem::offset_of!(WindowEvent, r#type)).cast::<u32>().read_unaligned() };
+        let tag = crate::sys::WindowEventType::from_raw(raw_tag).ok_or(InvalidWindowEvent { field: "type", value: raw_tag })?;
+        // SAFETY: the copy is a whole struct, and the tag and every enum and bool the read below
+        // touches were checked above; the rest is plain data.
+        let event = unsafe { copy.assume_init() };
+        // SAFETY: the tag selects the payload arm that C set and that arm was checked above, and the
+        // caller's contract keeps any string in it valid for the result.
+        let safe = unsafe {
+            SafeWindowEvent {
+                kind: match tag {
+                    crate::sys::WindowEventType::None => WindowEventKind::None,
+                    crate::sys::WindowEventType::Focus_Gained => WindowEventKind::FocusGained,
+                    crate::sys::WindowEventType::Focus_Lost => WindowEventKind::FocusLost,
+                    crate::sys::WindowEventType::Resize => WindowEventKind::Resize(event.payload.resize),
+                    crate::sys::WindowEventType::Close => WindowEventKind::Close,
+                    crate::sys::WindowEventType::Drop_File => WindowEventKind::DropFile { path: event.payload.drop.path.as_str(), x: event.payload.drop.x, y: event.payload.drop.y },
+                },
+                timestamp: event.timestamp,
+            }
+        };
+        Ok(safe)
+    }
+}
+
+const _: () = assert!(core::mem::size_of::<GamepadAxis>() == 4, "GamepadAxis is read as a u32");
+
+impl GamepadAxis {
+    /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
+    /// before it is a [`GamepadAxis`].
+    pub fn from_raw(raw: u32) -> Option<GamepadAxis> {
+        const VALUES: [GamepadAxis; 6] = [GamepadAxis::Left_X, GamepadAxis::Left_Y, GamepadAxis::Right_X, GamepadAxis::Right_Y, GamepadAxis::Left_Trigger, GamepadAxis::Right_Trigger];
+        VALUES.into_iter().find(|value| *value as u32 == raw)
+    }
+}
+
+const _: () = assert!(core::mem::size_of::<GamepadButton>() == 4, "GamepadButton is read as a u32");
+
+impl GamepadButton {
+    /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
+    /// before it is a [`GamepadButton`].
+    pub fn from_raw(raw: u32) -> Option<GamepadButton> {
+        const VALUES: [GamepadButton; 15] = [GamepadButton::A, GamepadButton::B, GamepadButton::X, GamepadButton::Y, GamepadButton::Left_Bumper, GamepadButton::Right_Bumper, GamepadButton::Back, GamepadButton::Start, GamepadButton::Guide, GamepadButton::Left_Thumb, GamepadButton::Right_Thumb, GamepadButton::Dpad_Up, GamepadButton::Dpad_Right, GamepadButton::Dpad_Down, GamepadButton::Dpad_Left];
+        VALUES.into_iter().find(|value| *value as u32 == raw)
+    }
+}
+
+const _: () = assert!(core::mem::size_of::<GamepadEventType>() == 4, "GamepadEventType is read as a u32");
+
+impl GamepadEventType {
+    /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
+    /// before it is a [`GamepadEventType`].
+    pub fn from_raw(raw: u32) -> Option<GamepadEventType> {
+        const VALUES: [GamepadEventType; 5] = [GamepadEventType::Button_Down, GamepadEventType::Button_Up, GamepadEventType::Axis_Motion, GamepadEventType::Connected, GamepadEventType::Disconnected];
+        VALUES.into_iter().find(|value| *value as u32 == raw)
+    }
+}
+
+const _: () = assert!(core::mem::size_of::<MouseButton>() == 4, "MouseButton is read as a u32");
+
+impl MouseButton {
+    /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
+    /// before it is a [`MouseButton`].
+    pub fn from_raw(raw: u32) -> Option<MouseButton> {
+        const VALUES: [MouseButton; 5] = [MouseButton::Left, MouseButton::Right, MouseButton::Middle, MouseButton::X1, MouseButton::X2];
+        VALUES.into_iter().find(|value| *value as u32 == raw)
+    }
+}
+
+const _: () = assert!(core::mem::size_of::<MouseEventType>() == 4, "MouseEventType is read as a u32");
+
+impl MouseEventType {
+    /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
+    /// before it is a [`MouseEventType`].
+    pub fn from_raw(raw: u32) -> Option<MouseEventType> {
+        const VALUES: [MouseEventType; 7] = [MouseEventType::Move, MouseEventType::Button_Down, MouseEventType::Button_Up, MouseEventType::Wheel, MouseEventType::Enter, MouseEventType::Leave, MouseEventType::Relative_Motion];
+        VALUES.into_iter().find(|value| *value as u32 == raw)
+    }
+}
+
+const _: () = assert!(core::mem::size_of::<WindowEventType>() == 4, "WindowEventType is read as a u32");
+
+impl WindowEventType {
+    /// The variant whose value is `raw`, or [`None`] when no variant has it: what an integer from C must pass
+    /// before it is a [`WindowEventType`].
+    pub fn from_raw(raw: u32) -> Option<WindowEventType> {
+        const VALUES: [WindowEventType; 6] = [WindowEventType::None, WindowEventType::Focus_Gained, WindowEventType::Focus_Lost, WindowEventType::Resize, WindowEventType::Close, WindowEventType::Drop_File];
+        VALUES.into_iter().find(|value| *value as u32 == raw)
+    }
+}
 

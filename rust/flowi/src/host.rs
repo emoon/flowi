@@ -33,15 +33,16 @@ use crate::sys;
 /// One decoded OS event, as [`Application::push_input`](crate::Application::push_input)
 /// takes it. The payload types are re-exported from the crate root.
 ///
-/// Does not implement Debug: the mouse, gamepad and window payloads are untagged unions.
-#[derive(Copy, Clone)]
+/// The mouse, gamepad and window events are safe enums whose variants carry their payload, so building
+/// and reading one takes no `unsafe`. The lifetime is the borrow of a dropped file's path.
+#[derive(Copy, Clone, Debug)]
 #[non_exhaustive]
-pub enum InputEvent {
+pub enum InputEvent<'a> {
     Key(sys::KeyEvent),
     TextInput(sys::TextInputEvent),
-    Mouse(sys::MouseEvent),
-    Gamepad(sys::GamepadEvent),
-    Window(sys::WindowEvent),
+    Mouse(sys::SafeMouseEvent),
+    Gamepad(sys::SafeGamepadEvent),
+    Window(sys::SafeWindowEvent<'a>),
 }
 
 /// The rendered pixels of one frame, borrowed from the render backend until the next
