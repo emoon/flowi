@@ -196,11 +196,11 @@ struct TextInputEvent {
 #[attributes(Copy)]
 struct MouseEvent {
     type: MouseEventType,
-    union {
-        move: MouseMoveData,
-        button: MouseButtonData,
-        wheel: MouseWheelData,
-        relative: MouseRelativeData
+    union(type) {
+        [tag(Move)] move: MouseMoveData,
+        [tag(Button_Down, Button_Up)] button: MouseButtonData,
+        [tag(Wheel)] wheel: MouseWheelData,
+        [tag(Relative_Motion)] relative: MouseRelativeData
     },
     timestamp: u64,
 }
@@ -214,9 +214,9 @@ struct MouseEvent {
 struct GamepadEvent {
     type: GamepadEventType,
     gamepad_id: u32,
-    union {
-        button: GamepadButtonData,
-        axis: GamepadAxisData
+    union(type) {
+        [tag(Button_Down, Button_Up)] button: GamepadButtonData,
+        [tag(Axis_Motion)] axis: GamepadAxisData
     },
     timestamp: u64,
 }
@@ -228,9 +228,9 @@ struct GamepadEvent {
 #[attributes(Copy)]
 struct WindowEvent {
     type: WindowEventType,
-    union {
-        resize: WindowResizeData,
-        drop: WindowDropData
+    union(type) {
+        [tag(Resize)] resize: WindowResizeData,
+        [tag(Drop_File)] drop: WindowDropData
     },
     timestamp: u64,
 }

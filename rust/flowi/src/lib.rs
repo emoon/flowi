@@ -257,17 +257,29 @@ mod host;
 /// it presents itself. The tier they drive is [`Application::embedded`].
 pub use host::{InputEvent, Pixels};
 
-/// The decoded-event vocabulary [`Application::push_input`] takes; every payload type sits
-/// inside [`InputEvent`].
-pub use crate::sys::{GamepadEvent, KeyEvent, MouseEvent, TextInputEvent, WindowEvent};
-
-/// The insides of those events: the type tag that selects a payload union's live arm, the
-/// unions themselves, and the per-arm data structs. A host decoding OS events constructs
-/// these.
+/// The decoded-event vocabulary [`Application::push_input`] takes. The mouse, gamepad and window
+/// events are safe: a [`SafeMouseEvent`] holds a [`MouseEventKind`] whose variants carry their payload,
+/// so a host builds and reads one without `unsafe`, and the same goes for the gamepad and window
+/// events. A dropped file's path is a `&str` the event borrows.
 pub use crate::sys::{
-    GamepadAxis, GamepadAxisData, GamepadButtonData, GamepadEventPayload, GamepadEventType,
-    KeyEventType, MouseButtonData, MouseEventPayload, MouseEventType, MouseMoveData,
-    MouseRelativeData, MouseWheelData, WindowEventPayload, WindowEventType, WindowResizeData,
+    GamepadEventKind, MouseEventKind, SafeGamepadEvent, SafeMouseEvent, SafeWindowEvent,
+    WindowEventKind,
+};
+/// The keyboard and text input events, which are plain structs.
+pub use crate::sys::{KeyEvent, KeyEventType, TextInputEvent};
+
+/// The C structs behind the safe events, and the error naming the field of one that held a value no
+/// variant has. [`SafeMouseEvent::try_from_raw`] reads a C struct into a safe event, and `From` goes the
+/// other way.
+pub use crate::sys::{
+    GamepadEvent, InvalidGamepadEvent, InvalidMouseEvent, InvalidWindowEvent, MouseEvent,
+    WindowEvent,
+};
+
+/// The per-variant data of those events.
+pub use crate::sys::{
+    GamepadAxis, GamepadAxisData, GamepadButtonData, MouseButtonData, MouseMoveData,
+    MouseRelativeData, MouseWheelData, WindowResizeData,
 };
 
 /// The keyboard modifier bitmask carried on a [`KeyEvent`]: the typed view of its modifiers
@@ -560,8 +572,6 @@ mod public_surface_guard {
         crate::GamepadButton = crate::sys::GamepadButton,
         crate::GamepadButtonData = crate::sys::GamepadButtonData,
         crate::GamepadEvent = crate::sys::GamepadEvent,
-        crate::GamepadEventPayload = crate::sys::GamepadEventPayload,
-        crate::GamepadEventType = crate::sys::GamepadEventType,
         crate::ImageFormat = crate::sys::ImageFormat,
         crate::ImageHandle = crate::sys::ImageHandle,
         crate::ImageLoadOptions = crate::sys::ImageLoadOptions,
@@ -593,8 +603,6 @@ mod public_surface_guard {
         crate::MouseButton = crate::sys::MouseButton,
         crate::MouseButtonData = crate::sys::MouseButtonData,
         crate::MouseEvent = crate::sys::MouseEvent,
-        crate::MouseEventPayload = crate::sys::MouseEventPayload,
-        crate::MouseEventType = crate::sys::MouseEventType,
         crate::MouseMoveData = crate::sys::MouseMoveData,
         crate::MouseRelativeData = crate::sys::MouseRelativeData,
         crate::MouseWheelData = crate::sys::MouseWheelData,
@@ -634,8 +642,15 @@ mod public_surface_guard {
         crate::WidgetSize = crate::sys::WidgetSize,
         crate::WidgetVariant = crate::sys::WidgetVariant,
         crate::WindowEvent = crate::sys::WindowEvent,
-        crate::WindowEventPayload = crate::sys::WindowEventPayload,
-        crate::WindowEventType = crate::sys::WindowEventType,
+        crate::GamepadEventKind = crate::sys::GamepadEventKind,
+        crate::InvalidGamepadEvent = crate::sys::InvalidGamepadEvent,
+        crate::InvalidMouseEvent = crate::sys::InvalidMouseEvent,
+        crate::InvalidWindowEvent = crate::sys::InvalidWindowEvent,
+        crate::MouseEventKind = crate::sys::MouseEventKind,
+        crate::SafeGamepadEvent = crate::sys::SafeGamepadEvent,
+        crate::SafeMouseEvent = crate::sys::SafeMouseEvent,
+        crate::SafeWindowEvent = crate::sys::SafeWindowEvent,
+        crate::WindowEventKind = crate::sys::WindowEventKind,
         crate::WindowResizeData = crate::sys::WindowResizeData,
 
         // Namespaced under abi.

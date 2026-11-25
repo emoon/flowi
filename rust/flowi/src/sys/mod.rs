@@ -185,9 +185,11 @@ pub use toolkit::image_handle::ImageHandle;
 /// enums, and the functions a host calls to push OS events into the UI context.
 pub use toolkit::input::{
     GamepadAxis, GamepadAxisData, GamepadButton, GamepadButtonData, GamepadEvent,
-    GamepadEventPayload, GamepadEventType, KeyEvent, KeyEventType, MouseButton, MouseButtonData,
-    MouseEvent, MouseEventPayload, MouseEventType, MouseMoveData, MouseRelativeData,
-    MouseWheelData, TextInputEvent, WindowDropData, WindowEvent, WindowEventPayload,
+    GamepadEventKind, GamepadEventPayload, GamepadEventType, InvalidGamepadEvent,
+    InvalidMouseEvent, InvalidWindowEvent, KeyEvent, KeyEventType, MouseButton, MouseButtonData,
+    MouseEvent, MouseEventKind, MouseEventPayload, MouseEventType, MouseMoveData,
+    MouseRelativeData, MouseWheelData, SafeGamepadEvent, SafeMouseEvent, SafeWindowEvent,
+    TextInputEvent, WindowDropData, WindowEvent, WindowEventKind, WindowEventPayload,
     WindowEventType, WindowResizeData,
 };
 pub use toolkit::item_behavior::*;

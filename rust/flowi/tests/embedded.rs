@@ -4,7 +4,7 @@
 
 use flowi::{
     mouse_button, Application, EmbeddedSettings, InputEvent, MouseButton, MouseButtonData,
-    MouseEvent, MouseEventPayload, MouseEventType,
+    MouseEventKind, SafeMouseEvent,
 };
 
 /// Default clear color (theme surface.base).
@@ -16,18 +16,18 @@ const HEIGHT: u32 = 48;
 /// The button query is global and unrouted, so the exact cursor spot is irrelevant.
 const CURSOR: (f32, f32) = (12.0, 20.0);
 
-/// A decoded mouse button transition: the type tag plus the union arm it selects.
-fn button_event(kind: MouseEventType, button: MouseButton) -> InputEvent {
-    InputEvent::Mouse(MouseEvent {
-        r#type: kind,
-        payload: MouseEventPayload {
-            button: MouseButtonData {
-                button,
-                x: CURSOR.0,
-                y: CURSOR.1,
-                click_count: 1,
-            },
-        },
+/// A decoded mouse button transition: the safe event whose variant carries the button.
+fn button_event(
+    kind: fn(MouseButtonData) -> MouseEventKind,
+    button: MouseButton,
+) -> InputEvent<'static> {
+    InputEvent::Mouse(SafeMouseEvent {
+        kind: kind(MouseButtonData {
+            button,
+            x: CURSOR.0,
+            y: CURSOR.1,
+            click_count: 1,
+        }),
         timestamp: 0,
     })
 }
@@ -78,7 +78,7 @@ fn assert_pushed_input_is_the_next_frames(app: &mut Application) {
         );
     }
 
-    app.push_input(button_event(MouseEventType::Button_Down, MouseButton::Left));
+    app.push_input(button_event(MouseEventKind::ButtonDown, MouseButton::Left));
     let state = frame(app, || mouse_button(MouseButton::Left));
     assert!(
         state.pressed && state.held,
@@ -90,7 +90,7 @@ fn assert_pushed_input_is_the_next_frames(app: &mut Application) {
         "the pressed edge lasts one frame, the held level stays"
     );
 
-    app.push_input(button_event(MouseEventType::Button_Up, MouseButton::Left));
+    app.push_input(button_event(MouseEventKind::ButtonUp, MouseButton::Left));
     let state = frame(app, || mouse_button(MouseButton::Left));
     assert!(
         state.released && !state.held,

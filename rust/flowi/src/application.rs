@@ -607,7 +607,7 @@ impl Application {
     /// # Panics
     /// Panics on a window-owning application, which pumps the OS itself (a headless one
     /// synthesises input with the `inject_*` harness instead).
-    pub fn push_input(&self, event: InputEvent) {
+    pub fn push_input(&self, event: InputEvent<'_>) {
         // Panics on a window-owning application.
         let _ = self.host();
         // SAFETY: the events are plain PODs and target the host's own context.
@@ -615,9 +615,9 @@ impl Application {
             match event {
                 InputEvent::Key(event) => sys::fl_input_push_key_event(event),
                 InputEvent::TextInput(event) => sys::fl_input_push_text_input_event(event),
-                InputEvent::Mouse(event) => sys::fl_input_push_mouse_event(event),
-                InputEvent::Gamepad(event) => sys::fl_input_push_gamepad_event(event),
-                InputEvent::Window(event) => sys::fl_input_push_window_event(event),
+                InputEvent::Mouse(event) => sys::fl_input_push_mouse_event(event.into()),
+                InputEvent::Gamepad(event) => sys::fl_input_push_gamepad_event(event.into()),
+                InputEvent::Window(event) => sys::fl_input_push_window_event(event.into()),
             }
         }
     }
