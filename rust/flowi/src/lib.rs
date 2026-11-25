@@ -255,7 +255,8 @@ mod host;
 
 /// The embedded-mode vocabulary: the events an embedding host pushes in, and the pixels
 /// it presents itself. The tier they drive is [`Application::embedded`].
-pub use host::{InputEvent, Pixels};
+pub use host::{InputEvent, PadCallback, PadInfo, Pixels, SdlEventPump, SdlPumpConfig};
+pub use crate::sys::PadType;
 
 /// The decoded-event vocabulary [`Application::push_input`] takes. The mouse, gamepad and window
 /// events are safe: a [`SafeMouseEvent`] holds a [`MouseEventKind`] whose variants carry their payload,

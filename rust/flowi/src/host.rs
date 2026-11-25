@@ -106,3 +106,130 @@ impl<'a> Pixels<'a> {
         (0..self.height).map(|y| self.row(y))
     }
 }
+
+/// Who a gamepad is, as [`SdlEventPump`] reports it with each raw pad event.
+#[derive(Copy, Clone, Debug)]
+pub struct PadInfo<'a> {
+    /// The name the pad reports.
+    pub name: &'a str,
+    /// The USB vendor id (0 if unknown).
+    pub vendor: u16,
+    /// The USB product id (0 if unknown).
+    pub product: u16,
+    /// The face-button family of the pad.
+    pub pad_type: sys::PadType,
+    /// Whether the pad has a Guide button.
+    pub has_guide: bool,
+}
+
+/// Receives each gamepad event of an [`SdlEventPump`] with raw pads on.
+///
+/// A panic inside it aborts the process, as it would in any `extern "C"` callback.
+pub type PadCallback = Box<dyn FnMut(sys::SafeGamepadEvent, PadInfo<'_>)>;
+
+/// How to bring an [`SdlEventPump`] up.
+pub struct SdlPumpConfig<'a> {
+    /// The SDL id of the window whose events the pump reads.
+    pub window_id: u32,
+    /// Text of an SDL controller database, applied to pads opened afterwards (empty for none).
+    pub controller_db: &'a str,
+    /// Called with every gamepad event and the pad it came from. When set, no gamepad event reaches the
+    /// application's own gamepad state, and pads are read by button position.
+    pub on_pad: Option<PadCallback>,
+}
+
+/// Moves the SDL events of an embedding host's window into its [`Application`](crate::Application).
+///
+/// Build it after SDL's video subsystem is up and call
+/// [`Application::pump_sdl_events`](crate::Application::pump_sdl_events) once per frame before
+/// [`begin_frame`](crate::Application::begin_frame).
+pub struct SdlEventPump {
+    raw: *mut sys::SdlPump,
+    // The `Box<PadCallback>` leaked to C as user data; freed in `Drop` after the pump is destroyed.
+    on_pad: *mut PadCallback,
+}
+
+unsafe extern "C" fn pad_trampoline(
+    user_data: *mut core::ffi::c_void,
+    event: *const sys::GamepadEvent,
+    pad: *const sys::PadIdentity,
+) {
+    // SAFETY: user_data is the `Box<PadCallback>` the pump was created with, alive until the pump is
+    // dropped, and C calls this only from inside `pump_sdl_events`, which holds `&mut` to the pump.
+    let callback = unsafe { &mut *user_data.cast::<PadCallback>() };
+    // SAFETY: C passes a whole, initialized event that is valid until this call returns.
+    let event = match unsafe { sys::SafeGamepadEvent::try_from_raw(event) } {
+        Ok(event) => event,
+        Err(err) => {
+            log::error!("flowi: dropped a pad event with an invalid value: {err:?}");
+            return;
+        }
+    };
+    // SAFETY: C passes a valid identity whose name is valid until this call returns.
+    let pad = unsafe { &*pad };
+    // SAFETY: as above, the name outlives the call, and `info` does not escape it.
+    let name = unsafe { pad.name.as_str() };
+    callback(
+        event,
+        PadInfo {
+            name,
+            vendor: pad.vendor,
+            product: pad.product,
+            pad_type: pad.pad_type,
+            has_guide: pad.has_guide,
+        },
+    );
+}
+
+impl SdlEventPump {
+    pub(crate) fn raw(&self) -> *mut sys::SdlPump {
+        self.raw
+    }
+
+    /// Creates the pump, or [`None`] if SDL's event or controller subsystem would not start; flowi has
+    /// logged the reason.
+    pub fn new(app: &crate::Application, config: SdlPumpConfig<'_>) -> Option<SdlEventPump> {
+        let on_pad = config.on_pad.map_or(core::ptr::null_mut(), |callback| {
+            Box::into_raw(Box::new(callback))
+        });
+        let settings = sys::SdlPumpSettings {
+            window_id: config.window_id,
+            raw_pads: !on_pad.is_null(),
+            controller_db: sys::RawStr::borrow(config.controller_db),
+        };
+        let pad_fn: sys::SdlPadFn = if on_pad.is_null() {
+            None
+        } else {
+            Some(pad_trampoline)
+        };
+        // SAFETY: the foundation arena outlives the application and so the pump; settings only has to
+        // outlive the call; the callback box is kept in the returned value for as long as C may use it.
+        let raw = unsafe {
+            sys::fl_sdl_pump_create(
+                app.arena().as_raw().cast(),
+                &settings,
+                pad_fn,
+                on_pad.cast(),
+            )
+        };
+        if raw.is_null() {
+            if !on_pad.is_null() {
+                // SAFETY: made by `Box::into_raw` above and not kept by C, since creation failed.
+                drop(unsafe { Box::from_raw(on_pad) });
+            }
+            return None;
+        }
+        Some(SdlEventPump { raw, on_pad })
+    }
+}
+
+impl Drop for SdlEventPump {
+    fn drop(&mut self) {
+        // SAFETY: created by `new`, non-null, destroyed exactly once here.
+        unsafe { sys::fl_sdl_pump_destroy(self.raw) };
+        if !self.on_pad.is_null() {
+            // SAFETY: made by `Box::into_raw` in `new`; C no longer calls it once the pump is destroyed.
+            drop(unsafe { Box::from_raw(self.on_pad) });
+        }
+    }
+}

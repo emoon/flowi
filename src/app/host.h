@@ -50,3 +50,6 @@ void host_window_detach(FlHost* host, FlUiCtx* ctx);
 // Read back the last-rendered pixels of surface (native interleaved: RGB24 software, RGBA8 GPU) so the
 // host can copy them into its own framebuffer. False when the backend has no readback capability.
 bool host_read_pixels(FlHost* host, FlSurface* surface, FlPixelReadback* out);
+
+// The UI context of the window a sized host_create opened, or nullptr for a host without one.
+FlUiCtx* host_window_context(FlHost* host);

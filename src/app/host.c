@@ -260,6 +260,11 @@ bool host_read_pixels(FlHost* host, FlSurface* surface, FlPixelReadback* out) {
     return host->backend.read_pixels(host->backend.user_data, surface, out);
 }
 
+FlUiCtx* host_window_context(FlHost* host) {
+    FL_ASSERT(host != nullptr);
+    return host->window_ctx;
+}
+
 // The public `fl_host_*` surface: thin forwarders onto the internal entry points above. flowi's own code never
 // calls these (see the note in app/host.h).
 

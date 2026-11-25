@@ -1,0 +1,80 @@
+#[module(app)]
+
+extern opaque FlArena
+
+/// The face-button family of a gamepad.
+enum PadType {
+    /// A generic pad, or one SDL does not recognize.
+    Unknown = 0,
+    Xbox,
+    PlayStation,
+    Nintendo,
+}
+
+/// Who a gamepad is.
+///
+/// `SdlPadFn` receives it with every event of a pad when `SdlPumpSettings.raw_pads` is on.
+struct PadIdentity {
+    /// The name the pad reports. It is valid until the callback returns.
+    name: String,
+    /// The USB vendor id (0 if unknown).
+    vendor: u16,
+    /// The USB product id (0 if unknown).
+    product: u16,
+    /// The face-button family of the pad.
+    pad_type: PadType,
+    /// Whether the pad has a Guide button.
+    has_guide: bool,
+}
+
+/// The settings for `SdlPump::create`.
+struct SdlPumpSettings {
+    /// The SDL id of the window whose events the pump reads (0 takes a close of any window as a quit).
+    window_id: u32,
+    /// Whether gamepad events go to the `SdlPadFn` instead of into the host's own gamepad state.
+    ///
+    /// Turn it on when you seat and map pads yourself. The pump then also reads buttons by their position on the pad
+    /// and not by their label, so a Nintendo pad matches the others.
+    raw_pads: bool,
+    /// Text of an SDL controller database, applied to every pad opened afterwards (empty for none).
+    ///
+    /// SDL copies it, so it only has to be valid during `SdlPump::create`.
+    controller_db: String,
+}
+
+/// Receives one gamepad event.
+///
+/// `pad` is the pad the event came from. A disconnect carries the identity the pad had until then. `event` and `pad`
+/// are valid until the callback returns. `user_data` is the pointer you passed to `SdlPump::create`.
+callback SdlPadFn(user_data: *void, event: *const GamepadEvent, pad: *const PadIdentity)
+
+/// A pump that moves SDL events into a `Host`.
+///
+/// Returned by `SdlPump::create` and freed with `SdlPump::destroy`.
+#[attributes(Opaque)]
+struct SdlPump {}
+
+/// An SDL event pump for a program that owns its window but not the frame loop.
+///
+/// Use it with a `Host` when your window is an SDL window. Call `SdlPump::pump` once per frame before
+/// `Host::frame_begin`. Key, text, mouse and window events go into the host's input. Gamepad events do too, unless
+/// `SdlPumpSettings.raw_pads` is on. The pump starts SDL's controller subsystem and text input for you.
+api SdlPump {
+    /// Creates a pump and returns it, or null if it could not be created.
+    ///
+    /// The reason is logged. The pump allocates from `arena`, so keep it alive until after `SdlPump::destroy`. Call
+    /// this after SDL's video subsystem is up. `pad_fn` is only used when `SdlPumpSettings.raw_pads` is on, and can be
+    /// null otherwise.
+    [manual] create(arena: *FlArena, settings: *const SdlPumpSettings, pad_fn: SdlPadFn, pad_user_data: *void) -> *SdlPump
+    /// Destroys the pump and closes the pads it opened.
+    ///
+    /// Does nothing if `pump` is null.
+    [manual] destroy(pump: *SdlPump)
+
+    /// Moves the SDL events queued since the last call into `host` and returns false once the user asked to quit.
+    ///
+    /// Closing the window `SdlPumpSettings.window_id` names counts as a request to quit. `host` must have been created
+    /// with a render size. `mouse_scale` multiplies SDL's mouse coordinates to give positions in the host's render
+    /// size (above 0). Pass the render width divided by the window width.
+    [manual] pump(pump: *SdlPump, host: *Host, mouse_scale: f32) -> bool
+}

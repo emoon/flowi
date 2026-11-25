@@ -382,6 +382,13 @@ pub use toolkit::host::{
     fl_host_create, fl_host_destroy, fl_host_frame_begin, fl_host_frame_end, fl_host_read_pixels, Host, HostSettings,
 };
 
+/// The SDL event pump for an embedded host: the opaque `SdlPump` handle, its settings, the pad callback and the
+/// `fl_sdl_pump_*` functions.
+pub use toolkit::sdl_pump::{
+    fl_sdl_pump_create, fl_sdl_pump_destroy, fl_sdl_pump_pump, PadIdentity, PadType, SdlPadFn, SdlPump,
+    SdlPumpSettings,
+};
+
 /// "Let the backend place the window" value for [`WindowSettings::x`] and `y`.
 pub const FL_APP_WINDOW_POS_DEFAULT: c_int = i32::MIN;
 
