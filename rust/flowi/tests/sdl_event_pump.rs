@@ -1,5 +1,7 @@
 //! An embedding host pumps its SDL window's events into the application with one call.
 
+#![cfg(feature = "windowed")]
+
 use std::{cell::RefCell, rc::Rc, sync::Mutex};
 
 use flowi::{Application, EmbeddedSettings, PadType, SdlEventPump, SdlPumpConfig};

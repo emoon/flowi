@@ -1448,7 +1448,10 @@ UTEST(sdl_pump, controller_database_applies_to_pads_opened_afterwards) {
     const SDL_JoystickGUID guid = SDL_JoystickGetGUIDFromString(guid_text);
     ASSERT_TRUE(SDL_GameControllerMappingForGUID(guid) == nullptr);
 
-    const char* db = "00110000445566778899aabbccddeeff,Pump Test Pad,a:b0,b:b1,platform:Linux,\n";
+    // SDL ignores a mapping whose platform is not the running one.
+    char db[128];
+    snprintf(db, sizeof(db), "00110000445566778899aabbccddeeff,Pump Test Pad,a:b0,b:b1,platform:%s,\n",
+             SDL_GetPlatform());
     const FlSdlPumpSettings settings = { .controller_db = { .data = db, .length = strlen(db), .is_static = 1 } };
     FlSdlPump* pump = fl_sdl_pump_create(s_arena, &settings, nullptr, nullptr);
     ASSERT_TRUE(pump != nullptr);
