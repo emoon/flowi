@@ -13,28 +13,33 @@ impl Color {
     pub const TRANSPARENT: Color = Color::rgba(0, 0, 0, 0);
 
     /// Opaque RGB color (`a = 255`).
+    #[inline(always)]
     pub const fn rgb(r: u8, g: u8, b: u8) -> Color {
         Color { r, g, b, a: 255 }
     }
 
     /// RGBA color from 8-bit channels.
+    #[inline(always)]
     pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
         Color { r, g, b, a }
     }
 
     /// This color with its alpha channel replaced by `a`.
+    #[inline(always)]
     pub const fn with_alpha(self, a: u8) -> Color {
         Color { a, ..self }
     }
 }
 
 impl Default for Color {
+    #[inline(always)]
     fn default() -> Color {
         Color::TRANSPARENT
     }
 }
 
 impl PartialEq for Color {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         (self.r, self.g, self.b, self.a) == (other.r, other.g, other.b, other.a)
     }
@@ -47,12 +52,14 @@ impl Vec2 {
     pub const ZERO: Vec2 = Vec2 { x: 0.0, y: 0.0 };
 
     /// Construct a 2D vector from `(x, y)`.
+    #[inline(always)]
     pub const fn new(x: f32, y: f32) -> Vec2 {
         Vec2 { x, y }
     }
 }
 
 impl Default for Vec2 {
+    #[inline(always)]
     fn default() -> Vec2 {
         Vec2::ZERO
     }
@@ -67,6 +74,7 @@ impl StrokeStyle {
 }
 
 impl Default for StrokeStyle {
+    #[inline(always)]
     fn default() -> StrokeStyle {
         StrokeStyle::SOLID
     }
@@ -77,6 +85,7 @@ impl BorderWidthConfig {
     pub const NONE: BorderWidthConfig = BorderWidthConfig::all(0);
 
     /// Uniform width on all four outer edges, with no child dividers.
+    #[inline(always)]
     pub const fn all(width: u16) -> BorderWidthConfig {
         BorderWidthConfig {
             left: width,
@@ -88,6 +97,7 @@ impl BorderWidthConfig {
     }
 
     /// Top edge only.
+    #[inline(always)]
     pub const fn top(width: u16) -> BorderWidthConfig {
         BorderWidthConfig {
             top: width,
@@ -96,6 +106,7 @@ impl BorderWidthConfig {
     }
 
     /// Bottom edge only.
+    #[inline(always)]
     pub const fn bottom(width: u16) -> BorderWidthConfig {
         BorderWidthConfig {
             bottom: width,
@@ -104,6 +115,7 @@ impl BorderWidthConfig {
     }
 
     /// Left edge only.
+    #[inline(always)]
     pub const fn left(width: u16) -> BorderWidthConfig {
         BorderWidthConfig {
             left: width,
@@ -112,6 +124,7 @@ impl BorderWidthConfig {
     }
 
     /// Right edge only.
+    #[inline(always)]
     pub const fn right(width: u16) -> BorderWidthConfig {
         BorderWidthConfig {
             right: width,
@@ -121,12 +134,14 @@ impl BorderWidthConfig {
 }
 
 impl Default for BorderWidthConfig {
+    #[inline(always)]
     fn default() -> BorderWidthConfig {
         BorderWidthConfig::NONE
     }
 }
 
 impl PartialEq for BorderWidthConfig {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         (
             self.left,
@@ -147,12 +162,14 @@ impl PartialEq for BorderWidthConfig {
 impl Eq for BorderWidthConfig {}
 
 impl From<u16> for BorderWidthConfig {
+    #[inline(always)]
     fn from(width: u16) -> BorderWidthConfig {
         BorderWidthConfig::all(width)
     }
 }
 
 impl From<BorderWidth> for BorderWidthConfig {
+    #[inline(always)]
     fn from(width: BorderWidth) -> BorderWidthConfig {
         BorderWidthConfig::all(width as u16)
     }
@@ -163,11 +180,13 @@ impl LayoutBorder {
     pub const NONE: LayoutBorder = LayoutBorder::solid(Color::TRANSPARENT, BorderWidthConfig::NONE);
 
     /// Solid border with uniform `width` on all four outer edges.
+    #[inline(always)]
     pub const fn all(color: Color, width: u16) -> LayoutBorder {
         LayoutBorder::solid(color, BorderWidthConfig::all(width))
     }
 
     /// Solid border with caller-chosen per-edge widths.
+    #[inline(always)]
     pub const fn solid(color: Color, width: BorderWidthConfig) -> LayoutBorder {
         LayoutBorder {
             color,
@@ -178,6 +197,7 @@ impl LayoutBorder {
 }
 
 impl Default for LayoutBorder {
+    #[inline(always)]
     fn default() -> LayoutBorder {
         LayoutBorder::NONE
     }
@@ -192,12 +212,14 @@ impl LayoutSizing {
         LayoutSizing::new(LayoutSizingAxis::GROW, LayoutSizingAxis::GROW);
 
     /// Construct sizing from explicit width and height axes.
+    #[inline(always)]
     pub const fn new(width: LayoutSizingAxis, height: LayoutSizingAxis) -> LayoutSizing {
         LayoutSizing { width, height }
     }
 }
 
 impl Default for LayoutSizing {
+    #[inline(always)]
     fn default() -> LayoutSizing {
         LayoutSizing::FIT
     }
@@ -230,6 +252,7 @@ impl LayoutChildAlignment {
 }
 
 impl Default for LayoutChildAlignment {
+    #[inline(always)]
     fn default() -> LayoutChildAlignment {
         LayoutChildAlignment::TOP_LEFT
     }
@@ -237,6 +260,7 @@ impl Default for LayoutChildAlignment {
 
 impl Default for ScrollAreaConfig {
     /// Full-size vertical scroll area with transparent background and auto scrollbar.
+    #[inline(always)]
     fn default() -> ScrollAreaConfig {
         ScrollAreaConfig {
             sizing: LayoutSizing::GROW,
@@ -255,6 +279,7 @@ impl Default for ScrollAreaConfig {
 
 impl CornerRadius {
     /// The same radius on all four corners.
+    #[inline(always)]
     pub const fn uniform(radius: f32) -> CornerRadius {
         CornerRadius {
             tl: radius,
@@ -265,6 +290,7 @@ impl CornerRadius {
     }
 
     /// Round the left and right corner pairs independently, as for a segmented control's end caps.
+    #[inline(always)]
     pub const fn sides(left: f32, right: f32) -> CornerRadius {
         CornerRadius {
             tl: left,
@@ -277,6 +303,7 @@ impl CornerRadius {
 
 impl From<f32> for CornerRadius {
     /// A scalar means a uniform radius.
+    #[inline(always)]
     fn from(radius: f32) -> CornerRadius {
         CornerRadius::uniform(radius)
     }
@@ -287,6 +314,7 @@ impl From<f32> for CornerRadius {
 /// u16 is the only integer source, so an unsuffixed literal (padding: 8) infers.
 impl From<u16> for LayoutPadding {
     /// One value: the same inset on all four sides.
+    #[inline(always)]
     fn from(pad: u16) -> LayoutPadding {
         LayoutPadding {
             left: pad,
@@ -299,6 +327,7 @@ impl From<u16> for LayoutPadding {
 
 impl From<(u16, u16)> for LayoutPadding {
     /// CSS's two-value shorthand: (vertical, horizontal).
+    #[inline(always)]
     fn from((vertical, horizontal): (u16, u16)) -> LayoutPadding {
         LayoutPadding {
             left: horizontal,
@@ -312,6 +341,7 @@ impl From<(u16, u16)> for LayoutPadding {
 impl From<[u16; 4]> for LayoutPadding {
     /// CSS's four-value shorthand, clockwise from the top: `[top, right, bottom, left]`. This
     /// is not the struct's field order.
+    #[inline(always)]
     fn from([top, right, bottom, left]: [u16; 4]) -> LayoutPadding {
         LayoutPadding {
             left,
@@ -345,6 +375,7 @@ impl Default for LayoutConfig {
     /// children at the left/top origin, LeftToRight, transparent, unclipped, no border, and
     /// normal flex flow rather than explicit placement. The layout macros expand an omitted
     /// field to the matching field of this value.
+    #[inline(always)]
     fn default() -> LayoutConfig {
         LayoutConfig {
             sizing: LayoutSizing::FIT,
