@@ -119,15 +119,7 @@ impl<T> Job<T> {
     /// True once the worker job has finished executing (or its data was already taken).
     #[inline]
     pub fn is_finished(&self) -> bool {
-        if self.slot.is_null() {
-            return true;
-        }
-        if Jobs::is_finished(self.handle) == JobsResult::NotFinished {
-            return false;
-        }
-        // SAFETY: `self.slot` is non-null and remains alive until reclaimed by
-        // `try_take`, `wait`, or `Drop`.
-        unsafe { (*self.slot).state.load(Ordering::Acquire) == JOB_DONE }
+        self.slot.is_null() || Jobs::is_finished(self.handle) != JobsResult::NotFinished
     }
 
     /// Reclaim the pre-allocated `T` if the job has finished without panicking.
@@ -163,13 +155,10 @@ impl<T> Job<T> {
     fn reclaim_finished_slot(&mut self) -> Option<T> {
         let ptr = self.slot;
         self.slot = ptr::null_mut();
-        // SAFETY: callers verified the job finished (via `is_finished` or `Jobs::wait`),
-        // so the worker will never touch `ptr` again. The Acquire load synchronises
-        // with the worker's AcqRel transition to `JOB_DONE`.
-        let slot = unsafe {
-            let _ = (*ptr).state.load(Ordering::Acquire);
-            Box::from_raw(ptr)
-        };
+        // SAFETY: callers verified completion through `Jobs::is_finished` or
+        // `Jobs::wait`, whose acquire load of `JOB_STATUS_COMPLETED` synchronises
+        // with the worker's release store after `execute_owned_slot` returned.
+        let slot = unsafe { Box::from_raw(ptr) };
         slot.completed.then_some(slot.data)
     }
 }
