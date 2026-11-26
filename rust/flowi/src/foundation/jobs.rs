@@ -20,6 +20,8 @@
 use crate::sys;
 use std::os::raw::c_void;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::ptr;
+use std::sync::atomic::{AtomicU8, Ordering};
 
 /// The scheduled-job handle. Query it with
 /// [`Jobs::is_finished`], block on it with [`Jobs::wait`], or pass it as a dependency
@@ -68,6 +70,188 @@ pub struct Jobs;
 /// The message every scheduling entry point asserts with.
 const FOUNDATION_DOWN: &str =
     "flowi: the job system is not up — start the foundation first (Application::new or flowi::init)";
+
+const JOB_RUNNING: u8 = 0;
+const JOB_DONE: u8 = 1;
+const JOB_ABANDONED: u8 = 2;
+
+struct JobSlot<T> {
+    state: AtomicU8,
+    completed: bool,
+    data: T,
+}
+
+struct SendPtr<T>(*mut JobSlot<T>);
+
+// SAFETY: `SendPtr<T>` transfers unique write ownership of `JobSlot<T>` from the
+// scheduling thread to the worker thread; `T: Send` allows crossing threads.
+unsafe impl<T: Send> Send for SendPtr<T> {}
+
+/// Owning handle to a pre-allocated `T` being mutated in place by a worker job.
+///
+/// Created by [`Jobs::run`] (and its priority/dependency variants). Moving `T`
+/// into the job prevents the caller from touching it while the worker runs,
+/// with no `Mutex`, `Arc`, or channel. Once [`is_finished`](Self::is_finished)
+/// is true, [`try_take`](Self::try_take) or [`wait`](Self::wait) returns the
+/// mutated `T`.
+///
+/// Dropping a `Job<T>` before taking its value waits for completion on the main
+/// thread (or delegates cleanup to the worker if dropped off the main thread)
+/// and drops `T` without leaking or dangling.
+pub struct Job<T> {
+    handle: JobHandle,
+    slot: *mut JobSlot<T>,
+}
+
+// SAFETY: `Job<T>` uniquely owns the heap-allocated `JobSlot<T>` once the worker
+// finishes (coordinated through `JobSlot::state`), and `T: Send` permits moving
+// the handle across threads.
+unsafe impl<T: Send> Send for Job<T> {}
+
+impl<T> Job<T> {
+    /// Underlying [`JobHandle`], for chaining dependents via [`Jobs::add_after`]
+    /// or [`Jobs::run_after`].
+    #[inline]
+    pub fn handle(&self) -> JobHandle {
+        self.handle
+    }
+
+    /// True once the worker job has finished executing (or its data was already taken).
+    #[inline]
+    pub fn is_finished(&self) -> bool {
+        if self.slot.is_null() {
+            return true;
+        }
+        if Jobs::is_finished(self.handle) == JobsResult::NotFinished {
+            return false;
+        }
+        // SAFETY: `self.slot` is non-null and remains alive until reclaimed by
+        // `try_take`, `wait`, or `Drop`.
+        unsafe { (*self.slot).state.load(Ordering::Acquire) == JOB_DONE }
+    }
+
+    /// Reclaim the pre-allocated `T` if the job has finished without panicking.
+    ///
+    /// Returns `None` while the job is still running, if the value was already
+    /// taken, or if the job closure panicked (in which case [`is_finished`](Self::is_finished)
+    /// is true and `T` is dropped cleanly).
+    pub fn try_take(&mut self) -> Option<T> {
+        if self.slot.is_null() || !self.is_finished() {
+            return None;
+        }
+        self.reclaim_finished_slot()
+    }
+
+    /// Block on the main thread until the job completes and return `T`, or
+    /// `None` if the job closure panicked (or the value was already taken).
+    ///
+    /// # Panics
+    /// Panics if called off the main thread, because `fl_jobs_wait` cannot block
+    /// a worker thread.
+    pub fn wait(mut self) -> Option<T> {
+        assert!(
+            Jobs::is_main_thread(),
+            "flowi: Job::wait may only be called on the main thread"
+        );
+        if self.slot.is_null() {
+            return None;
+        }
+        Jobs::wait(self.handle);
+        self.reclaim_finished_slot()
+    }
+
+    fn reclaim_finished_slot(&mut self) -> Option<T> {
+        let ptr = self.slot;
+        self.slot = ptr::null_mut();
+        // SAFETY: callers verified the job finished (via `is_finished` or `Jobs::wait`),
+        // so the worker will never touch `ptr` again. The Acquire load synchronises
+        // with the worker's AcqRel transition to `JOB_DONE`.
+        let slot = unsafe {
+            let _ = (*ptr).state.load(Ordering::Acquire);
+            Box::from_raw(ptr)
+        };
+        slot.completed.then_some(slot.data)
+    }
+}
+
+impl<T> Drop for Job<T> {
+    fn drop(&mut self) {
+        if self.slot.is_null() {
+            return;
+        }
+        if Jobs::is_main_thread() {
+            Jobs::wait(self.handle);
+            let _ = self.reclaim_finished_slot();
+            return;
+        }
+        let ptr = self.slot;
+        self.slot = ptr::null_mut();
+        // SAFETY: `ptr` is live because neither this handle nor the worker has freed it
+        // yet. Swapping to `JOB_ABANDONED` lets the worker free it if still running, or
+        // lets us free it immediately if the worker already stored `JOB_DONE`.
+        let prev = unsafe { (*ptr).state.swap(JOB_ABANDONED, Ordering::AcqRel) };
+        if prev == JOB_DONE {
+            // SAFETY: `prev == JOB_DONE` with Acquire ordering guarantees the worker
+            // observed `JOB_RUNNING` and will never access or free `ptr` again.
+            unsafe { drop(Box::from_raw(ptr)) };
+        }
+    }
+}
+
+fn execute_owned_slot<T, F>(slot_ptr: SendPtr<T>, f: F, worker: WorkerInfo)
+where
+    T: Send + 'static,
+    F: FnOnce(&mut T, WorkerInfo) + Send + 'static,
+{
+    let ptr = slot_ptr.0;
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        // SAFETY: `ptr` was created by `Box::into_raw` in `schedule_owned` and stays
+        // exclusively writable by this worker until it transitions `state` to `JOB_DONE`.
+        let data = unsafe { &mut (*ptr).data };
+        f(data, worker);
+    }));
+    let completed = match result {
+        Ok(()) => true,
+        Err(payload) => {
+            log::error!(
+                "job panicked on worker {}: {}",
+                worker.worker_index,
+                sys::guard::payload_message(&*payload)
+            );
+            false
+        }
+    };
+    // SAFETY: no other thread reads `completed` before observing `JOB_DONE`, and
+    // `ptr` stays alive until the atomic swap below decides who frees it.
+    let prev = unsafe {
+        (*ptr).completed = completed;
+        (*ptr).state.swap(JOB_DONE, Ordering::AcqRel)
+    };
+    if prev == JOB_ABANDONED {
+        // SAFETY: the handle abandoned `ptr` while `JOB_RUNNING` and transferred
+        // reclamation to this worker; no other reference to `ptr` remains.
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+
+fn schedule_owned<T, F>(data: T, priority: JobPriority, dependency: JobHandle, f: F) -> Job<T>
+where
+    T: Send + 'static,
+    F: FnOnce(&mut T, WorkerInfo) + Send + 'static,
+{
+    let slot = Box::into_raw(Box::new(JobSlot {
+        state: AtomicU8::new(JOB_RUNNING),
+        completed: false,
+        data,
+    }));
+    let send_ptr = SendPtr(slot);
+    let handle = Jobs::add_with_priority_after(
+        move |worker| execute_owned_slot(send_ptr, f, worker),
+        priority,
+        dependency,
+    );
+    Job { handle, slot }
+}
 
 impl Jobs {
     /// Schedule f to run on a worker thread at Normal priority; returns its
@@ -148,6 +332,66 @@ impl Jobs {
                 dependency,
             )
         }
+    }
+
+    /// Schedule `f` to mutate a pre-allocated `data` in place on a worker thread
+    /// at Normal priority, returning an owning [`Job<T>`] handle.
+    ///
+    /// # Panics
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
+    #[inline]
+    pub fn run<T, F>(data: T, f: F) -> Job<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut T, WorkerInfo) + Send + 'static,
+    {
+        schedule_owned(data, JobPriority::Normal, JobHandle::INVALID, f)
+    }
+
+    /// Schedule `f` to mutate `data` in place at an explicit [`JobPriority`].
+    ///
+    /// # Panics
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
+    #[inline]
+    pub fn run_with_priority<T, F>(data: T, priority: JobPriority, f: F) -> Job<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut T, WorkerInfo) + Send + 'static,
+    {
+        schedule_owned(data, priority, JobHandle::INVALID, f)
+    }
+
+    /// Schedule `f` to mutate `data` in place once `dependency` completes
+    /// (Normal priority).
+    ///
+    /// # Panics
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
+    #[inline]
+    pub fn run_after<T, F>(data: T, dependency: JobHandle, f: F) -> Job<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut T, WorkerInfo) + Send + 'static,
+    {
+        schedule_owned(data, JobPriority::Normal, dependency, f)
+    }
+
+    /// Schedule `f` to mutate `data` in place at `priority` once `dependency`
+    /// completes.
+    ///
+    /// # Panics
+    /// Panics if the foundation is not up; see the module docs on lifecycle.
+    #[inline]
+    pub fn run_with_priority_after<T, F>(
+        data: T,
+        priority: JobPriority,
+        dependency: JobHandle,
+        f: F,
+    ) -> Job<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut T, WorkerInfo) + Send + 'static,
+    {
+        schedule_owned(data, priority, dependency, f)
     }
 
     /// Whether handle has finished; see [`JobsResult`]. An unknown/expired handle
@@ -278,5 +522,85 @@ mod tests {
 
         assert_eq!(rx.recv().unwrap(), "first");
         assert_eq!(rx.recv().unwrap(), "second");
+    }
+
+    #[test]
+    fn owned_job_mutates_preallocated_data_in_place() {
+        foundation();
+        let preallocated = vec![10u32, 20, 30];
+        let mut job = Jobs::run(preallocated, |values, _worker| {
+            for v in values.iter_mut() {
+                *v *= 2;
+            }
+            values.push(80);
+        });
+
+        while !job.is_finished() {
+            std::thread::yield_now();
+        }
+        assert!(job.is_finished());
+        let result = job.try_take().unwrap();
+        assert_eq!(result, vec![20, 40, 60, 80]);
+        assert!(job.try_take().is_none(), "value is yielded once");
+    }
+
+    #[test]
+    fn owned_job_wait_and_dependency_chain() {
+        foundation();
+        let first = Jobs::run(String::from("hello"), |text, _| text.push_str(", "));
+        let second = Jobs::run_after(String::from("world"), first.handle(), |text, _| {
+            text.push('!');
+        });
+        let a = first.wait().unwrap();
+        let b = second.wait().unwrap();
+        assert_eq!(format!("{a}{b}"), "hello, world!");
+    }
+
+    #[test]
+    fn owned_job_panic_drops_data_and_returns_none() {
+        foundation();
+        let dropped = Arc::new(AtomicBool::new(false));
+        struct DropFlag(Arc<AtomicBool>);
+        impl Drop for DropFlag {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Release);
+            }
+        }
+
+        let job = Jobs::run(DropFlag(Arc::clone(&dropped)), |_, _| {
+            panic!("deliberate owned job panic");
+        });
+        assert!(job.wait().is_none());
+        assert!(dropped.load(Ordering::Acquire), "data dropped after panic");
+    }
+
+    #[test]
+    fn dropping_owned_job_off_main_thread_delegates_cleanup_to_worker() {
+        foundation();
+        let dropped = Arc::new(AtomicBool::new(false));
+        struct DropFlag(Arc<AtomicBool>);
+        impl Drop for DropFlag {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Release);
+            }
+        }
+
+        let flag = Arc::clone(&dropped);
+        let spawner = Jobs::add(move |_| {
+            let child = Jobs::run(DropFlag(flag), |_, _| {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            });
+            drop(child);
+        });
+        Jobs::wait(spawner);
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while std::time::Instant::now() < deadline && !dropped.load(Ordering::Acquire) {
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+        assert!(
+            dropped.load(Ordering::Acquire),
+            "abandoned job's data was reclaimed by its worker"
+        );
     }
 }

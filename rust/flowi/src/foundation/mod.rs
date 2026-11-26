@@ -23,7 +23,7 @@ pub use arena::{Arena, ArenaString, ArenaVec, BaseArena};
 /// The job system: a closure-taking façade over the C worker pool, with priorities and
 /// dependencies between queued jobs.
 mod jobs;
-pub use jobs::{JobHandle, JobPriority, Jobs, JobsResult, WorkerInfo};
+pub use jobs::{Job, JobHandle, JobPriority, Jobs, JobsResult, WorkerInfo};
 
 /// Path manipulation (join, parent, absoluteness) with owned `String` results.
 pub mod path;

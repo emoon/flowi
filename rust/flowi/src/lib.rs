@@ -306,9 +306,9 @@ pub use crate::sys::FileChangeType;
 /// [`LogFile`] is the on-disk sink, open for as long as the guard lives.
 pub use crate::foundation::{install_log_bridge, set_target_level, LogFile};
 
-/// flowi's global work-stealing job system: schedule a Rust closure with [`Jobs::add`], then
-/// query or wait on the returned [`JobHandle`].
-pub use crate::foundation::{JobHandle, JobPriority, Jobs, JobsResult, WorkerInfo};
+/// flowi's global work-stealing job system: schedule a Rust closure with [`Jobs::add`] or mutate
+/// pre-allocated data in place with [`Jobs::run`], then query or wait on [`JobHandle`] / [`Job`].
+pub use crate::foundation::{Job, JobHandle, JobPriority, Jobs, JobsResult, WorkerInfo};
 
 /// Profiler scopes as RAII guards.
 mod perf;
