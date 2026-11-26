@@ -201,9 +201,11 @@ typedef struct ItemState {
     u32 click_count;
     f64 last_click_time;
 
-    // Toggle animation (0.0 to 1.0): checkbox check/uncheck, and the switch knob's on/off slide.
-    // Per-item, so a checkbox and a switch never share it.
+    // Toggle animation (0.0 to 1.0): checkbox check/uncheck, switch knob slide, and radio dot.
+    // Per-item, so a checkbox and a switch never share it. Initialized to the first seen target so
+    // mounting an already-checked toggle does not animate it from off to on.
     float check_anim_t;
+    bool check_anim_initialized;
 
     // Popup scope tracking
     u32 popup_scope_id;   // 0 = main UI, non-zero = belongs to popup

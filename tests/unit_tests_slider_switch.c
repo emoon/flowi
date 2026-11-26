@@ -91,6 +91,70 @@ UTEST(ui_switch, toggles_and_animates) {
 #undef SWITCH_FRAME
 }
 
+// Mounting an already-checked toggle (or remounting one after its ItemState retired while a screen was closed)
+// starts settled at 1.0 instead of replaying an off-to-on animation; subsequent flips still animate smoothly.
+UTEST(ui_switch, mounts_settled_when_initially_on_and_after_reopen) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+
+    ctx->layout_width = 1920.0f;
+    ctx->layout_height = 1080.0f;
+    ui_set_scale(1.0f, 1.0f);
+    const float dt = 1.0f / 60.0f;
+    ctx->delta_time = dt;
+
+    const FlLayoutId sw_id = { .name = FL_S("test_switch_settled"), .id = 0 };
+    const FlLayoutId cb_id = { .name = FL_S("test_checkbox_settled"), .id = 0 };
+    const u32 sw_clay = ui_layout_id_to_clay_id(sw_id);
+    const u32 cb_clay = ui_layout_id_to_clay_id(cb_id);
+
+    bool sw_on = true;
+    bool cb_on = true;
+
+#define SETTLED_FRAME(show_toggles)                                  \
+    do {                                                             \
+        ui_update_begin(ctx);                                        \
+        ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }) { \
+            if (show_toggles) {                                      \
+                ui_switch(FL_S("test_switch_settled"), &sw_on);      \
+                ui_checkbox(FL_S("test_checkbox_settled"), &cb_on);  \
+            }                                                        \
+        }                                                            \
+        ui_update_end(ctx, dt);                                      \
+    } while (0)
+
+    SETTLED_FRAME(true);
+    ItemState* sw = hashmap_get(&ctx->shared->item_state, sw_clay);
+    ItemState* cb = hashmap_get(&ctx->shared->item_state, cb_clay);
+    ASSERT_TRUE_MSG(sw != nullptr && cb != nullptr, "toggles registered interactive items");
+    ASSERT_NEAR_MSG((double)sw->check_anim_t, 1.0, 1e-6, "switch starts settled on without animating");
+    ASSERT_NEAR_MSG((double)cb->check_anim_t, 1.0, 1e-6, "checkbox starts settled on without animating");
+
+    // Unmount for a frame so retire_stale_items evicts both ItemStates, then reopen the screen.
+    SETTLED_FRAME(false);
+    ASSERT_TRUE_MSG(hashmap_get(&ctx->shared->item_state, sw_clay) == nullptr, "switch state retired while unmounted");
+
+    SETTLED_FRAME(true);
+    sw = hashmap_get(&ctx->shared->item_state, sw_clay);
+    cb = hashmap_get(&ctx->shared->item_state, cb_clay);
+    ASSERT_TRUE_MSG(sw != nullptr && cb != nullptr, "toggles recreated on reopen");
+    ASSERT_NEAR_MSG((double)sw->check_anim_t, 1.0, 1e-6, "reopened switch starts settled on");
+    ASSERT_NEAR_MSG((double)cb->check_anim_t, 1.0, 1e-6, "reopened checkbox starts settled on");
+
+    // Changing the value while mounted still eases smoothly rather than snapping.
+    sw_on = false;
+    cb_on = false;
+    SETTLED_FRAME(true);
+    sw = hashmap_get(&ctx->shared->item_state, sw_clay);
+    cb = hashmap_get(&ctx->shared->item_state, cb_clay);
+    ASSERT_GT_MSG((double)sw->check_anim_t, 0.0, "mounted switch eases off rather than snapping");
+    ASSERT_LT_MSG((double)sw->check_anim_t, 1.0, "mounted switch moved toward off");
+    ASSERT_GT_MSG((double)cb->check_anim_t, 0.0, "mounted checkbox eases off rather than snapping");
+    ASSERT_LT_MSG((double)cb->check_anim_t, 1.0, "mounted checkbox moved toward off");
+
+#undef SETTLED_FRAME
+}
+
 // One frame's solid rects, captured from the render call. A switch draws exactly three: the hit-test container,
 // the track, then the knob. A slider draws exactly four: the hit-test row, then the filled segment, the thumb and the
 // unfilled segment (parent before children, in Clay's render order).

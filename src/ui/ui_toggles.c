@@ -16,8 +16,14 @@
 #include <external/clay/clay.h>
 
 static f32 toggle_anim_value(ItemState* item, bool target) {
+    const f32 target_t = target ? 1.0f : 0.0f;
     if (item == nullptr) {
-        return 0.0f;
+        return target_t;
+    }
+    if (!item->check_anim_initialized) {
+        item->check_anim_initialized = true;
+        item->check_anim_t = target_t;
+        return target_t;
     }
     item->check_anim_t = anim_toggle_toward(item->check_anim_t, target, ANIM_SPEED_DEFAULT, g_ui_ctx->delta_time);
     return item->check_anim_t;
