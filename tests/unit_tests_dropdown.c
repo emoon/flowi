@@ -673,3 +673,37 @@ UTEST(dropdown, searchable_down_with_empty_filter_keeps_focus_in_input) {
 
     fl_app_destroy(app);
 }
+
+// Activating a focused non-searchable trigger with Enter or Space opens the popup and leaves it open instead of
+// immediately committing on the opening frame.
+UTEST(dropdown, keyboard_trigger_activation_keeps_popup_open) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+    FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    FlString opts[4] = { FL_S("Red"), FL_S("Green"), FL_S("Blue"), FL_S("Alpha") };
+    DropdownState st = { .is_open = false, .choice = 1, .options = opts, .option_count = 4 };
+    dropdown_ticks(app, &st, 3);
+
+    // Focus the trigger with Tab, settle one frame, then open it with Enter.
+    dropdown_key_tap(app, &st, FlKey_Tab);
+    dropdown_ticks(app, &st, 1);
+    dropdown_key_tap(app, &st, FlKey_Enter);
+    ASSERT_TRUE_MSG(st.is_open, "pressing Enter on the focused trigger opens the popup and leaves it open");
+    ASSERT_EQ_MSG(st.choice, 1, "opening with Enter leaves the current selection unchanged");
+
+    // Arrow Down moves to option 2 and a subsequent Enter commits and closes.
+    dropdown_key_tap(app, &st, FlKey_Down);
+    dropdown_key_tap(app, &st, FlKey_Enter);
+    ASSERT_EQ_MSG(st.choice, 2, "Down then Enter after keyboard-open commits index 2");
+    ASSERT_FALSE_MSG(st.is_open, "committing closes the popup");
+
+    // Closing the popup restores focus to the trigger; settle two frames so focus stabilizes, then open with Space.
+    dropdown_ticks(app, &st, 2);
+    dropdown_key_tap(app, &st, FlKey_Space);
+    ASSERT_TRUE_MSG(st.is_open, "pressing Space on the focused trigger opens the popup and leaves it open");
+    ASSERT_EQ_MSG(st.choice, 2, "opening with Space leaves the current selection unchanged");
+
+    fl_app_destroy(app);
+}

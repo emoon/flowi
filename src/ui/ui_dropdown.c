@@ -379,5 +379,7 @@ void ui_dropdown_impl(FlString label, bool* is_open, const FlString* options, in
 
     DropdownOutcome outcome
         = open.is_open ? dropdown_show_popup(&d, trigger, open.opened_this_frame) : (DropdownOutcome) { 0 };
-    *is_open = open.is_open && !dropdown_commit(outcome, selected_index);
+    // Ignore same-frame commits so opening the popup does not immediately close it.
+    bool committed = !open.opened_this_frame && dropdown_commit(outcome, selected_index);
+    *is_open = open.is_open && !committed;
 }
