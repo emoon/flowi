@@ -92,12 +92,11 @@ unsafe impl<T: Send> Send for SendPtr<T> {}
 /// Created by [`Jobs::run`] (and its priority/dependency variants). Moving `T`
 /// into the job prevents the caller from touching it while the worker runs,
 /// with no `Mutex`, `Arc`, or channel. Once [`is_finished`](Self::is_finished)
-/// is true, [`try_take`](Self::try_take) or [`wait`](Self::wait) returns the
-/// mutated `T`.
+/// is true, [`try_take`](Self::try_take) returns the mutated `T`.
 ///
-/// Dropping a `Job<T>` before taking its value waits for completion on the main
-/// thread (or delegates cleanup to the worker if dropped off the main thread)
-/// and drops `T` without leaking or dangling.
+/// Dropping a `Job<T>` before taking its value never blocks: if the worker has
+/// already finished, `T` is dropped immediately; if it is still running, the
+/// worker drops `T` when it completes.
 pub struct Job<T> {
     handle: JobHandle,
     slot: *mut JobSlot<T>,
@@ -131,33 +130,11 @@ impl<T> Job<T> {
         if self.slot.is_null() || !self.is_finished() {
             return None;
         }
-        self.reclaim_finished_slot()
-    }
-
-    /// Block on the main thread until the job completes and return `T`, or
-    /// `None` if the job closure panicked (or the value was already taken).
-    ///
-    /// # Panics
-    /// Panics if called off the main thread, because `fl_jobs_wait` cannot block
-    /// a worker thread.
-    pub fn wait(mut self) -> Option<T> {
-        assert!(
-            Jobs::is_main_thread(),
-            "flowi: Job::wait may only be called on the main thread"
-        );
-        if self.slot.is_null() {
-            return None;
-        }
-        Jobs::wait(self.handle);
-        self.reclaim_finished_slot()
-    }
-
-    fn reclaim_finished_slot(&mut self) -> Option<T> {
         let ptr = self.slot;
         self.slot = ptr::null_mut();
-        // SAFETY: callers verified completion through `Jobs::is_finished` or
-        // `Jobs::wait`, whose acquire load of `JOB_STATUS_COMPLETED` synchronises
-        // with the worker's release store after `execute_owned_slot` returned.
+        // SAFETY: `is_finished()` observed `Jobs::is_finished != NotFinished`, whose
+        // acquire load of `JOB_STATUS_COMPLETED` synchronises with the worker's
+        // release store after `execute_owned_slot` returned.
         let slot = unsafe { Box::from_raw(ptr) };
         slot.completed.then_some(slot.data)
     }
@@ -166,11 +143,6 @@ impl<T> Job<T> {
 impl<T> Drop for Job<T> {
     fn drop(&mut self) {
         if self.slot.is_null() {
-            return;
-        }
-        if Jobs::is_main_thread() {
-            Jobs::wait(self.handle);
-            let _ = self.reclaim_finished_slot();
             return;
         }
         let ptr = self.slot;
@@ -534,14 +506,15 @@ mod tests {
     }
 
     #[test]
-    fn owned_job_wait_and_dependency_chain() {
+    fn owned_job_dependency_chain() {
         foundation();
-        let first = Jobs::run(String::from("hello"), |text, _| text.push_str(", "));
-        let second = Jobs::run_after(String::from("world"), first.handle(), |text, _| {
+        let mut first = Jobs::run(String::from("hello"), |text, _| text.push_str(", "));
+        let mut second = Jobs::run_after(String::from("world"), first.handle(), |text, _| {
             text.push('!');
         });
-        let a = first.wait().unwrap();
-        let b = second.wait().unwrap();
+        Jobs::wait(second.handle());
+        let a = first.try_take().unwrap();
+        let b = second.try_take().unwrap();
         assert_eq!(format!("{a}{b}"), "hello, world!");
     }
 
@@ -556,15 +529,17 @@ mod tests {
             }
         }
 
-        let job = Jobs::run(DropFlag(Arc::clone(&dropped)), |_, _| {
+        let mut job = Jobs::run(DropFlag(Arc::clone(&dropped)), |_, _| {
             panic!("deliberate owned job panic");
         });
-        assert!(job.wait().is_none());
+        Jobs::wait(job.handle());
+        assert!(job.is_finished());
+        assert!(job.try_take().is_none());
         assert!(dropped.load(Ordering::Acquire), "data dropped after panic");
     }
 
     #[test]
-    fn dropping_owned_job_off_main_thread_delegates_cleanup_to_worker() {
+    fn dropping_unfinished_owned_job_delegates_cleanup_to_worker() {
         foundation();
         let dropped = Arc::new(AtomicBool::new(false));
         struct DropFlag(Arc<AtomicBool>);
@@ -574,19 +549,12 @@ mod tests {
             }
         }
 
-        let flag = Arc::clone(&dropped);
-        let spawner = Jobs::add(move |_| {
-            let child = Jobs::run(DropFlag(flag), |_, _| {
-                std::thread::sleep(std::time::Duration::from_millis(10));
-            });
-            drop(child);
+        let job = Jobs::run(DropFlag(Arc::clone(&dropped)), |_, _| {
+            std::thread::sleep(std::time::Duration::from_millis(10));
         });
-        Jobs::wait(spawner);
-
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
-        while std::time::Instant::now() < deadline && !dropped.load(Ordering::Acquire) {
-            std::thread::sleep(std::time::Duration::from_millis(2));
-        }
+        let handle = job.handle();
+        drop(job);
+        Jobs::wait(handle);
         assert!(
             dropped.load(Ordering::Acquire),
             "abandoned job's data was reclaimed by its worker"
