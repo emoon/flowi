@@ -344,7 +344,7 @@
       ]
     },
     {
-      "matching_content_path": "{rust/flowi/src/application.rs,rust/flowi/src/layout_ext.rs,rust/flowi/src/slider.rs,rust/flowi/tests/common/mod.rs,rust/flowi/tests/layout.rs,tests/simd_test_support.h}",
+      "matching_content_path": "{rust/flowi/src/application.rs,rust/flowi/src/layout_ext.rs,rust/flowi/src/slider.rs,rust/flowi/src/sys/ergonomics.rs,rust/flowi/tests/common/mod.rs,rust/flowi/tests/layout.rs,tests/simd_test_support.h}",
       "thresholds": [
         {
           "name": "function_max_arguments",
