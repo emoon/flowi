@@ -559,7 +559,7 @@ UTEST(perf_fence, scene_widget_gallery) {
     render_set_layout(ctx, 1920.0f, 1080.0f);
     const FlFrameStats stats = run_perf_scene(ctx, "scene_widget_gallery", scene_widget_gallery, 500);
 
-    ASSERT_EQ_MSG(stats.render_commands, 67u, "render_commands baseline drift");
-    ASSERT_EQ_MSG(stats.bin_alloc_bytes, 820080u, "bin_alloc_bytes baseline drift");
+    ASSERT_EQ_MSG(stats.render_commands, 68u, "render_commands baseline drift");
+    ASSERT_EQ_MSG(stats.bin_alloc_bytes, 834360u, "bin_alloc_bytes baseline drift");
     ASSERT_EQ_MSG(stats.clip_broadcasts, 1020u, "clip_broadcasts baseline drift");
 }

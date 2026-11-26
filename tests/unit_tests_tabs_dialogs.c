@@ -255,9 +255,9 @@ UTEST(ui_checkbox, fill_eases_like_switch) {
     const u32 cb_clay = ui_layout_id_to_clay_id(cb_id);
     const u32 sw_clay = ui_layout_id_to_clay_id(sw_id);
 
-    // No clicks are needed. The fill animation reads the bound bool, so identical bools give identical curves.
-    bool checked = true;
-    bool switched = true;
+    // Start both off for one frame so their animation state is initialized at 0.0, then flip both on.
+    bool checked = false;
+    bool switched = false;
 
 #define BOTH_FRAME()                                                 \
     do {                                                             \
@@ -272,6 +272,9 @@ UTEST(ui_checkbox, fill_eases_like_switch) {
     ctx->mouse_pressed_this_frame = false;
     ctx->mouse_released_this_frame = false;
 
+    BOTH_FRAME();
+    checked = true;
+    switched = true;
     BOTH_FRAME();
     ItemState* cb = hashmap_get(&ctx->shared->item_state, cb_clay);
     ItemState* sw = hashmap_get(&ctx->shared->item_state, sw_clay);
