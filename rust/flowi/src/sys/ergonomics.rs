@@ -2,11 +2,256 @@
 //! way (radius: 4.0, padding: (8, 12), ..Default::default()) instead of naming every field.
 
 use super::{
-    BorderWidthConfig, Color, CornerRadius, LayoutAlignmentX, LayoutAlignmentY, LayoutBorder,
-    LayoutChildAlignment, LayoutClip, LayoutConfig, LayoutDirection, LayoutPadding, LayoutPlaced,
-    LayoutSizing, LayoutSizingAxis, LayoutSizingAxisSize, LayoutSizingMinMax, LayoutSizingType,
-    StrokeStyle, Vec2,
+    BorderWidth, BorderWidthConfig, Color, CornerRadius, LayoutAlignmentX, LayoutAlignmentY,
+    LayoutBorder, LayoutChildAlignment, LayoutClip, LayoutConfig, LayoutDirection, LayoutPadding,
+    LayoutPlaced, LayoutSizing, LayoutSizingAxis, LayoutSizingAxisSize, LayoutSizingMinMax,
+    LayoutSizingType, ScrollAreaConfig, ScrollbarDisplayMode, StrokeStyle, Vec2,
 };
+
+impl Color {
+    /// Fully transparent (all channels zero).
+    pub const TRANSPARENT: Color = Color::rgba(0, 0, 0, 0);
+
+    /// Opaque RGB color (`a = 255`).
+    pub const fn rgb(r: u8, g: u8, b: u8) -> Color {
+        Color { r, g, b, a: 255 }
+    }
+
+    /// RGBA color from 8-bit channels.
+    pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
+        Color { r, g, b, a }
+    }
+
+    /// This color with its alpha channel replaced by `a`.
+    pub const fn with_alpha(self, a: u8) -> Color {
+        Color { a, ..self }
+    }
+}
+
+impl Default for Color {
+    fn default() -> Color {
+        Color::TRANSPARENT
+    }
+}
+
+impl PartialEq for Color {
+    fn eq(&self, other: &Self) -> bool {
+        (self.r, self.g, self.b, self.a) == (other.r, other.g, other.b, other.a)
+    }
+}
+
+impl Eq for Color {}
+
+impl Vec2 {
+    /// The origin `(0.0, 0.0)`.
+    pub const ZERO: Vec2 = Vec2 { x: 0.0, y: 0.0 };
+
+    /// Construct a 2D vector from `(x, y)`.
+    pub const fn new(x: f32, y: f32) -> Vec2 {
+        Vec2 { x, y }
+    }
+}
+
+impl Default for Vec2 {
+    fn default() -> Vec2 {
+        Vec2::ZERO
+    }
+}
+
+impl StrokeStyle {
+    /// Solid stroke (no dashes).
+    pub const SOLID: StrokeStyle = StrokeStyle {
+        dash_len: 0.0,
+        gap_len: 0.0,
+    };
+}
+
+impl Default for StrokeStyle {
+    fn default() -> StrokeStyle {
+        StrokeStyle::SOLID
+    }
+}
+
+impl BorderWidthConfig {
+    /// Zero width on every edge and between children.
+    pub const NONE: BorderWidthConfig = BorderWidthConfig::all(0);
+
+    /// Uniform width on all four outer edges, with no child dividers.
+    pub const fn all(width: u16) -> BorderWidthConfig {
+        BorderWidthConfig {
+            left: width,
+            right: width,
+            top: width,
+            bottom: width,
+            between_children: 0,
+        }
+    }
+
+    /// Top edge only.
+    pub const fn top(width: u16) -> BorderWidthConfig {
+        BorderWidthConfig {
+            top: width,
+            ..BorderWidthConfig::NONE
+        }
+    }
+
+    /// Bottom edge only.
+    pub const fn bottom(width: u16) -> BorderWidthConfig {
+        BorderWidthConfig {
+            bottom: width,
+            ..BorderWidthConfig::NONE
+        }
+    }
+
+    /// Left edge only.
+    pub const fn left(width: u16) -> BorderWidthConfig {
+        BorderWidthConfig {
+            left: width,
+            ..BorderWidthConfig::NONE
+        }
+    }
+
+    /// Right edge only.
+    pub const fn right(width: u16) -> BorderWidthConfig {
+        BorderWidthConfig {
+            right: width,
+            ..BorderWidthConfig::NONE
+        }
+    }
+}
+
+impl Default for BorderWidthConfig {
+    fn default() -> BorderWidthConfig {
+        BorderWidthConfig::NONE
+    }
+}
+
+impl PartialEq for BorderWidthConfig {
+    fn eq(&self, other: &Self) -> bool {
+        (
+            self.left,
+            self.right,
+            self.top,
+            self.bottom,
+            self.between_children,
+        ) == (
+            other.left,
+            other.right,
+            other.top,
+            other.bottom,
+            other.between_children,
+        )
+    }
+}
+
+impl Eq for BorderWidthConfig {}
+
+impl From<u16> for BorderWidthConfig {
+    fn from(width: u16) -> BorderWidthConfig {
+        BorderWidthConfig::all(width)
+    }
+}
+
+impl From<BorderWidth> for BorderWidthConfig {
+    fn from(width: BorderWidth) -> BorderWidthConfig {
+        BorderWidthConfig::all(width as u16)
+    }
+}
+
+impl LayoutBorder {
+    /// No border (transparent, zero width).
+    pub const NONE: LayoutBorder = LayoutBorder::solid(Color::TRANSPARENT, BorderWidthConfig::NONE);
+
+    /// Solid border with uniform `width` on all four outer edges.
+    pub const fn all(color: Color, width: u16) -> LayoutBorder {
+        LayoutBorder::solid(color, BorderWidthConfig::all(width))
+    }
+
+    /// Solid border with caller-chosen per-edge widths.
+    pub const fn solid(color: Color, width: BorderWidthConfig) -> LayoutBorder {
+        LayoutBorder {
+            color,
+            width,
+            stroke: StrokeStyle::SOLID,
+        }
+    }
+}
+
+impl Default for LayoutBorder {
+    fn default() -> LayoutBorder {
+        LayoutBorder::NONE
+    }
+}
+
+impl LayoutSizing {
+    /// Fit content along both axes.
+    pub const FIT: LayoutSizing = LayoutSizing::new(LayoutSizingAxis::FIT, LayoutSizingAxis::FIT);
+
+    /// Grow to fill available space along both axes.
+    pub const GROW: LayoutSizing =
+        LayoutSizing::new(LayoutSizingAxis::GROW, LayoutSizingAxis::GROW);
+
+    /// Construct sizing from explicit width and height axes.
+    pub const fn new(width: LayoutSizingAxis, height: LayoutSizingAxis) -> LayoutSizing {
+        LayoutSizing { width, height }
+    }
+}
+
+impl Default for LayoutSizing {
+    fn default() -> LayoutSizing {
+        LayoutSizing::FIT
+    }
+}
+
+impl LayoutChildAlignment {
+    /// Top-left origin.
+    pub const TOP_LEFT: LayoutChildAlignment = LayoutChildAlignment {
+        x: LayoutAlignmentX::Left,
+        y: LayoutAlignmentY::Top,
+    };
+
+    /// Left-aligned horizontally, centered vertically.
+    pub const CENTER_LEFT: LayoutChildAlignment = LayoutChildAlignment {
+        x: LayoutAlignmentX::Left,
+        y: LayoutAlignmentY::Center,
+    };
+
+    /// Centered along both axes.
+    pub const CENTER: LayoutChildAlignment = LayoutChildAlignment {
+        x: LayoutAlignmentX::Center,
+        y: LayoutAlignmentY::Center,
+    };
+
+    /// Right-aligned horizontally, centered vertically.
+    pub const CENTER_RIGHT: LayoutChildAlignment = LayoutChildAlignment {
+        x: LayoutAlignmentX::Right,
+        y: LayoutAlignmentY::Center,
+    };
+}
+
+impl Default for LayoutChildAlignment {
+    fn default() -> LayoutChildAlignment {
+        LayoutChildAlignment::TOP_LEFT
+    }
+}
+
+impl Default for ScrollAreaConfig {
+    /// Full-size vertical scroll area with transparent background and auto scrollbar.
+    fn default() -> ScrollAreaConfig {
+        ScrollAreaConfig {
+            sizing: LayoutSizing::GROW,
+            direction: LayoutDirection::TopToBottom,
+            child_gap: 0,
+            padding: LayoutPadding::from(0),
+            background_color: Color::TRANSPARENT,
+            corner_radius: CornerRadius::uniform(0.0),
+            show_scrollbar: true,
+            scrollbar_mode: ScrollbarDisplayMode::Auto,
+            smooth_scroll: false,
+            scroll_speed: 0.0,
+        }
+    }
+}
 
 impl CornerRadius {
     /// The same radius on all four corners.
@@ -101,49 +346,23 @@ impl Default for LayoutConfig {
     /// normal flex flow rather than explicit placement. The layout macros expand an omitted
     /// field to the matching field of this value.
     fn default() -> LayoutConfig {
-        const TRANSPARENT: Color = Color {
-            r: 0,
-            g: 0,
-            b: 0,
-            a: 0,
-        };
-
         LayoutConfig {
-            sizing: LayoutSizing {
-                width: LayoutSizingAxis::FIT,
-                height: LayoutSizingAxis::FIT,
-            },
+            sizing: LayoutSizing::FIT,
             padding: LayoutPadding::from(0),
             child_gap: 0,
             radius: CornerRadius::uniform(0.0),
-            child_alignment: LayoutChildAlignment {
-                x: LayoutAlignmentX::Left,
-                y: LayoutAlignmentY::Top,
-            },
+            child_alignment: LayoutChildAlignment::TOP_LEFT,
             direction: LayoutDirection::LeftToRight,
-            color: TRANSPARENT,
+            color: Color::TRANSPARENT,
             clip: LayoutClip {
                 horizontal: false,
                 vertical: false,
                 manual_scroll: false,
-                scroll_pos: Vec2 { x: 0.0, y: 0.0 },
+                scroll_pos: Vec2::ZERO,
             },
-            border: LayoutBorder {
-                color: TRANSPARENT,
-                width: BorderWidthConfig {
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    between_children: 0,
-                },
-                stroke: StrokeStyle {
-                    dash_len: 0.0,
-                    gap_len: 0.0,
-                },
-            },
+            border: LayoutBorder::NONE,
             placed: LayoutPlaced {
-                offset: Vec2 { x: 0.0, y: 0.0 },
+                offset: Vec2::ZERO,
                 enabled: false,
             },
         }
@@ -263,5 +482,53 @@ mod tests {
             "a default child flows, it is not explicitly placed"
         );
         assert_eq!((d.placed.offset.x, d.placed.offset.y), (0.0, 0.0));
+    }
+
+    #[test]
+    fn color_and_vec2_constructors() {
+        assert_eq!(Color::default(), Color::TRANSPARENT);
+        assert_eq!(Color::rgb(10, 20, 30), Color::rgba(10, 20, 30, 255));
+        assert_eq!(
+            Color::rgb(10, 20, 30).with_alpha(128),
+            Color::rgba(10, 20, 30, 128)
+        );
+        let z = Vec2::default();
+        assert_eq!((z.x, z.y), (0.0, 0.0));
+        let p = Vec2::new(3.0, 4.0);
+        assert_eq!((p.x, p.y), (3.0, 4.0));
+    }
+
+    #[test]
+    fn border_and_scroll_constructors() {
+        let all = BorderWidthConfig::all(2);
+        assert_eq!(all, BorderWidthConfig::from(2u16));
+        assert_eq!(all, BorderWidthConfig::from(BorderWidth::Medium));
+        assert_eq!(
+            (
+                all.left,
+                all.right,
+                all.top,
+                all.bottom,
+                all.between_children
+            ),
+            (2, 2, 2, 2, 0)
+        );
+        assert_eq!(BorderWidthConfig::top(1).top, 1);
+        assert_eq!(BorderWidthConfig::top(1).bottom, 0);
+        assert_eq!(BorderWidthConfig::bottom(3).bottom, 3);
+        assert_eq!(BorderWidthConfig::left(4).left, 4);
+        assert_eq!(BorderWidthConfig::right(5).right, 5);
+
+        let b = LayoutBorder::all(Color::rgb(1, 2, 3), 2);
+        assert_eq!(b.color, Color::rgb(1, 2, 3));
+        assert_eq!(b.width, BorderWidthConfig::all(2));
+        assert_eq!((b.stroke.dash_len, b.stroke.gap_len), (0.0, 0.0));
+
+        let s = ScrollAreaConfig::default();
+        assert_eq!(s.background_color, Color::TRANSPARENT);
+        assert!(s.show_scrollbar);
+        assert!(matches!(s.scrollbar_mode, ScrollbarDisplayMode::Auto));
+        assert!(matches!(s.sizing.width.r#type, LayoutSizingType::Grow));
+        assert!(matches!(s.sizing.height.r#type, LayoutSizingType::Grow));
     }
 }

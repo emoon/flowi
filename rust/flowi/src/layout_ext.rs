@@ -140,9 +140,4 @@ pub fn corner_radius_bottom(value: f32) -> CornerRadius {
 }
 
 /// Fully transparent, the colour of a container that paints nothing.
-pub const TRANSPARENT: Color = Color {
-    r: 0,
-    g: 0,
-    b: 0,
-    a: 0,
-};
+pub const TRANSPARENT: Color = Color::TRANSPARENT;
