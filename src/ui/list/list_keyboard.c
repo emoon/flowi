@@ -72,7 +72,10 @@ static i32 resolve_target(FlListContext* self, ListState* st, i32 cur, bool* dir
     return (ta >= 0) ? ta : cur;
 }
 
-static bool activation_pressed(void) {
+static bool activation_pressed(const FlListContext* self) {
+    if (self->ui_ctx->nav_activate_pressed) {
+        return true;
+    }
     return ui_key_pressed(FlKey_Enter) || ui_key_pressed(FlKey_Kp_Enter) || ui_key_pressed(FlKey_Space);
 }
 
@@ -131,7 +134,7 @@ static void commit_move(FlListContext* self, ListState* st, CursorMove move) {
 
 // Enter / Space activate the cursor row (committed id on the result), independent of any move this frame.
 static void activate_row(FlListContext* self, i32 target) {
-    if (activation_pressed() && target >= 0) {
+    if (activation_pressed(self) && target >= 0) {
         self->activated_id = list_row_id(self, (u32)target);
     }
 }

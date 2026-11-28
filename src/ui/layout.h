@@ -10,6 +10,7 @@
 #include <flowi/ui/ui_floating.h> // @generated fl_floating_* prototypes (api_gen)
 #include <flowi/ui/ui_layout.h>   // @generated fl_layout_* prototypes (api_gen)
 #include <ui/ui_types.h>
+#include "render_ir.h"
 #include "ui_scroll.h"
 
 #define corner_radius(radius) ((FlCornerRadius) { radius, radius, radius, radius })
@@ -81,6 +82,9 @@ typedef struct FlScrollContainerExtent {
 } FlScrollContainerExtent;
 
 FlScrollContainerExtent ui_get_scroll_container_extent(u32 element_id);
+
+// Laid-out screen-space rect from Clay, including off-screen elements culled from render commands.
+bool ui_get_element_layout_rect(u32 element_id, FlRect* out);
 
 #define UI__WRAPPER_TYPE(type) UI__##type##Wrapper
 #define UI__WRAPPER_STRUCT(type) \

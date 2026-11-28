@@ -20,6 +20,7 @@ typedef struct DropdownState {
     int option_count;
     int max_visible_rows; // DropdownConfig.max_visible_rows (0 = default)
     bool searchable;
+    bool show_cancel;
     FlTextInputState search; // the dropdown initializes this on the first open frame
 } DropdownState;
 
@@ -27,7 +28,7 @@ static void dropdown_frame(void* user_data) {
     DropdownState* st = (DropdownState*)user_data;
     st->ctx = g_ui_ctx;
     FlDropdownConfig cfg = {
-        .show_cancel = false, // the popup holds only the list, which keeps the geometry simple to read
+        .show_cancel = st->show_cancel,
         .min_width = 200.0f,
         .max_visible_rows = st->max_visible_rows,
         .searchable = st->searchable,
@@ -704,6 +705,49 @@ UTEST(dropdown, keyboard_trigger_activation_keeps_popup_open) {
     dropdown_key_tap(app, &st, FlKey_Space);
     ASSERT_TRUE_MSG(st.is_open, "pressing Space on the focused trigger opens the popup and leaves it open");
     ASSERT_EQ_MSG(st.choice, 2, "opening with Space leaves the current selection unchanged");
+
+    fl_app_destroy(app);
+}
+
+static u32 dropdown_cancel_clay_id(void) {
+    return ui_layout_id_to_clay_id((FlLayoutId) { .name = FL_S("Pick_cancel"), .id = 0 });
+}
+
+// Down past the last option hands focus from the list to the Cancel button, Up returns to the last option, and
+// confirming Cancel closes the popup without changing *selected_index.
+UTEST(dropdown, keyboard_nav_reaches_and_activates_cancel_button) {
+    ASSERT_TRUE_MSG(render_fixture_get() != nullptr, "render fixture creation failed");
+    FlAppSettings settings = { .window_title = FL_S("dropdown"), .width = 400, .height = 400, .headless = true };
+    FlApp* app = fl_app_create(&settings);
+    ASSERT_TRUE_MSG(app != nullptr, "fl_app_create(headless) failed");
+
+    FlString opts[3] = { FL_S("Red"), FL_S("Green"), FL_S("Blue") };
+    DropdownState st = { .is_open = false, .choice = 1, .options = opts, .option_count = 3, .show_cancel = true };
+
+    dropdown_ticks(app, &st, 3);
+    dropdown_open_and_settle(utest_result, app, &st);
+    RETURN_IF_TEST_FAILED();
+
+    // Start on option 1 ("Green"): Down -> option 2 ("Blue"), Down -> Cancel button.
+    dropdown_key_tap(app, &st, FlKey_Down);
+    ASSERT_EQ_MSG((u64)dropdown_list_clay_id(), (u64)st.ctx->focused_id, "first Down stays on last option in list");
+
+    dropdown_key_tap(app, &st, FlKey_Down);
+    ASSERT_EQ_MSG((u64)dropdown_cancel_clay_id(), (u64)st.ctx->focused_id,
+                  "Down past the last option hands focus to the Cancel button");
+
+    // Up from Cancel hands focus back to the list on the last option.
+    dropdown_key_tap(app, &st, FlKey_Up);
+    ASSERT_EQ_MSG((u64)dropdown_list_clay_id(), (u64)st.ctx->focused_id,
+                  "Up from Cancel returns focus to the option list");
+
+    // Down back to Cancel and activate with Enter: popup closes and original selection is preserved.
+    dropdown_key_tap(app, &st, FlKey_Down);
+    ASSERT_EQ_MSG((u64)dropdown_cancel_clay_id(), (u64)st.ctx->focused_id,
+                  "Down from the last option reaches Cancel again");
+    dropdown_key_tap(app, &st, FlKey_Enter);
+    ASSERT_FALSE_MSG(st.is_open, "activating Cancel closes the popup");
+    ASSERT_EQ_MSG(st.choice, 1, "activating Cancel preserves the previous selection");
 
     fl_app_destroy(app);
 }

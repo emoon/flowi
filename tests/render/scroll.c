@@ -702,3 +702,163 @@ UTEST(render, wheel_scroll) {
 
     fl_app_destroy(app);
 }
+
+static void reset_scroll_state(FlUiCtx* ctx, FlLayoutId id) {
+    ScrollAreaState* area = hashmap_get(&ctx->shared->scroll_states, ui_layout_id_to_clay_id(id));
+    if (area != nullptr) {
+        area->scroll_offset = (FlVec2) { 0 };
+        area->scroll_target = (FlVec2) { 0 };
+    }
+}
+
+static void scroll_nav_frame(FlUiCtx* ctx, const char* const* names, u32 count, bool nav_down, bool nav_up) {
+    ctx->delta_time = 1.0f / 60.0f;
+    ui_update_begin(ctx);
+    ctx->nav_frame.nav_down = nav_down;
+    ctx->nav_frame.nav_up = nav_up;
+    ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }, .direction = FlLayoutDirection_TopToBottom,
+                   .child_gap = 8, .padding = { 16, 16, 16, 16 }) {
+        fl_scroll_area_id(FL_ID("snav_area"), .sizing = { sizing_grow(), sizing_grow() },
+                          .direction = FlLayoutDirection_TopToBottom, .child_gap = 10) {
+            fl_spacer(48.0f);
+            for_count(i, count) {
+                if (i == 6) {
+                    fl_spacer(90.0f);
+                }
+                ui_button(string_from_cstr(names[i]));
+            }
+            fl_spacer(40.0f);
+        }
+        ui_button(FL_S("snav_footer"));
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+    ctx->nav_frame.nav_down = false;
+    ctx->nav_frame.nav_up = false;
+}
+
+static void scroll_nav_idle(FlUiCtx* ctx, const char* const* names, u32 count, u32 frames) {
+    for_count(i, frames) {
+        (void)i;
+        scroll_nav_frame(ctx, names, count, false, false);
+    }
+}
+
+UTEST(render, scroll_nav_crosses_culled_items_and_footer) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    render_set_layout(ctx, 400.0f, 360.0f);
+    render_use_default_font(ctx, 2);
+
+    static const char* const k_names[16] = {
+        "snav_00", "snav_01", "snav_02", "snav_03", "snav_04", "snav_05", "snav_06", "snav_07",
+        "snav_08", "snav_09", "snav_10", "snav_11", "snav_12", "snav_13", "snav_14", "snav_15",
+    };
+    u32 ids[16];
+    for_count(i, 16) {
+        ids[i] = ui_layout_id_to_clay_id((FlLayoutId) { .name = string_from_cstr(k_names[i]) });
+    }
+    reset_scroll_state(ctx, FL_ID("snav_area"));
+    ctx->focused_id = ids[0];
+    ctx->last_focused_id = ids[0];
+    scroll_nav_idle(ctx, k_names, 16, 2);
+
+    for_count(i, 15) {
+        scroll_nav_frame(ctx, k_names, 16, true, false);
+        scroll_nav_idle(ctx, k_names, 16, 2);
+        ASSERT_EQ_MSG(ids[i + 1], fl_focused_id(), "repeated nav_down advances one row per step");
+    }
+    scroll_nav_frame(ctx, k_names, 16, true, false);
+    ASSERT_EQ_MSG(ui_layout_id_to_clay_id(FL_ID("snav_footer")), fl_focused_id(), "nav_down past last row hits footer");
+    scroll_nav_idle(ctx, k_names, 16, 40);
+
+    scroll_nav_frame(ctx, k_names, 16, false, true);
+    ASSERT_EQ_MSG(ids[15], fl_focused_id(), "nav_up from footer lands on bottom visible row");
+    for (u32 step = 15; step > 0; step--) {
+        scroll_nav_frame(ctx, k_names, 16, false, true);
+        scroll_nav_idle(ctx, k_names, 16, 2);
+        ASSERT_EQ_MSG(ids[step - 1], fl_focused_id(), "repeated nav_up retreats one row per step");
+    }
+    scroll_nav_idle(ctx, k_names, 16, 60);
+    ScrollAreaState* area = hashmap_get(&ctx->shared->scroll_states, ui_layout_id_to_clay_id(FL_ID("snav_area")));
+    ASSERT_TRUE_MSG(area != nullptr && area->scroll_offset.y < 0.5f, "returning to row 0 reveals leading header");
+
+    ctx->focused_id = 0;
+    ctx->last_focused_id = 0;
+}
+
+UTEST(render, scroll_to_culled_widget_at_scale) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    render_set_layout(ctx, 400.0f, 160.0f);
+    ui_set_scale(2.0f, 2.0f);
+    reset_scroll_state(ctx, FL_ID("scroll_vis_area"));
+
+    scroll_vis_frame(ctx);
+    scroll_vis_frame(ctx);
+    ASSERT_FALSE_MSG(ui_is_widget_visible(ID("svb7")), "svb7 starts culled below the scaled viewport");
+    ui_scroll_to_widget_ex(ID("svb7"), (FlScrollToOptions) { .immediate = true });
+    scroll_vis_frame(ctx);
+    ASSERT_TRUE_MSG(ui_is_widget_visible(ID("svb7")), "scroll_to_widget brings culled child into view");
+    ui_set_scale(1.0f, 1.0f);
+}
+
+static void scroll_rail_frame(FlUiCtx* ctx, const char* const* rows, u32 row_count, bool nav_left, bool nav_right) {
+    ctx->delta_time = 1.0f / 60.0f;
+    ui_update_begin(ctx);
+    ctx->nav_frame.nav_left = nav_left;
+    ctx->nav_frame.nav_right = nav_right;
+    ui_layout_area(.sizing = { sizing_grow(), sizing_grow() }, .direction = FlLayoutDirection_LeftToRight,
+                   .child_gap = 16, .padding = { 16, 16, 16, 16 }) {
+        ui_layout_area(.sizing = { sizing_fixed(120), sizing_grow() }, .direction = FlLayoutDirection_TopToBottom,
+                       .child_gap = 8) {
+            ui_button(FL_S("srail_0"));
+            ui_button(FL_S("srail_1"));
+            ui_button(FL_S("srail_2"));
+        }
+        fl_scroll_area_id(FL_ID("srail_area"), .sizing = { sizing_grow(), sizing_grow() },
+                          .direction = FlLayoutDirection_TopToBottom, .child_gap = 8) {
+            for_count(i, row_count) {
+                ui_button(string_from_cstr(rows[i]));
+            }
+        }
+    }
+    ui_update_end(ctx, 1.0f / 60.0f);
+    ctx->nav_frame.nav_left = false;
+    ctx->nav_frame.nav_right = false;
+}
+
+UTEST(render, scroll_nav_rail_exit_and_visible_reentry) {
+    FlUiCtx* ctx = render_fixture_get();
+    ASSERT_TRUE_MSG(ctx != nullptr, "render fixture creation failed");
+    render_set_layout(ctx, 500.0f, 240.0f);
+    render_use_default_font(ctx, 2);
+
+    static const char* const k_rows[10] = {
+        "r0", "row_wide_01", "r2", "row_wide_03", "r4", "row_wide_05", "r6", "row_wide_07", "r8", "row_wide_09",
+    };
+    const u32 rail0_id = ui_layout_id_to_clay_id(FL_ID("srail_0"));
+    const u32 row9_id = ui_layout_id_to_clay_id(FL_ID("row_wide_09"));
+
+    reset_scroll_state(ctx, FL_ID("srail_area"));
+    scroll_rail_frame(ctx, k_rows, 10, false, false);
+    scroll_rail_frame(ctx, k_rows, 10, false, false);
+
+    ui_scroll_to_widget_ex(ID("row_wide_09"), (FlScrollToOptions) { .immediate = true });
+    ctx->focused_id = row9_id;
+    ctx->last_focused_id = row9_id;
+    scroll_rail_frame(ctx, k_rows, 10, false, false);
+    ASSERT_FALSE_MSG(ui_is_widget_visible(ID("r0")), "r0 is scrolled off-screen");
+
+    scroll_rail_frame(ctx, k_rows, 10, true, false);
+    ASSERT_EQ_MSG(ui_layout_id_to_clay_id(FL_ID("srail_2")), fl_focused_id(), "nav_left exits onto aligned rail item");
+
+    ctx->focused_id = rail0_id;
+    ctx->last_focused_id = rail0_id;
+    scroll_rail_frame(ctx, k_rows, 10, false, false);
+    scroll_rail_frame(ctx, k_rows, 10, false, true);
+    ASSERT_NE_MSG(ui_layout_id_to_clay_id(FL_ID("r0")), fl_focused_id(), "nav_right skips scrolled-off row");
+    ASSERT_TRUE_MSG(ui_get_element_state_by_id(fl_focused_id()).visible, "nav_right lands on visible row");
+
+    ctx->focused_id = 0;
+    ctx->last_focused_id = 0;
+}

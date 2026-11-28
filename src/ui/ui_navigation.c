@@ -5,6 +5,7 @@
 // so the rects spatial navigation scores are this frame's.
 
 #include "ui_navigation.h"
+#include "layout.h"
 #include <core/arena.h>
 #include <core/hashmap.h>
 #include <core/types.h>
@@ -115,77 +116,123 @@ static const FlUiFeedbackDir NAV_FEEDBACK_DIR[4] = {
     [NavDirection_Right] = FlUiFeedbackDir_Right,
 };
 
-static bool center_in_viewport(const FlUiCtx* self, const ItemState* item) {
-    float cx = ITEM_CENTER_X(item);
-    float cy = ITEM_CENTER_Y(item);
+static u32 widget_scroll_area(const FlUiCtx* self, u32 widget_id) {
+    WidgetScrollInfo* info = hashmap_get(&self->shared->widget_scroll_map, widget_id);
+    return info != nullptr ? info->scroll_area_id : 0;
+}
+
+static bool item_visible_this_frame(const FlUiCtx* self, const ItemState* item) {
+    bool hit = item->hit_pass == self->shared->hit_test_pass && item->state.found;
+    if (!hit || !item->state.visible) {
+        return false;
+    }
+    return item->hit_max.x > item->hit_min.x && item->hit_max.y > item->hit_min.y;
+}
+
+static bool center_in_viewport(const FlUiCtx* self, FlRect r) {
+    float cx = r.x + r.w * 0.5f;
+    float cy = r.y + r.h * 0.5f;
     return !(cx < 0 || cx > self->layout_width || cy < 0 || cy > self->layout_height);
 }
 
-static bool items_aligned(const ItemState* from, const ItemState* to, u8 axis) {
-    float overlap;
-    if (axis == 1) {
-        overlap = calculate_overlap_1d(ITEM_LEFT(from), ITEM_RIGHT(from), ITEM_LEFT(to), ITEM_RIGHT(to));
-    } else {
-        overlap = calculate_overlap_1d(ITEM_TOP(from), ITEM_BOTTOM(from), ITEM_TOP(to), ITEM_BOTTOM(to));
-    }
+static bool items_aligned(FlRect from, FlRect to, u8 axis) {
+    float overlap = (axis == 1) ? calculate_overlap_1d(from.x, from.x + from.w, to.x, to.x + to.w)
+                                : calculate_overlap_1d(from.y, from.y + from.h, to.y, to.y + to.h);
     return overlap > 0.0f;
 }
 
-// Weighted navigation distance between two items; INFINITY if the candidate is not in the given direction.
-static float calculate_navigation_distance(ItemState* from, ItemState* to, NavDirection dir, FlUiCtx* self) {
-    // Skipping candidates whose center is outside the viewport keeps navigation out of the scrolled-away
-    // regions of content views.
-    if (!center_in_viewport(self, to)) {
-        return INFINITY;
+// Shift a scroll-area rect to its settled scroll_target position.
+static FlRect project_to_scroll_target(const FlUiCtx* self, u32 scroll_area_id, FlRect r) {
+    const ScrollAreaState* scroll
+        = scroll_area_id != 0 ? hashmap_get(&self->shared->scroll_states, scroll_area_id) : nullptr;
+    if (scroll != nullptr) {
+        r.x -= (scroll->scroll_target.x - scroll->scroll_offset.x);
+        r.y -= (scroll->scroll_target.y - scroll->scroll_offset.y);
     }
+    return r;
+}
 
-    // delta indexed by axis: [0] = horizontal (x), [1] = vertical (y)
-    float delta[2] = { ITEM_CENTER_X(to) - ITEM_CENTER_X(from), ITEM_CENTER_Y(to) - ITEM_CENTER_Y(from) };
+// Weighted navigation distance: aligned in same scroll area, then aligned outside (+10k), then unaligned (+100k).
+static float calculate_navigation_distance(FlRect from, FlRect to, NavDirection dir, bool same_scroll) {
+    float delta[2]
+        = { (to.x + to.w * 0.5f) - (from.x + from.w * 0.5f), (to.y + to.h * 0.5f) - (from.y + from.h * 0.5f) };
     u8 axis = NAV_AXIS_SIGN[dir].axis;
-
-    // Candidate must lie on the directed side of the focused item along the primary axis
     if (NAV_AXIS_SIGN[dir].sign * delta[axis] <= 0.0f) {
         return INFINITY;
     }
 
-    float primary_distance = fabsf(delta[axis]);
-    float secondary_distance = fabsf(delta[1 - axis]);
-
-    // Aligned: primary distance dominates, secondary is only a tiebreaker. Unaligned candidates take a penalty
-    // large enough that any aligned candidate wins.
+    float primary = fabsf(delta[axis]);
+    float secondary = fabsf(delta[1 - axis]);
     if (items_aligned(from, to, axis)) {
-        return primary_distance + secondary_distance * 0.1f;
+        return primary + secondary * 0.1f + (same_scroll ? 0.0f : 10000.0f);
     }
-    return primary_distance + secondary_distance * 3.0f + 10000.0f;
+    return primary + secondary * 3.0f + 100000.0f;
+}
+
+typedef struct NavSearch {
+    FlUiCtx* ui;
+    FlRect from;
+    NavDirection dir;
+    u32 scroll_id;
+    bool popup_active;
+} NavSearch;
+
+static bool candidate_rect(const NavSearch* s, u32 candidate_id, bool same_scroll, FlRect* out) {
+    if (!ui_get_element_layout_rect(candidate_id, out)) {
+        return false;
+    }
+    if (same_scroll) {
+        *out = project_to_scroll_target(s->ui, s->scroll_id, *out);
+        return true;
+    }
+    return center_in_viewport(s->ui, *out);
+}
+
+static float candidate_distance(const NavSearch* s, u32 candidate_id) {
+    if (candidate_id == s->ui->focused_id) {
+        return INFINITY;
+    }
+    ItemState* candidate = hashmap_get(&s->ui->shared->item_state, candidate_id);
+    if (candidate == nullptr || !item_in_scope(s->ui, candidate, s->popup_active)) {
+        return INFINITY;
+    }
+    bool same_scroll = s->scroll_id != 0 && widget_scroll_area(s->ui, candidate_id) == s->scroll_id;
+    if (!same_scroll && !item_visible_this_frame(s->ui, candidate)) {
+        return INFINITY;
+    }
+    FlRect to;
+    if (!candidate_rect(s, candidate_id, same_scroll, &to)) {
+        return INFINITY;
+    }
+    return calculate_navigation_distance(s->from, to, s->dir, same_scroll);
 }
 
 static u32 find_best_navigation_candidate(FlUiCtx* self, ItemState* focused, NavDirection dir) {
+    (void)focused;
+    FlRect from;
+    if (!ui_get_element_layout_rect(self->focused_id, &from)) {
+        return 0;
+    }
+
+    u32 scroll_id = widget_scroll_area(self, self->focused_id);
+    NavSearch search = {
+        .ui = self,
+        .from = project_to_scroll_target(self, scroll_id, from),
+        .dir = dir,
+        .scroll_id = scroll_id,
+        .popup_active = (self->popup_stack_count > 0),
+    };
+
     u32 best_id = 0;
     float best_distance = FLT_MAX;
-
-    bool popup_active = (self->popup_stack_count > 0);
-
     for_count(i, self->focus_order_count) {
         u32 candidate_id = self->focus_order[i];
-
-        if (candidate_id == self->focused_id)
-            continue;
-
-        ItemState* candidate = hashmap_get(&self->shared->item_state, candidate_id);
-        if (candidate == nullptr)
-            continue;
-
-        if (!item_in_scope(self, candidate, popup_active))
-            continue;
-
-        float distance = calculate_navigation_distance(focused, candidate, dir, self);
-
+        float distance = candidate_distance(&search, candidate_id);
         if (distance < best_distance) {
             best_distance = distance;
             best_id = candidate_id;
         }
     }
-
     return best_id;
 }
 
