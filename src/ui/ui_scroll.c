@@ -546,32 +546,70 @@ void ui_scroll_to_widget(FlLayoutId widget_id) {
 typedef struct ScrollToGeometry {
     f32 widget_top;
     f32 widget_height;
-    f32 visible_top; // Current scroll offset
+    f32 widget_screen_y;
+    f32 visible_top; // Current scroll target
     f32 viewport_height;
+    f32 max_scroll;
     f32 current_target;
+    f32 margin;
 } ScrollToGeometry;
 
-static f32 scroll_target_for_align(FlScrollAlignment align, f32 margin, ScrollToGeometry g) {
+static f32 scroll_target_for_align(FlScrollAlignment align, ScrollToGeometry g) {
     f32 widget_bottom = g.widget_top + g.widget_height;
     f32 visible_bottom = g.visible_top + g.viewport_height;
 
     switch (align) {
         case FlScrollAlign_Nearest:
-            if (g.widget_top - margin < g.visible_top) {
-                return g.widget_top - margin;
+            if (g.widget_top - g.margin < g.visible_top) {
+                return g.widget_top - g.margin;
             }
-            if (widget_bottom + margin > visible_bottom) {
-                return widget_bottom + margin - g.viewport_height;
+            if (widget_bottom + g.margin > visible_bottom) {
+                return widget_bottom + g.margin - g.viewport_height;
             }
             break;
         case FlScrollAlign_Top:
-            return g.widget_top - margin;
+            return g.widget_top - g.margin;
         case FlScrollAlign_Center:
             return g.widget_top + g.widget_height / 2.0f - g.viewport_height / 2.0f;
         case FlScrollAlign_Bottom:
-            return widget_bottom + margin - g.viewport_height;
+            return widget_bottom + g.margin - g.viewport_height;
     }
     return g.current_target;
+}
+
+static bool scroll_has_focusable_beyond(FlUiCtx* ctx, u32 scroll_area_id, f32 edge_y, bool above) {
+    for_count(i, ctx->focus_order_count) {
+        u32 id = ctx->focus_order[i];
+        FlRect r;
+        if (widget_scroll_area_id(ctx, id) != scroll_area_id || !ui_get_element_layout_rect(id, &r)) {
+            continue;
+        }
+        if (above ? (r.y < edge_y - 1.0f) : (r.y + r.h > edge_y + 1.0f)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Reveals non-focusable headers above the first focusable item and trailing content below the last.
+static f32 snap_edge_scroll_target(FlUiCtx* ctx, u32 scroll_area_id, ScrollToGeometry g, f32 target_y) {
+    bool fits_top = target_y > 0.0f && g.widget_top + g.widget_height + g.margin <= g.viewport_height;
+    if (fits_top && !scroll_has_focusable_beyond(ctx, scroll_area_id, g.widget_screen_y, true)) {
+        return 0.0f;
+    }
+    bool fits_bottom = target_y < g.max_scroll && g.widget_top - g.margin >= g.max_scroll;
+    if (fits_bottom && !scroll_has_focusable_beyond(ctx, scroll_area_id, g.widget_screen_y + g.widget_height, false)) {
+        return g.max_scroll;
+    }
+    return target_y;
+}
+
+static f32 scroll_content_height(const ScrollAreaState* scroll, u32 scroll_area_id) {
+    if (scroll->content_size.y > 0.0f) {
+        return scroll->content_size.y;
+    }
+    FlScrollContainerExtent extent = ui_get_scroll_container_extent(scroll_area_id);
+    return extent.found ? extent.content_extent.y : 0.0f;
 }
 
 // Takes the raw Clay id; used by ui_scroll_auto_to_focused.
@@ -580,39 +618,34 @@ static void scroll_to_widget_internal(u32 widget_clay_id, FlScrollToOptions opts
 
     u32 scroll_area_id = widget_scroll_area_id(ctx, widget_clay_id);
     if (scroll_area_id == 0) {
-        return; // Not in a scroll area
+        return;
     }
-
     ScrollAreaState* scroll = hashmap_get(&ctx->shared->scroll_states, scroll_area_id);
     if (scroll == nullptr) {
         return;
     }
-
-    // item_state only contains elements emitted this frame; fully culled widgets have no bounds to scroll to.
-    FlVec2 widget_pos, widget_size;
-    if (!get_element_bounds(widget_clay_id, &widget_pos, &widget_size)) {
+    FlRect widget, viewport;
+    if (!ui_get_element_layout_rect(widget_clay_id, &widget)
+        || !ui_get_element_layout_rect(scroll_area_id, &viewport)) {
         return;
     }
 
-    // Get scroll area viewport rect from item_state (screen space)
-    FlVec2 viewport_pos, viewport_size;
-    if (!get_element_bounds(scroll_area_id, &viewport_pos, &viewport_size)) {
-        return; // Can't determine viewport position
-    }
-
-    // Widget position in content = (widget.y - viewport.y) + scroll_offset, where both y values are screen space
+    f32 max_scroll_y = max(0.0f, scroll_content_height(scroll, scroll_area_id) - viewport.h);
     ScrollToGeometry geometry = {
-        .widget_top = (widget_pos.y - viewport_pos.y) + scroll->scroll_offset.y,
-        .widget_height = widget_size.y,
-        .visible_top = scroll->scroll_offset.y,
-        .viewport_height = viewport_size.y,
+        .widget_top = (widget.y - viewport.y) + scroll->scroll_offset.y,
+        .widget_height = widget.h,
+        .widget_screen_y = widget.y,
+        .visible_top = scroll->scroll_target.y,
+        .viewport_height = viewport.h,
+        .max_scroll = max_scroll_y,
         .current_target = scroll->scroll_target.y,
+        .margin = positive_or(opts.margin, SCROLL_DEFAULT_MARGIN),
     };
-    f32 margin = positive_or(opts.margin, SCROLL_DEFAULT_MARGIN);
-    f32 new_scroll_y = scroll_target_for_align(opts.align, margin, geometry);
-
-    f32 max_scroll_y = scroll->content_size.y - viewport_size.y;
-    new_scroll_y = clamp(new_scroll_y, 0.0f, max(0.0f, max_scroll_y));
+    f32 new_scroll_y = scroll_target_for_align(opts.align, geometry);
+    if (opts.align == FlScrollAlign_Nearest) {
+        new_scroll_y = snap_edge_scroll_target(ctx, scroll_area_id, geometry, new_scroll_y);
+    }
+    new_scroll_y = clamp(new_scroll_y, 0.0f, max_scroll_y);
 
     scroll->scroll_target.y = new_scroll_y;
     if (opts.immediate) {

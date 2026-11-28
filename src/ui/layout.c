@@ -49,8 +49,8 @@ static void ui_open_element_with_id(FlLayoutId id) {
     FlUiCtx* ctx = g_ui_ctx;
     ItemState* existing = hashmap_get(&ctx->shared->debug_id_tracker, element_id_value);
     if (existing) {
-        log_error("DUPLICATE ID DETECTED: name='%.*s' id=%u (hash=0x%08X)", (int)id.name.length, id.name.data,
-                  id.id, element_id_value);
+        log_error("DUPLICATE ID DETECTED: name='%.*s' id=%u (hash=0x%08X)", (int)id.name.length, id.name.data, id.id,
+                  element_id_value);
         FL_ASSERT_FATAL(!existing);
     } else {
         // Only presence matters, not the value
@@ -133,6 +133,15 @@ FlScrollContainerExtent ui_get_scroll_container_extent(u32 element_id) {
         .content_extent = { data.contentDimensions.width, data.contentDimensions.height },
         .found = true,
     };
+}
+
+bool ui_get_element_layout_rect(u32 element_id, FlRect* out) {
+    Clay_ElementData data = Clay_GetElementData((Clay_ElementId) { .id = element_id });
+    if (!data.found) {
+        return false;
+    }
+    *out = (FlRect) { data.boundingBox.x, data.boundingBox.y, data.boundingBox.width, data.boundingBox.height };
+    return true;
 }
 
 static bool ui_border_has_width(const FlBorderWidthConfig* width) {
