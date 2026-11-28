@@ -45,6 +45,8 @@ typedef struct DropdownSearch {
 typedef struct Dropdown {
     FlLayoutId button_id;
     FlLayoutId list_id;
+    FlString cancel_id_str;
+    u32 cancel_clay_id;
     const FlString* options;
     int option_count;
     const FlDropdownConfig* cfg;
@@ -213,17 +215,36 @@ static void dropdown_focus_list_on_open(const Dropdown* d, bool opened_this_fram
     }
 }
 
-// Searchable hand-off in: Down while the search input holds focus moves focus into the list, seeded on the first
-// filtered row. With no filtered rows Down is a no-op; either way the Nav-Down is consumed so it neither
-// spatial-navigates out of the search box nor advances the list cursor.
-static void dropdown_hand_off_search_to_list(const DropdownSearch* search, const DropdownRows* rows,
-                                             FlLayoutId list_id) {
+// Searchable hand-off in: Down while the search input holds focus moves focus into the list (or Cancel when
+// filtered empty), consuming Nav-Down so it neither spatial-navigates out nor advances the list cursor.
+static void dropdown_hand_off_search_to_list(const Dropdown* d, const DropdownSearch* search,
+                                             const DropdownRows* rows) {
     if (!search->focused || !fl_get_nav_frame().nav_down) {
         return;
     }
     fl_consume_nav_down();
     if (rows->count > 0) {
-        fl_list_request_focus(list_id, rows->items[0].id);
+        fl_list_request_focus(d->list_id, rows->items[0].id);
+    } else if (d->cfg->show_cancel) {
+        g_ui_ctx->focused_id = d->cancel_clay_id;
+    }
+}
+
+// Cancel hand-off back: Up while Cancel holds focus returns focus to the last list row (or the search input
+// when filtered empty), consuming Nav-Up so the list does not also step up a row on the same frame.
+static void dropdown_hand_off_cancel_to_list(const Dropdown* d, const DropdownSearch* search,
+                                             const DropdownRows* rows) {
+    if (!d->cfg->show_cancel || g_ui_ctx->focused_id != d->cancel_clay_id) {
+        return;
+    }
+    if (!fl_get_nav_frame().nav_up) {
+        return;
+    }
+    fl_consume_nav_up();
+    if (rows->count > 0) {
+        fl_list_request_focus(d->list_id, rows->items[rows->count - 1].id);
+    } else if (d->cfg->searchable) {
+        g_ui_ctx->focused_id = search->clay_id;
     }
 }
 
@@ -246,7 +267,8 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
     ui_layout_area(.sizing = { sizing_grow(0), sizing_fixed(dropdown_viewport_height(d->cfg, rows->count)) },
                    .direction = LayoutDirection_TopToBottom) {
         dropdown_focus_list_on_open(d, opened_this_frame);
-        dropdown_hand_off_search_to_list(search, rows, d->list_id);
+        dropdown_hand_off_search_to_list(d, search, rows);
+        dropdown_hand_off_cancel_to_list(d, search, rows);
 
         // An empty (all-filtered-out) list feeds nullptr ids to the core, which forbids a non-null set, so the set is
         // dropped on that path.
@@ -257,11 +279,12 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
                                                  .multi_select = false,
                                                  .reorderable = false });
 
-        // Searchable hand-off out: Nav-Up on the list's first row (nav_up_edge) returns focus to the search input.
-        // The list consumed the Nav-Up when raising the edge flag; claiming the global ring here blurs the list on
-        // the next frame.
+        // Edge hand-offs out of the list: Nav-Up at the top returns to search; Nav-Down at the bottom enters Cancel.
         if (d->cfg->searchable && lr.nav_up_edge) {
             g_ui_ctx->focused_id = search->clay_id;
+        }
+        if (d->cfg->show_cancel && lr.nav_down_edge) {
+            g_ui_ctx->focused_id = d->cancel_clay_id;
         }
 
         picked = dropdown_picked_id(&lr);
@@ -274,10 +297,9 @@ static u64 dropdown_draw_list(const Dropdown* d, const DropdownSearch* search, c
 // Draw the Cancel button; returns true when it was pressed.
 static bool dropdown_draw_cancel(const Dropdown* d) {
     FlString cancel_label = d->cfg->cancel_label.length > 0 ? d->cfg->cancel_label : FL_S("Cancel");
-    FlString cancel_id_str = fl_format_frame_string("%S_cancel", d->button_id.name);
 
     FlSignal cancel_signal = ui_button_impl(cancel_label, (FlWidgetConfig) {
-                                                              .id_override = cancel_id_str,
+                                                              .id_override = d->cancel_id_str,
                                                               .focusable = FlFocusable_Yes,
                                                               .variant = FlWidgetVariant_Ghost,
                                                           });
@@ -366,9 +388,12 @@ void ui_dropdown_impl(FlString label, bool* is_open, const FlString* options, in
     // The button id must match the popup anchor.
     FlLayoutId button_id = resolve_widget_id(label, cfg.widget.id_override);
     FlString list_id_str = fl_format_frame_string("%S_dropdown_list", button_id.name);
+    FlString cancel_id_str = fl_format_frame_string("%S_cancel", button_id.name);
     const Dropdown d = {
         .button_id = button_id,
         .list_id = (FlLayoutId) { .name = list_id_str, .id = 0 },
+        .cancel_id_str = cancel_id_str,
+        .cancel_clay_id = ui_layout_id_to_clay_id((FlLayoutId) { .name = cancel_id_str, .id = 0 }),
         .options = options,
         .option_count = option_count,
         .cfg = &cfg,
